@@ -5,3 +5,4 @@
 /temp
 /__pycache__
 deprecatedtools.py
+/flask_session
