@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+
+<html lang="en" data-browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0">
+<head>
+
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<title>Search | Cardwatcher
+</title>
+<meta name="author" content="Sammelkartenmarkt GmbH &amp; Co. KG">
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noIndex,follow">
+<!--[if IE]>
+<link rel="shortcut icon" href="//static.cardmarket.com/img/c0a10b062a8c3b48a5c29b779b3ac51e/static/misc/favicon.ico?>">
+<![endif]-->
+<meta name="msapplication-TileColor" content="#ffffff">
+<meta name="msapplication-TileImage" content="//static.cardmarket.com/img/526dbb9ae52c5e62404fe903e9769807/static/misc/mstile-144x144.png">
+<link href="{{ url_for('static', filename='Search/master.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='Search/product_search.min.css') }}" rel="stylesheet">
+</head>
+
+<body>
+<div tabindex="-1" aria-hidden="true" id="modal" class="modal">
+<div class="modal-dialog">
+<div class="modal-content">
+</div>
+</div>
+</div>
+<header id="header" class="fixed-top">
+	<nav class="navbar navbar-light">
+		<a href="/" class="navbar-brand">
+			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">
+			CardWatcher
+			</span>
+		</a>
+		
+		<a class="btn btn-primary" style="background-color:rgba(34,139,34,1);border-color:rgba(34,139,34,1);" href="/?update=true">Update All</a>
+	</nav>
+	<nav class="navbar navbar-light">
+		<form method="GET" id="searchForm" action="/" class="justify-content-center">
+			<div id="Search" class="form-group mb-0">
+				<div id="autoCompWrapper" class="input-group input-group-sm autocomplete-wrapper show container">
+				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Search CardWatcher..." aria-label="Search" class="form-control autocomplete-input">
+
+				<button type="submit" id="search-btn" title="Suche" class="btn btn-light">
+				<span class="mx-2 mx-lg-4 fw-bold ">Suche
+				</span>
+				</button>
+				</div>
+			</div>
+		</form>
+	</nav>
+</header>
+
+
+
+
+<main class="container" style="padding-top: 90px;">
+<h1 class="H1_PageTitle page-header">Articles
+</h1>
+<section style="margin-bottom: 75.1667px; padding-bottom: 5rem;">
+
+<div class="row">
+	{{  search_elements  |  safe  }}
+</div>
+</section>
+</main>
+</body>
+</html>

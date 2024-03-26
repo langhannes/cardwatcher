@@ -1,0 +1,7 @@
+*.jpg
+*.page
+/downloads
+/pages
+/temp
+/__pycache__
+deprecatedtools.py

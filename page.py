@@ -1,0 +1,252 @@
+import os
+from datetime import datetime
+import time
+import math
+from listing import Listing, Seller
+from language_libraries import *
+
+class Page:
+        
+    def __init__(self):
+        # these variables stay the same
+        self.card = ""
+        self.set = ""
+        self.canonical_name = ""
+        self.image = ""
+        self.sold = 0
+        self.inserted = 0
+
+        # these are important when updating the page
+        self.listings = []
+        self.languages = []
+        self.only_germany = False
+        self.available = 0
+
+        # these are for plotting the information
+        self.xdata = []
+        self.ydata = []
+
+        self.loadMoreButton = False
+            
+    def __str__(self):
+        output = self.card
+        output += "," + self.set +",["
+        for language in self.languages:
+            output += language + ";"
+        if output[-1] == ";":
+            output = output[0:-1]
+        output += "]"
+        output += "," + str(self.only_germany)
+        output += "," + self.image
+        output += "," + str(self.available)
+        for listing in self.listings:
+            output += "\n" + str(listing)
+        return output
+
+    def save(self):
+        with open(os.path.join("pages",(self.canonical_name+".page")),'w',encoding="utf-8") as f:
+            f.write(str(self))
+
+    def import_page(self,file):
+        try:
+            with open(file,'r',encoding='utf-8') as f:
+                lines = f.read()
+                first = True
+
+                for line in lines.split('\n'):
+                    if first:
+                        card_,set_,languages_,only_germany_,image_,available_ = line.split(',')
+                        self.card = card_
+                        self.set = set_
+                        self.languages = languages_[1:-1].split(';')
+                        self.only_germany = True if only_germany_ == "True" else "False"
+                        self.image = image_
+                        self.available = int(available_)
+                        first = False
+                        continue
+                    listing = Listing()
+                    listing.import_listing(line)
+                    listing.canonical_name = self.canonical_name
+                    self.listings.append(listing)
+        except FileNotFoundError:
+            print("No previous page found.")
+            return
+
+    def update_page(self,page):
+        if self.canonical_name != page.canonical_name:
+            print("ERROR: wrong page. Can't update!")
+            return
+        new_listings = []
+        self.available = 0
+        self.card = page.card
+        self.set = page.set
+        self.canonical_name = page.canonical_name
+        self.image = page.image
+
+        highest_price = page.listings[-1].price if len(page.listings) > 0 else 0
+
+        # find all the listings that were previously on the page
+        while len(page.listings) > 0:
+            new_listing = Listing()
+            new_listing.card = page.listings[0].card
+            new_listing.seller = Seller()
+            new_listing.seller.name = page.listings[0].seller.name
+            new_listing.seller.country = page.listings[0].seller.country
+            new_listing.price = page.listings[0].price
+            new_listing.date = page.listings[0].date
+            new_listing.language = page.listings[0].language
+            new_listing.condition = page.listings[0].condition
+            new_listing.quantity = page.listings[0].quantity
+            # currently, the first seen date is this one
+            new_listing.first_date = page.listings[0].date
+            # the last seen date is this one
+            new_listing.comment = page.listings[0].comment
+            new_listing.first_ed = page.listings[0].first_ed
+            new_listing.reverse_holo = page.listings[0].reverse_holo
+            new_listing.canonical_name = self.canonical_name
+            self.available += new_listing.quantity
+            self.inserted += 1
+
+            # check if the listing was there before
+            for listing in self.listings:
+                if (    listing.seller.name == page.listings[0].seller.name
+                        and listing.language == page.listings[0].language
+                        and listing.condition == page.listings[0].condition
+                        and (listing.first_ed == page.listings[0].first_ed or listing.first_ed == 2)
+                        and (listing.reverse_holo == page.listings[0].reverse_holo or listing.reverse_holo == 2)):
+                    # we have found an older first date and the listing is not new
+                    new_listing.first_date = listing.first_date
+                    new_listing.new = False
+
+                    # check if the price has changed
+                    new_listing.previous_prices = listing.previous_prices
+                    if (listing.price != page.listings[0].price):
+                        new_listing.price_is_new = True
+                        new_listing.previous_prices.append((listing.price,listing.date))
+
+                    # check if the quantity has changed
+                    new_listing.quantity_change = page.listings[0].quantity - listing.quantity
+
+                    # check if the listing had ended before
+                    if listing.ended:
+                        new_listing.comment = "RELISTED! " + page.listings[0].comment
+                    # if not, it was there before and not actually inserted
+                    else:
+                        self.inserted -= 1
+
+                    # since we already updated the listing we can remove it from the previous listings
+                    self.listings.remove(listing)
+                    break
+                    
+            # remove the old listing and save the new one
+            page.listings.pop(0)
+            new_listings.append(new_listing)
+
+        # work through all the listings that are no longer available
+        while len(self.listings) > 0:
+            new_listing = Listing()
+            new_listing.card = self.listings[0].card
+            new_listing.seller = Seller()
+            new_listing.seller.name = self.listings[0].seller.name
+            new_listing.seller.country = self.listings[0].seller.country
+            new_listing.price = self.listings[0].price
+            new_listing.language = self.listings[0].language
+            new_listing.condition = self.listings[0].condition
+            new_listing.previous_prices = self.listings[0].previous_prices
+            new_listing.quantity = self.listings[0].quantity
+            new_listing.first_date = self.listings[0].first_date
+            new_listing.comment = self.listings[0].comment
+            new_listing.new = False
+            new_listing.first_ed = self.listings[0].first_ed
+            new_listing.reverse_holo = self.listings[0].reverse_holo
+            new_listing.canonical_name = self.canonical_name
+            # if the new page only has listings from germany, we don't want to show listings from other countries as ended
+            if (page.only_germany
+                and location_to_english[new_listing.seller.country] !=  "Item location: Germany"):
+                new_listing.ended = self.listings[0].ended
+            # otherwise, if the language of the old listing is not in the new set of chosen languages, don't show it as ended, either
+            elif language_to_english[new_listing.language] not in page.languages:
+                new_listing.ended = self.listings[0].ended
+            # if the user did not load all listings, don't let listings end that have a higher price than the last listing.
+            elif page.loadMoreButton and self.listings[0].price >= highest_price:
+                new_listing.ended = self.listings[0].ended
+            else:
+                new_listing.ended = True
+                new_listing.new = not self.listings[0].ended
+                if new_listing.new:
+                    self.sold += 1
+                new_listing.quantity = 0
+            new_listing.date = self.listings[0].date
+            # the last seen date is the date of the previous listing
+            new_listing.quantity_change = new_listing.quantity - self.listings[0].quantity
+
+            # remove the old listing and save the new one
+            self.listings.pop(0)
+            new_listings.append(new_listing)
+
+        # save the new listings in sorted order
+        self.listings = sorted(new_listings, key = lambda x: x.price)
+        
+        for language in page.languages:
+            if language not in self.languages:
+                self.languages.append(language)
+
+    def delete_listings(self,delete_list):
+        print("delete_listings | delete: " + str(delete_list))
+        new_listings = []
+        self.available = 0
+        for i in range(len(self.listings)):
+            if i not in delete_list:
+                self.available += self.listings[i].quantity
+                new_listings.append(self.listings[i])
+        self.listings = new_listings
+        self.save()
+
+    def build_table(self):
+        table = ""
+        listing_counter = 0
+        for listing in self.listings:
+            listing.row_number = listing_counter
+            table += listing.build_row()
+            listing_counter += 1
+
+        return table
+
+    def build_country_selection(self):
+        selection = ""
+        countries = ["Item location: Germany"]
+        for listing in self.listings:
+            if listing.seller.country not in countries:
+                countries.append(listing.seller.country)
+        for country in countries:
+            selection += """<div class="form-check">
+	                            <input type="checkbox" name="sellerCountry[7]" id="sellerCountry-"""+country[15:]+"""" value=\"show-"""+country[15:]+"""" class="country-checkbox form-check-input mb-1 me-2">
+                                <label for="sellerCountry-"""+country[15:]+"""" class="d-inline-flex form-check-label">
+                                    <span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain.png'); background-position:"""+flags[country]+""";" class="icon align-self-center me-2">
+                                    </span>
+                                    <span>"""+country[15:]+"""</span>
+                                </label>
+                            </div>"""
+        return selection
+
+    def build_language_selection(self):
+        selection = ""
+        languages = []
+        for listing in self.listings:
+            if listing.language not in languages:
+                languages.append(listing.language)
+        for language in languages:
+            selection += """<div class="form-check">
+	                            <input type="checkbox" name="sellerCountry[7]" id="language-"""+language+"""" value=\"language-"""+language+"""" class="language-checkbox form-check-input mb-1 me-2">
+                                <label for="language-"""+language+"""" class="d-inline-flex form-check-label">
+                                    <span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position:"""+language_flags[language]+""";" class="icon align-self-center me-2">
+                                    </span>
+                                    <span>"""+language+"""</span>
+                                </label>
+                            </div>"""
+        return selection
+
+
+    def build_graphs():
+        return
+            

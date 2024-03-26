@@ -1,0 +1,832 @@
+
+<!DOCTYPE html>
+
+<html lang="de" data-browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0">
+<head>
+
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+
+<title>
+CardWatcher
+</title>
+<link href="{{ url_for('static', filename='Blanko/master.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='Blanko/product_singleProduct.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='Blanko/shariff.min.css') }}" rel="stylesheet">
+<script src="{{ url_for('static', filename='Blanko/Chart_2_7_2.min.js') }}"></script>
+
+<style type="text/css">
+.hidden-country {
+	display:none !important;
+}
+.hidden-language {
+	display:none !important;
+}
+.hidden-availability {
+	display:none !important;
+}
+.hidden-condition {
+	display:none !important;
+}
+.hidden-firsted {
+	display:none !important;
+}
+.hidden-reverse {
+	display:none !important;
+}
+</style>
+
+</head>
+<body>
+
+<header id="header" class="fixed-top">
+	<nav class="navbar navbar-light">
+		<a href="/" class="navbar-brand">
+			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">
+			CardWatcher
+			</span>
+		</a>
+	</nav>
+	<nav class="navbar navbar-light">
+		<form method="GET" id="searchForm" action="/" class="justify-content-center">
+			<div id="Search" class="form-group mb-0">
+				<div id="autoCompWrapper" class="input-group input-group-sm autocomplete-wrapper show container">
+				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Suche auf&nbsp;Cardmarket..." aria-label="Search" class="form-control autocomplete-input">
+
+				<button type="submit" id="search-btn" title="Suche" class="btn btn-light">
+				<span class="mx-2 mx-lg-4 fw-bold ">Suche
+				</span>
+				</button>
+				</div>
+			</div>
+		</form>
+	</nav>
+</header>
+
+<main class="container" style="padding-top: 90px;">
+
+<div class="page-title-container d-flex align-items-center text-break">
+	<a href="{{  cardmarket_link  }}" style="text-decoration:none;">
+	<div class="flex-grow-1">
+		<h1>{{ card_name  }}
+			<span class="h4 text-muted fst-italic fw-normal ">{{ set_name  }}
+			</span>
+		</h1>
+	</div>
+	</a>
+	<div class="align-self-end mb-md-1">
+	</div>
+</div>
+
+<div id="mainContent" class="d-flex flex-wrap justify-content-between" style="margin-bottom: 66.55px; padding-bottom: 5rem;">
+
+<section id="image" class="d-lg-flex align-items-center col-lg-3 p-3">
+	<img src="{{  main_image  }}" alt="Card Image" class="lazy img-fluid">
+</section>
+
+<section id="tabs" class="col-12 col-lg-9 px-0">
+<div class="tab-container d-flex flex-column h-100">
+<div class="tab-navigation">
+	<ul role="tablist" class="nav nav-tabs">
+		<li class="nav-item tab-info" role="presentation">
+			<a href="" data-bs-toggle="tab" role="tab" aria-controls="tabContent-info" aria-selected="true" class="nav-link active show">
+				<span class="nav-link-title">
+					<span>Info
+					</span>
+				</span>
+			</a>
+		</li>
+	</ul>
+</div>
+
+<div class="tab-content">
+	<div id="tabContent-info" role="tabpanel" aria-labelledby="tabContent-info" class="tab-pane d-none h-100 px-3 pt-3 active">
+		<div class="row">
+			<div class="col-12 col-lg-12">
+				<div class="row g-0 small justify-content-center ">
+					<div class="col-8 col-md-4 d-lg-none mb-3">
+					</div>
+					<div class="info-list-container col-12 col-md-8 col-lg-12 mx-auto align-self-start">
+						<dl class="labeled row mx-auto g-0">
+							<dt class="col-6 col-xl-5">Verfügbare Artikel
+							</dt>
+							<dd class="col-6 col-xl-7">{{  available  }}
+							</dd>
+						</dl>
+					</div>
+				</div>
+				<div class="row g-0 small justify-content-center ">
+					<canvas id="chart" width="400" height="120"></canvas>
+				</div>
+			</div>
+			<div class="col-lg-0 d-none d-lg-block">
+			</div>
+		</div>
+	</div>
+</div>
+</section>
+<div class="clearfix w-100 mt-3">
+</div>
+
+
+<section id="filter" style="width:15rem" class="d-none d-lg-block align-self-start collapse ps-0 pe-3 show">
+
+<form method="POST" id="FilterForm" action="/en/OnePiece/PostGetAction/Product_Filter_FilterProduct" class="article-filter-form">
+	<input type="hidden" name="__cmtkn" value="00f0119a1889792e299d7c3fa759a1369dcea69494d25633bed72ad1160c8da8" autocomplete="off">
+	<input type="hidden" name="idProduct" value="733268">
+	<input type="hidden" name="isSingle" value="1">
+	<div class="filter-headline d-none d-lg-flex align-items-center border">
+		<h2 class="h5">
+			<span class="ms-2">Filter</span>
+		</h2>
+	</div>
+
+<div id="articleFilters" data-children=".item" class="accordion rounded-0 border border-top-0 small keep-open">
+	<!-- Filter for Countries -->
+	<div class="accordion-item">
+		<div class="accordion-header">
+			<div style="padding:10px">
+				<span class="filterName text-nowrap me-1">Seller Location</span>
+			</div>
+		</div>
+		<div id="articleFilterSellerLocation" class="accordion-collapse collapse show">
+			<div class="item-body-wrapper">
+				<div class="filter-box">
+					{{  country_selection  |  safe  }}
+					<button type="button" class="btn deselect-all-countries btn-link btn-sm btn-slim">Deselect all</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Filter for Languages -->
+	<div class="accordion-item">
+		<div class="accordion-header">
+			<div style="padding:10px">
+					<span class="filterName text-nowrap me-1">Language</span>
+			</div>
+		</div>
+		<div id="articleFilterLanguage" class="accordion-collapse collapse show">
+			<div class="item-body-wrapper">
+				<div class="filter-box">
+					{{  language_selection  |  safe  }}
+					<button type="button" class="btn deselect-all-languages btn-link btn-sm btn-slim">Deselect all</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Filter for Conditions -->
+	<div class="accordion-item">
+		<div class="accordion-header">
+			<div style="padding:10px">
+					<span class="filterName text-nowrap me-1">Condition</span>
+			</div>
+		</div>
+		<div id="articleFilterCondition" class="accordion-collapse collapse show">
+			<div class="item-body-wrapper">
+				<div class="filter-box">
+					<div class="form-check">
+	                    <input type="checkbox" id="condition-mint" value="condition-mt-val" class="condition-checkbox form-check-input mb-1 me-2">
+						<label for="condition-mint" class="d-inline-flex form-check-label">
+							<a data-bs-placement="bottom" class="article-condition condition-mt me-1">
+								<span class="badge">MT</span>
+							</a>
+							<span>Mint</span>
+						</label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" id="condition-nearmint" value="condition-nm-val" class="condition-checkbox form-check-input mb-1 me-2">
+						<label for="condition-nearmint" class="d-inline-flex form-check-label">
+							<a data-bs-placement="bottom" class="article-condition condition-nm me-1">
+								<span class="badge">NM</span>
+							</a>
+							<span>Near Mint</span>
+						</label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" id="condition-excelent" value="condition-ex-val" class="condition-checkbox form-check-input mb-1 me-2">
+						<label for="condition-excelent" class="d-inline-flex form-check-label">
+							<a data-bs-placement="bottom" class="article-condition condition-ex me-1">
+								<span class="badge">EX</span>
+							</a>
+							<span>Excelent</span>
+						</label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" id="condition-good" value="condition-gd-val" class="condition-checkbox form-check-input mb-1 me-2">
+						<label for="condition-good" class="d-inline-flex form-check-label">
+							<a data-bs-placement="bottom" class="article-condition condition-gd me-1">
+								<span class="badge">GD</span>
+							</a>
+							<span>Good</span>
+						</label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" id="condition-lightplayed" value="condition-lp-val" class="condition-checkbox form-check-input mb-1 me-2">
+						<label for="condition-lightplayed" class="d-inline-flex form-check-label">
+							<a data-bs-placement="bottom" class="article-condition condition-lp me-1">
+								<span class="badge">LP</span>
+							</a>
+							<span>Light Played</span>
+						</label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" id="condition-played" value="condition-pl-val" class="condition-checkbox form-check-input mb-1 me-2">
+						<label for="condition-played" class="d-inline-flex form-check-label">
+							<a data-bs-placement="bottom" class="article-condition condition-pl me-1">
+								<span class="badge">PL</span>
+							</a>
+							<span>Played</span>
+						</label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" id="condition-poor" value="condition-po-val" class="condition-checkbox form-check-input mb-1 me-2">
+						<label for="condition-poor" class="d-inline-flex form-check-label">
+							<a data-bs-placement="bottom" class="article-condition condition-po me-1">
+								<span class="badge">PO</span>
+							</a>
+							<span>Poor</span>
+						</label>
+                    </div>
+					<button type="button" class="btn deselect-all-conditions btn-link btn-sm btn-slim">Deselect all</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Filter for Editions and Holos -->
+	<div class="accordion-item">
+		<div class="accordion-header">
+			<div style="padding:10px">
+					<span class="filterName text-nowrap me-1">Properties</span>
+			</div>
+		</div>
+		<div id="articleFilterLanguage" class="accordion-collapse collapse show">
+			<div class="item-body-wrapper">
+				<div class="filter-box">
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="firsted-is" value="firsted-is" class="firsted-checkbox form-check-input mb-1 me-2">
+                        <label for="firsted-is" class="d-inline-flex form-check-label">
+							<span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position: -112px -16px;" class="icon align-self-center me-2">
+							</span>
+                            <span>First Edition</span>
+                        </label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="firsted-none" value="firsted-none" class="firsted-checkbox form-check-input mb-1 me-2">
+                        <label for="firsted-none" class="d-inline-flex form-check-label">
+							<span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position: -112px -16px;" class="icon align-self-center me-2">
+							<span style="color:darkred;padding-left:2px;font-size:18px;line-height:16px;font-weight:bold;opacity:0.5;">X</span>
+							</span>
+                            <span>Not First Edition</span>
+                        </label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="reverseholo-is" value="reverseholo-is" class="reverse-checkbox form-check-input mb-1 me-2">
+                        <label for="reverseholo-is" class="d-inline-flex form-check-label">
+							<span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position: -416px -16px;" class="icon align-self-center me-2">
+							</span>
+                            <span>Reverse Holo</span>
+                        </label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="reverseholo-none" value="reverseholo-none" class="reverse-checkbox form-check-input mb-1 me-2">
+                        <label for="reverseholo-none" class="d-inline-flex form-check-label">
+							<span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position: -416px -16px;" class="icon align-self-center me-2">
+							<span style="color:darkred;padding-left:2px;font-size:18px;line-height:16px;font-weight:bold;opacity:0.5;">X</span>
+							</span>
+                            <span>Not Reverse Holo</span>
+                        </label>
+                    </div>
+					<button type="button" class="btn deselect-all-property btn-link btn-sm btn-slim">Deselect all</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Filter for Availability -->
+	<div class="accordion-item">
+		<div class="accordion-header">
+			<div style="padding:10px">
+					<span class="filterName text-nowrap me-1">Availability</span>
+			</div>
+		</div>
+		<div id="articleFilterLanguage" class="accordion-collapse collapse show">
+			<div class="item-body-wrapper">
+				<div class="filter-box">
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="availability-True" value="availability-True" class="availability-checkbox form-check-input mb-1 me-2">
+                        <label for="availability-True" class="d-inline-flex form-check-label">
+                            <span style="color:forestgreen;">Available Listings</span>
+                        </label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="availability-False" value="availability-False" class="availability-checkbox form-check-input mb-1 me-2">
+                        <label for="availability-False" class="d-inline-flex form-check-label">
+                            <span style="color:darkred">Ended Listings</span>
+                        </label>
+                    </div>
+					<button type="button" class="btn deselect-all-availability btn-link btn-sm btn-slim">Deselect all</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+</form>
+</section>
+
+<section id="table" class="col px-0">
+
+
+<div class="table article-table table-striped">
+
+	<div class="table-header d-none d-lg-flex">
+		<div class="row g-0 flex-nowrap">
+			<div class="d-none col">#
+			</div>
+			<div class="col-sellerProductInfo col">
+				<div class="row g-0 h-100">
+					<div class="col-seller col-12 col-lg-auto">
+						<div>Verkäufer
+						</div>
+					</div>
+					<div class="col-product col-12 col-lg">
+						<div>Produktinfo
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-offer col-auto" style="width:20.5rem;">Angebot
+			</div>
+		</div>
+	</div>
+
+	<div class="table-body">
+
+		{{ table_content  |  safe}}
+		<div class="table-footer">
+		</div>
+	</div>
+</div>
+</section>
+</div>
+</main>
+<script>
+	// Country Checkboxes ------------------------------------------------------------------------------
+    var country_checkboxes = document.querySelectorAll('.country-checkbox');
+	country_checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var allUnchecked = true;
+			var allWereUnchecked = true;
+			var value = this.value;
+            country_checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    allUnchecked = false;
+					if (checkbox.value != value){
+						allWereUnchecked = false;
+					}
+					console.log("found checked box")
+                }
+            });
+            if (allUnchecked) {
+				console.log("no box checked, showing all rows")
+                // If all checkboxes are unchecked, show all article rows
+                document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-country');
+                });
+            } else {
+				if (allWereUnchecked){
+					document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.add('hidden-country');
+                });
+
+				}
+				console.log("changing visibility of rows with class "+value)
+				var checked = this.checked
+				console.log("changing visibility: "+checked)
+				document.querySelectorAll('.'+value).forEach(function(element) {
+					console.log("  changing visibility for : "+element.id)
+					if (checked) {
+						element.classList.remove('hidden-country');
+					} else {
+						element.classList.add('hidden-country');
+					}
+				});
+            }
+			this.disabled = true;
+			setTimeout(function(){checkbox.disabled = false;},100);
+			generate_Graph();
+        });
+    });
+	document.querySelectorAll('.deselect-all-countries')[0].addEventListener('click',function() {
+		country_checkboxes.forEach(function(checkbox){
+			checkbox.checked = false;
+			document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-country');
+                });
+		});
+		this.disabled = true;
+		setTimeout(function(){checkbox.disabled = false;},100);
+		generate_Graph();
+	});
+	// Language Checkboxes -------------------------------------------------------------------------------
+	var language_checkboxes = document.querySelectorAll('.language-checkbox');
+	language_checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var allUnchecked = true;
+			var allWereUnchecked = true;
+			var value = this.value;
+            language_checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    allUnchecked = false;
+					if (checkbox.value != value){
+						allWereUnchecked = false;
+					}
+					console.log("found checked box")
+                }
+            });
+            if (allUnchecked) {
+				console.log("no box checked, showing all rows")
+                // If all checkboxes are unchecked, show all article rows
+                document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-language');
+                });
+            } else {
+				if (allWereUnchecked){
+					document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.add('hidden-language');
+                });
+
+				}
+				console.log("changing visibility of rows with class "+value)
+				var checked = this.checked
+				console.log("changing visibility: "+checked)
+				document.querySelectorAll('.'+value).forEach(function(element) {
+					console.log("  changing visibility for : "+element.id)
+					if (checked) {
+						element.classList.remove('hidden-language');
+					} else {
+						element.classList.add('hidden-language');
+					}
+				});
+            }
+			this.disabled = true;
+			setTimeout(function(){checkbox.disabled = false;},100);
+			generate_Graph();
+        });
+    });
+	document.querySelectorAll('.deselect-all-languages')[0].addEventListener('click',function() {
+		language_checkboxes.forEach(function(checkbox){
+			checkbox.checked = false;
+			document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-language');
+                });
+		});
+		this.disabled = true;
+		setTimeout(function(){checkbox.disabled = false;},100)
+		generate_Graph();
+	});
+	// Availability Checkboxes ---------------------------------------------------------------------
+	var availability_checkboxes = document.querySelectorAll('.availability-checkbox');
+	availability_checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var allUnchecked = true;
+			var allWereUnchecked = true;
+			var value = this.value;
+            availability_checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    allUnchecked = false;
+					if (checkbox.value != value){
+						allWereUnchecked = false;
+					}
+					console.log("found checked box")
+                }
+            });
+            if (allUnchecked) {
+				console.log("no box checked, showing all rows")
+                // If all checkboxes are unchecked, show all article rows
+                document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-availability');
+                });
+            } else {
+				if (allWereUnchecked){
+					document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.add('hidden-availability');
+                });
+
+				}
+				console.log("changing visibility of rows with class "+value)
+				var checked = this.checked
+				console.log("changing visibility: "+checked)
+				document.querySelectorAll('.'+value).forEach(function(element) {
+					console.log("  changing visibility for : "+element.id)
+					if (checked) {
+						element.classList.remove('hidden-availability');
+					} else {
+						element.classList.add('hidden-availability');
+					}
+				});
+            }
+			this.disabled = true;
+			setTimeout(function(){checkbox.disabled = false;},100)
+			generate_Graph();
+        });
+    });
+	document.querySelectorAll('.deselect-all-availability')[0].addEventListener('click',function() {
+		availability_checkboxes.forEach(function(checkbox){
+			checkbox.checked = false;
+			document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-availability');
+                });
+		});
+		this.disabled = true;
+		setTimeout(function(){checkbox.disabled = false;},100)
+		generate_Graph();
+	});
+	// Property Checkboxes ---------------------------------------------------------------------
+	var firsted_checkboxes = document.querySelectorAll('.firsted-checkbox');
+	firsted_checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var allUnchecked = true;
+			var allWereUnchecked = true;
+			var value = this.value;
+            firsted_checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    allUnchecked = false;
+					if (checkbox.value != value){
+						allWereUnchecked = false;
+					}
+					console.log("found checked box")
+                }
+            });
+            if (allUnchecked) {
+				console.log("no box checked, showing all rows")
+                // If all checkboxes are unchecked, show all article rows
+                document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-firsted');
+                });
+            } else {
+				if (allWereUnchecked){
+					document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.add('hidden-firsted');
+                });
+
+				}
+				console.log("changing visibility of rows with class "+value)
+				var checked = this.checked
+				console.log("changing visibility: "+checked)
+				document.querySelectorAll('.'+value).forEach(function(element) {
+					console.log("  changing visibility for : "+element.id)
+					if (checked) {
+						element.classList.remove('hidden-firsted');
+					} else {
+						element.classList.add('hidden-firsted');
+					}
+				});
+            }
+			this.disabled = true;
+			setTimeout(function(){checkbox.disabled = false;},100)
+			generate_Graph();
+        });
+    });
+	var reverse_checkboxes = document.querySelectorAll('.reverse-checkbox');
+	reverse_checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var allUnchecked = true;
+			var allWereUnchecked = true;
+			var value = this.value;
+            reverse_checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    allUnchecked = false;
+					if (checkbox.value != value){
+						allWereUnchecked = false;
+					}
+					console.log("found checked box")
+                }
+            });
+            if (allUnchecked) {
+				console.log("no box checked, showing all rows")
+                // If all checkboxes are unchecked, show all article rows
+                document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-reverse');
+                });
+            } else {
+				if (allWereUnchecked){
+					document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.add('hidden-reverse');
+                });
+
+				}
+				console.log("changing visibility of rows with class "+value)
+				var checked = this.checked
+				console.log("changing visibility: "+checked)
+				document.querySelectorAll('.'+value).forEach(function(element) {
+					console.log("  changing visibility for : "+element.id)
+					if (checked) {
+						element.classList.remove('hidden-reverse');
+					} else {
+						element.classList.add('hidden-reverse');
+					}
+				});
+            }
+			this.disabled = true;
+			setTimeout(function(){checkbox.disabled = false;},100)
+			generate_Graph();
+        });
+    });
+	document.querySelectorAll('.deselect-all-property')[0].addEventListener('click',function() {
+		firsted_checkboxes.forEach(function(checkbox){
+			checkbox.checked = false;
+			document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-firsted');
+                });
+		});
+		this.disabled = true;
+		setTimeout(function(){checkbox.disabled = false;},100)
+		reverse_checkboxes.forEach(function(checkbox){
+			checkbox.checked = false;
+			document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-reverse');
+                });
+		});
+		this.disabled = true;
+		setTimeout(function(){checkbox.disabled = false;},100)
+		generate_Graph();
+		generate_Graph();
+	});
+	// Condition Checkboxes -------------------------------------------------------------------------
+	var condition_checkboxes = document.querySelectorAll('.condition-checkbox');
+	condition_checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var allUnchecked = true;
+			var allWereUnchecked = true;
+			var value = this.value;
+            condition_checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    allUnchecked = false;
+					if (checkbox.value != value){
+						allWereUnchecked = false;
+					}
+					console.log("found checked box")
+                }
+            });
+            if (allUnchecked) {
+				console.log("no box checked, showing all rows")
+                // If all checkboxes are unchecked, show all article rows
+                document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-condition');
+                });
+            } else {
+				if (allWereUnchecked){
+					document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.add('hidden-condition');
+                });
+
+				}
+				console.log("changing visibility of rows with class "+value)
+				var checked = this.checked
+				console.log("changing visibility: "+checked)
+				document.querySelectorAll('.'+value).forEach(function(element) {
+					console.log("  changing visibility for : "+element.id)
+					if (checked) {
+						element.classList.remove('hidden-condition');
+					} else {
+						element.classList.add('hidden-condition');
+					}
+				});
+            }
+			this.disabled = true;
+			setTimeout(function(){checkbox.disabled = false;},100)
+			generate_Graph();
+        });
+    });
+	document.querySelectorAll('.deselect-all-conditions')[0].addEventListener('click',function() {
+		condition_checkboxes.forEach(function(checkbox){
+			checkbox.checked = false;
+			document.querySelectorAll('[id^="articleRow"]').forEach(function(element) {
+                    element.classList.remove('hidden-condition');
+                });
+		});
+		this.disabled = true;
+		setTimeout(function(){checkbox.disabled = false;},100)
+		generate_Graph();
+	});
+
+	// bar chart data
+	function getDataFromTable(){
+		var currentDate = new Date();
+
+		var data = [];
+		var rows = document.querySelectorAll('.article-row');
+		rows.forEach(function(row) {
+			var isHidden = false;
+			row.classList.forEach(function(className) {
+				if (className.startsWith('hidden')) {
+					isHidden = true;
+				}
+			});
+			if (!isHidden){
+				var temp_list = [];
+				temp_list.push(row.querySelectorAll('.actions-container')[0].innerText);
+				temp_list.push(parseFloat(row.querySelectorAll('.price-container')[0].innerText.replace(' ','').replace('€','')));
+				data.push(temp_list);
+			}
+		});
+		data.sort(function(a,b) {
+			var dateA = new Date(a[0].split('.').reverse().join('-'));
+			var dateB = new Date(b[0].split('.').reverse().join('-'));
+			return dateA - dateB;
+		});
+		
+		var labels = [];
+		var prices = [];
+		var firstDate = new Date(data[0][0].split('.').reverse().join('-'));
+		var current_index = 0;
+		var date_at_index = new Date(data[0][0].split('.').reverse().join('-'));
+		for (var i = firstDate; i <= currentDate; i.setDate(i.getDate()+1)){
+			var sum = 0;
+			var num = 0;
+			console.log("i: " + i);
+			console.log("date_at_index: " + date_at_index);
+			while (date_at_index.getTime() === i.getTime()){
+				sum += data[current_index][1];
+				num++;
+				current_index++;
+				if(current_index >= data.length){
+					console.log("no more data points")
+					break;
+				}
+				date_at_index = new Date(data[current_index][0].split('.').reverse().join('-'));
+				console.log("date_at_index: " + date_at_index);
+			}
+			var day = i.getDate(); // Returns the day of the month (1-31)
+			var month = i.getMonth() + 1; // Returns the month (0-11), so we add 1 to get the correct month
+			var year = i.getFullYear(); // Returns the year (four digits)
+			var formattedDate = ('0' + day).slice(-2) + '.' + ('0' + month).slice(-2) + '.' + year;
+			labels.push(formattedDate);
+			if (num){
+				prices.push(sum/num);
+			}
+			else{
+				prices.push(null);
+			}
+		}
+
+		return { labels: labels, prices: prices };
+	}
+
+	var mychart;
+
+	function generate_Graph(){
+		var data = getDataFromTable();
+			// Sort the data by date
+		data.labels.sort(function(a, b) {
+			return new Date(a) - new Date(b);
+		});
+		var lineData = {
+			labels: data.labels,
+			datasets: [{
+				label: 'Price',
+				data: data.prices,
+				fill: false, // Don't fill the area under the line
+				borderColor: 'rgba(54, 162, 235, 1)',
+				borderWidth: 3,
+				lineTension: 0.3,
+				spanGaps: true
+			}]
+		}
+		if(mychart){
+			mychart.destroy();
+		}
+		// get bar chart canvas
+		var ctx = document.getElementById("chart").getContext("2d");
+		// Draw line chart
+		mychart = new Chart(ctx, {
+			type: 'line',
+			data: lineData,
+			options: {
+				scales: {
+					yAxes: [{
+						ticks: {
+							beginAtZero: true
+						}
+					}]
+				},
+				elements: {
+					point: {
+						radius: 3, // Set point radius to 0 to hide the dots
+						hitRadius: 5, // Set hitRadius to 5 to make it easier to interact with the line
+						hoverRadius: 5 // Set hoverRadius to 5 to maintain interactivity
+					}
+				},
+				legend: {
+					display: false // Hide the legend
+				}
+			}
+		});
+	}
+	generate_Graph();
+</script>
+</body>
+</html>
