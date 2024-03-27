@@ -18,7 +18,10 @@ class watcherbase():
         print("delete_download | deleting html " + file_name)
         os.remove(os.path.join("downloads",file_name))
         print("delete_download | deleting folder " + file_name[:-4] + "-Dateien")
-        shutil.rmtree(os.path.join("downloads",file_name[:-4]+"-Dateien"))
+        try:
+            shutil.rmtree(os.path.join("downloads",file_name[:-4]+"-Dateien"))
+        except:
+            print("delete_download | no folder to delete")
     
 
     def get_page(page_name):

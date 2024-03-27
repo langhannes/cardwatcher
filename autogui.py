@@ -131,13 +131,14 @@ def update_all_pages_old():
                 pyautogui.hotkey('ctrl', 'down')
                 time.sleep(0.2)
                 pos = pyautogui.locateOnScreen('show-more.png')
-                print("found button")
-                if stopper[0]:
-                    pyautogui.hotkey('ctrl','w')
-                    return
-                pyautogui.click(pos[0],pos[1])
-                pyautogui.move(0, -50)
-                time.sleep(2.0)
+                if pos:
+                    print("found button")
+                    if stopper[0]:
+                        pyautogui.hotkey('ctrl','w')
+                        return
+                    pyautogui.click(pos[0],pos[1])
+                    pyautogui.move(0, -50)
+                    time.sleep(2.0)
             except:
                 break
 
@@ -151,10 +152,8 @@ def update_all_pages_old():
         pyautogui.hotkey('left')
         pyperclip.copy(str(counter))
         pyautogui.hotkey('ctrl', 'v')
-
         pyautogui.hotkey('enter')
         time.sleep(0.3)
-        pyautogui.hotkey('enter')
         pyautogui.hotkey('ctrl','w')
         time.sleep(0.3)
         counter += 1

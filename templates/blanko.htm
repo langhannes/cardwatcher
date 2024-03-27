@@ -140,8 +140,38 @@ CardWatcher
 			<span class="ms-2">Filter</span>
 		</h2>
 	</div>
+	
 
 <div id="articleFilters" data-children=".item" class="accordion rounded-0 border border-top-0 small keep-open">
+	
+	<!-- Filter for Availability -->
+	<div class="accordion-item">
+		<div class="accordion-header">
+			<div style="padding:10px">
+					<span class="filterName text-nowrap me-1">Availability</span>
+			</div>
+		</div>
+		<div id="articleFilterLanguage" class="accordion-collapse collapse show">
+			<div class="item-body-wrapper">
+				<div class="filter-box">
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="availability-True" value="availability-True" class="availability-checkbox form-check-input mb-1 me-2">
+                        <label for="availability-True" class="d-inline-flex form-check-label">
+                            <span style="color:forestgreen;">Available Listings</span>
+                        </label>
+                    </div>
+					<div class="form-check">
+	                    <input type="checkbox" name="sellerCountry[7]" id="availability-False" value="availability-False" class="availability-checkbox form-check-input mb-1 me-2">
+                        <label for="availability-False" class="d-inline-flex form-check-label">
+                            <span style="color:darkred">Ended Listings</span>
+                        </label>
+                    </div>
+					<button type="button" class="btn deselect-all-availability btn-link btn-sm btn-slim">Deselect all</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
 	<!-- Filter for Countries -->
 	<div class="accordion-item">
 		<div class="accordion-header">
@@ -305,33 +335,6 @@ CardWatcher
 		</div>
 	</div>
 
-	<!-- Filter for Availability -->
-	<div class="accordion-item">
-		<div class="accordion-header">
-			<div style="padding:10px">
-					<span class="filterName text-nowrap me-1">Availability</span>
-			</div>
-		</div>
-		<div id="articleFilterLanguage" class="accordion-collapse collapse show">
-			<div class="item-body-wrapper">
-				<div class="filter-box">
-					<div class="form-check">
-	                    <input type="checkbox" name="sellerCountry[7]" id="availability-True" value="availability-True" class="availability-checkbox form-check-input mb-1 me-2">
-                        <label for="availability-True" class="d-inline-flex form-check-label">
-                            <span style="color:forestgreen;">Available Listings</span>
-                        </label>
-                    </div>
-					<div class="form-check">
-	                    <input type="checkbox" name="sellerCountry[7]" id="availability-False" value="availability-False" class="availability-checkbox form-check-input mb-1 me-2">
-                        <label for="availability-False" class="d-inline-flex form-check-label">
-                            <span style="color:darkred">Ended Listings</span>
-                        </label>
-                    </div>
-					<button type="button" class="btn deselect-all-availability btn-link btn-sm btn-slim">Deselect all</button>
-				</div>
-			</div>
-		</div>
-	</div>
 </div>
 </form>
 </section>
