@@ -2,6 +2,7 @@ from datetime import datetime
 from language_libraries import *
 import math
 import time
+import json
 
 class Seller:
 
@@ -98,7 +99,14 @@ class Listing:
         self.ended = True if ended_ == "True" else False
         self.new = True if new_ == "True" else False
         # previous_prices of the form:  ["(1.0_ '17364656.3665')"; "(2.0_ '17575938.3665')"] or ['']
-        self.previous_prices = [(prev_price.replace(' ','')[2:-2].split('_')[0],prev_price.replace(' ','')[2:-2].split('_')[1][1:-1]) for prev_price in previous_prices_[1:-1].replace('\'','').split(";") if prev_price != ""]
+        self.previous_prices = []
+        for prev_price in previous_prices_[1:-1].replace('\'','').split(";"):
+            if prev_price == "":
+                continue
+            prev_price = prev_price.replace(')','').replace('(','').replace(' ','').replace("'",'').replace('"','').replace('[','').replace(']','')
+            prev_price = prev_price.split('_')
+            self.previous_prices.append(prev_price)
+            # [(prev_price.replace(' ','')[2:-2].split('_')[0],prev_price.replace(' ','')[2:-2].split('_')[1][1:-1]) for prev_price in previous_prices_[1:-1].replace('\'','').split(";") if prev_price != ""]
         self.first_date = first_date_ if first_date_ else date_
         self.last_date = last_date_
         self.price_is_new = True if price_is_new_ == "True" else False
@@ -106,15 +114,69 @@ class Listing:
         self.first_ed = int(first_ed_)
         self.reverse_holo = int(reverse_holo_)
 
+    def to_json(self):
+        """Convert listing to JSON-serializable dictionary."""
+        return {
+            'card': self.card,
+            'canonical_name': self.canonical_name,
+            'seller': {
+                'name': self.seller.name,
+                'country': self.seller.country
+            },
+            'language': self.language,
+            'price': self.price,
+            'quantity': self.quantity,
+            'condition': self.condition,
+            'comment': self.comment,
+            'date': self.date,
+            'ended': self.ended,
+            'new': self.new,
+            'previous_prices': self.previous_prices,
+            'first_date': self.first_date,
+            'last_date': self.last_date,
+            'price_is_new': self.price_is_new,
+            'quantity_change': self.quantity_change,
+            'first_ed': self.first_ed,
+            'reverse_holo': self.reverse_holo
+        }
+
+    def from_json(self, data):
+        """Load listing from JSON dictionary."""
+        self.card = data.get('card', '')
+        self.canonical_name = data.get('canonical_name', '')
+
+        seller_data = data.get('seller', {})
+        self.seller = Seller()
+        self.seller.name = seller_data.get('name', '')
+        self.seller.country = seller_data.get('country', '')
+
+        self.language = data.get('language', '')
+        self.price = data.get('price', 0.0)
+        self.quantity = data.get('quantity', 0)
+        self.condition = data.get('condition', '')
+        self.comment = data.get('comment', '')
+        self.date = data.get('date', '')
+        self.ended = data.get('ended', False)
+        self.new = data.get('new', True)
+        self.previous_prices = data.get('previous_prices', [])
+        self.first_date = data.get('first_date', '')
+        self.last_date = data.get('last_date', '')
+        self.price_is_new = data.get('price_is_new', False)
+        self.quantity_change = data.get('quantity_change', 0)
+        self.first_ed = data.get('first_ed', 2)
+        self.reverse_holo = data.get('reverse_holo', 2)
+
     def parse_from_row(self,row):
         self.seller.name = row.find('span',attrs={'class':'seller-name'}).find('a').text
-        self.seller.country = location_to_english[row.find('span',attrs={'class':'seller-name'}).find('span',attrs={'class':'icon'})['aria-label']]
+        seller_name_icon = row.find('span',attrs={'class':'seller-name'}).find('span',attrs={'class':'icon d-flex has-content-centered me-1'})
+        self.seller.country = location_to_english[seller_name_icon['aria-label']]
         condition = row.find('a',attrs={'class':'article-condition'})
         if condition:
             self.condition = condition.find('span',attrs={'class':'badge'}).text
         else:
             self.condition = "NM"
-        self.language = language_to_english[row.find('div',attrs={'class':'product-attributes'}).find('span',attrs={'class':'icon'})['aria-label']]
+        card_language_icon =row.find('div',attrs={'class':'product-attributes'}).find('span',attrs={'class':'icon me-2'})
+        self.language = language_to_english[card_language_icon['aria-label']]
         comment_section = row.find('div',attrs={'class':'product-comments'})
         if comment_section:
             self.comment = comment_section.find('span',attrs={'class':'text-truncate'}).text.replace(",",".")
@@ -155,7 +217,18 @@ class Listing:
         if len(self.previous_prices) > 0:
             price_style = " style=\"color:" + ("rgb(0,100,0)" if self.price < float(self.previous_prices[-1][0]) else "rgb(139,0,0)") + " !important\" "
             price_string += " (" + str(self.previous_prices[-1][0]).replace('.',',') + ("0" if len(str(self.previous_prices[-1][0]).split('.')[1]) == 1 else "") + ")"
-    
+            list_of_previous_prices = ""
+            for prev_price in self.previous_prices:
+                prev_price_date = "            "
+                float_date = float(prev_price[1]) if prev_price[1] else 0
+                if str(float_date) == prev_price[1] and float_date > 17000000:
+                    prev_price_date = datetime.fromtimestamp(float_date).date()
+                list_of_previous_prices += f"{prev_price_date} {prev_price[0]}€\n"
+            price_string+= "€"
+            price_string = f"<span title=\"{list_of_previous_prices}\">{price_string}</span>"
+        else: 
+            price_string += "€"
+        
         first_edition_marker = ""
         first_edition_hider = "none"
         if self.first_ed == 1:
@@ -234,7 +307,7 @@ class Listing:
                                         "<div class=\"d-flex align-items-center justify-content-end\">" + \
                                             "<span class=\"color-primary small text-end text-nowrap fw-bold\" " + price_style + ">" + \
                                                 price_string +\
-                                            "€</span>" + \
+                                            "</span>" + \
                                         "</div>" + \
                                     "</div>" + \
                                 "</div>" + \
@@ -250,7 +323,7 @@ class Listing:
                                 "</div>" + \
                             "</div>" + \
                                 "<div class=\"col-auto\">" +\
-                                    "<a href=\"?name="+self.canonical_name+".page&delete="+str(self.row_number)+"\"><img src=\"static/Blanko/trash.png\" width=\"30rem\" height=\"30rem\"></a>" +\
+                                    "<a href=\"?name="+self.canonical_name+".json&delete="+str(self.row_number)+"\"><img src=\"static/Blanko/trash.png\" width=\"30rem\" height=\"30rem\"></a>" +\
                                 "</div>" +\
                         "</div>")
         return table_element

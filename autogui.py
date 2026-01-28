@@ -8,8 +8,9 @@ from watcherbase import watcherbase
 import threading
 
 def create_window_to_stop_updating(stopper):
-    if pyautogui.confirm("Stop Update:", "Stop Update", buttons=["STOP"]) == "STOP":
-        stopper[0] = True
+    while not stopper[0]:
+        if pyautogui.confirm("Stop Update:", "Stop Update", buttons=["STOP"], timeout=10000) == "STOP":
+            stopper[0] = True
     return
 
 def download_page(page_name):
@@ -86,14 +87,18 @@ def update_all_pages():
     watcherbase.import_all_pages()
 
 def update_all_pages_old():
+    print("Update all pages.")
     stopper = [False]
 
     files = os.listdir("pages")
-    minutes = int(len(files)*5/60)
-    threading.Thread(target=create_window_to_stop_updating, args=(stopper,)).start()
-    if pyautogui.confirm("This will take around " + str(minutes) + " minutes. Are you sure?", "Confirmation", buttons=["OK", "Cancel"]) != "OK":
-        return
-    
+    #minutes = int(len(files)*10/60)
+    #thread = threading.Thread(target=create_window_to_stop_updating, args=(stopper,))
+    #thread.start()
+    #print("check if user really wants to start the update.")
+    #pyautogui.confirm("This will take around " + str(minutes) + " minutes. Are you sure?", "Confirmation", buttons=["OK", "Cancel"],timeout=1)
+    #if pyautogui.confirm("This will take around " + str(minutes) + " minutes. Are you sure?", "Confirmation", buttons=["OK", "Cancel"]) != "OK":
+    #    return
+    time.sleep(1.0)
     counter = 0
     for file_name in files:
         page_link = watcherbase.get_address_from_name(file_name)
@@ -130,7 +135,7 @@ def update_all_pages_old():
                 pyautogui.hotkey('tab')
                 pyautogui.hotkey('ctrl', 'down')
                 time.sleep(0.2)
-                pos = pyautogui.locateOnScreen('show-more.png')
+                pos = pyautogui.locateOnScreen('show-more-plus.png')
                 if pos:
                     print("found button")
                     if stopper[0]:
@@ -157,4 +162,5 @@ def update_all_pages_old():
         pyautogui.hotkey('ctrl','w')
         time.sleep(0.3)
         counter += 1
+    stopper[0] = True
 

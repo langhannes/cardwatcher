@@ -47,8 +47,13 @@ def cardwatcher():
     if request.args.get('searchString',''):
         print("cardwatcher | search: " +request.args.get('searchString',''))
         page = watcherbase.import_all_pages()
-        search = watchersearch.build_search(request.args.get('searchString',''))
-        return render_template('search.htm',search_elements=search)
+        sort_by = request.args.get('sortBy', 'name')
+        # Smart default: descending for price fields, ascending for name
+        default_order = 'asc' if sort_by == 'name' else 'desc'
+        sort_order = request.args.get('order', default_order)
+        price_period = request.args.get('pricePeriod', 'last')
+        search = watchersearch.build_search(request.args.get('searchString',''), sort_by, sort_order, price_period)
+        return render_template('search.htm',search_elements=search, sort_order=sort_order)
 
     # otherwise we're leaving the search site
     # first, check if the user requested a specifig page
@@ -62,24 +67,37 @@ def cardwatcher():
     page = watcherbase.import_all_pages()
     # if we have a page in memory, load the specific site
     if page_name != "":
+        # Handle archive/unarchive action
+        if request.args.get('archive','') == 'toggle':
+            print("cardwatcher | toggling archive status for: " + page_name)
+            watcherbase.toggle_archive(page_name)
+            return redirect(f'/?name={page_name}')
+
         page = watcherbase.get_page(page_name)
         if request.args.get('delete',''):
             print("cardwatcher | delete: " +request.args.get('delete',''))
             page.delete_listings([int(request.args.get('delete',''))])
         return render_template(
-            'blanko.htm', 
+            'blanko.htm',
             table_content=page.build_table(),
-            main_image = page.image, 
-            card_name=page.card, 
+            main_image = page.image,
+            card_name=page.card,
             set_name = page.set,
             available = page.available,
             cardmarket_link="https://www.cardmarket.com/en/"+page.canonical_name.replace('_','/'),
             country_selection = page.build_country_selection(),
-            language_selection = page.build_language_selection())
+            language_selection = page.build_language_selection(),
+            is_archived=page.isArchived,
+            page_name=page_name)
     # otherwise the user has not specified a page and there was no new download, so we go back to the search
     else:
-        search = watchersearch.build_search()
-        return render_template('search.htm',search_elements=search)
+        sort_by = request.args.get('sortBy', 'name')
+        # Smart default: descending for price fields, ascending for name
+        default_order = 'asc' if sort_by == 'name' else 'desc'
+        sort_order = request.args.get('order', default_order)
+        price_period = request.args.get('pricePeriod', 'last')
+        search = watchersearch.build_search("", sort_by, sort_order, price_period)
+        return render_template('search.htm',search_elements=search, sort_order=sort_order)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
