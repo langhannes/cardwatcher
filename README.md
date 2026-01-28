@@ -95,20 +95,11 @@ To start tracking a new card, you need to manually download it once:
 
 2. **Load all listings** - Click all "Show More" buttons at the bottom of the page until all listings are loaded
 
-3. **Save the page** - Press `Ctrl+S` and save as "Webpage, Complete" or "Webpage, HTML Only" into the `downloads/` folder
+3. **Save the page** - Press `Ctrl+S` and save as "Webpage, Complete" into the `downloads/` folder. The filename doesn't matter - the app extracts the card identity from the HTML content.
 
-4. **Name the file correctly** - The filename must follow CardMarket's URL structure:
-   ```
-   Game_Category_Subcategory_CardName.htm
-   ```
-   Examples:
-   - `Pokemon_Products_Singles_Base-Set_Charizard.htm`
-   - `OnePiece_Products_Singles_Romance-Dawn_Monkey-D-Luffy-OP01-003.htm`
-   - `YuGiOh_Products_Singles_Legend-of-Blue-Eyes-White-Dragon_Blue-Eyes-White-Dragon.htm`
+4. **Import the card** - Open the web application (`http://localhost:5000`) - it will automatically detect and import files from `downloads/`
 
-5. **Import the card** - Open the web application (`http://localhost:5000`) - it will automatically detect and import files from `downloads/`
-
-The card will now appear in your gallery and a `.json` file will be created in `pages/`.
+The card will now appear in your gallery and a `.json` file will be created in `pages/` with the correct naming convention (e.g., `Pokemon_Products_Singles_Base-Set_Charizard.json`).
 
 #### Updating Existing Cards
 
@@ -128,7 +119,7 @@ Features:
 
 You can also manually update cards the same way you added them:
 
-1. Open the CardMarket listing page in your browser
+1. Open the CardMarket listing page in your browser (tip: each card's detail page in CardWatcher has a direct link to its CardMarket page)
 2. Click all "Show More" buttons to load all listings
 3. Save the page as HTML (Ctrl+S) into the `downloads/` folder
 4. Open the web application - it will automatically import new downloads
