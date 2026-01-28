@@ -23,7 +23,7 @@ import time
 import random
 import os
 from tqdm import tqdm
-from watcherbase import watcherbase
+from app.watcherbase import watcherbase
 
 
 def create_browser():
@@ -45,6 +45,13 @@ def create_browser():
         # Specify Chrome version to match your installed Chrome (143)
         # undetected-chromedriver will auto-download the matching chromedriver
         driver = uc.Chrome(options=options, version_main=143)
+
+        # Minimize the window programmatically (more reliable than --start-minimized)
+        try:
+            driver.minimize_window()
+        except:
+            pass  # Some environments don't support minimize
+
         print("[OK] Browser initialized (minimized)\n")
         return driver
 

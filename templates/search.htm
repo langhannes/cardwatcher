@@ -54,12 +54,29 @@
 			</div>
 		</form>
 	</nav>
+<!-- Download Control Bar -->
+<nav class="navbar navbar-light" style="padding: 4px 16px; border-top: 1px solid #dee2e6;">
+	<div id="downloadBar" style="display: flex; align-items: center; gap: 12px; font-size: 14px; width: 100%;">
+		<button id="downloadStartBtn" onclick="startDownload()" class="btn btn-sm btn-success" style="min-width: 80px;">
+			Start Download
+		</button>
+		<button id="downloadStopBtn" onclick="stopDownload()" class="btn btn-sm btn-danger" style="min-width: 80px; display: none;">
+			Stop
+		</button>
+		<div id="downloadProgress" style="flex: 1; display: none; align-items: center; gap: 12px;">
+			<div style="flex: 1; background: #e9ecef; border-radius: 4px; height: 20px; overflow: hidden;">
+				<div id="progressBar" style="height: 100%; background: #28a745; transition: width 0.3s; width: 0%;"></div>
+			</div>
+			<span id="progressText" style="min-width: 120px; text-align: right;">0 / 0</span>
+		</div>
+		<span id="downloadStatus" style="color: #6c757d;">Ready</span>
+		<span id="waitTimer" style="color: #6c757d; display: none;"></span>
+	</div>
+</nav>
 </header>
 
 
-
-
-<main class="container" style="padding-top: 90px;">
+<main class="container" style="padding-top: 140px;">
 <h1 class="H1_PageTitle page-header">Articles
 </h1>
 <div class="row mb-3">
@@ -108,5 +125,122 @@
 </div>
 </section>
 </main>
+
+<script>
+let pollInterval = null;
+
+function startDownload() {
+	fetch('/api/download/start', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			if (data.success) {
+				startPolling();
+			} else {
+				alert(data.message);
+			}
+		})
+		.catch(err => alert('Error: ' + err));
+}
+
+function stopDownload() {
+	fetch('/api/download/stop', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			if (!data.success) {
+				alert(data.message);
+			}
+		})
+		.catch(err => alert('Error: ' + err));
+}
+
+function updateUI(data) {
+	const startBtn = document.getElementById('downloadStartBtn');
+	const stopBtn = document.getElementById('downloadStopBtn');
+	const progress = document.getElementById('downloadProgress');
+	const progressBar = document.getElementById('progressBar');
+	const progressText = document.getElementById('progressText');
+	const statusText = document.getElementById('downloadStatus');
+	const waitTimer = document.getElementById('waitTimer');
+
+	const isRunning = data.status === 'running' || data.status === 'waiting' || data.status === 'stopping';
+
+	startBtn.style.display = isRunning ? 'none' : 'inline-block';
+	stopBtn.style.display = isRunning ? 'inline-block' : 'none';
+	stopBtn.disabled = data.status === 'stopping';
+	stopBtn.textContent = data.status === 'stopping' ? 'Stopping...' : 'Stop';
+
+	if (isRunning || data.completed > 0 || data.failed > 0) {
+		progress.style.display = 'flex';
+		progressBar.style.width = data.progress_percent + '%';
+		progressText.textContent = (data.completed + data.failed) + ' / ' + data.total;
+		if (data.skipped > 0) {
+			progressText.textContent += ' (' + data.skipped + ' skipped)';
+		}
+	} else {
+		progress.style.display = 'none';
+	}
+
+	if (data.status === 'idle') {
+		if (data.completed > 0 || data.failed > 0) {
+			statusText.textContent = 'Done: ' + data.completed + ' ok, ' + data.failed + ' failed';
+			statusText.style.color = data.failed > 0 ? '#dc3545' : '#28a745';
+		} else {
+			statusText.textContent = 'Ready';
+			statusText.style.color = '#6c757d';
+		}
+		waitTimer.style.display = 'none';
+	} else if (data.status === 'waiting') {
+		statusText.textContent = 'Waiting...';
+		statusText.style.color = '#ffc107';
+		if (data.wait_remaining > 0) {
+			const mins = Math.floor(data.wait_remaining / 60);
+			const secs = data.wait_remaining % 60;
+			waitTimer.textContent = mins + 'm ' + secs + 's';
+			waitTimer.style.display = 'inline';
+		}
+	} else if (data.status === 'running') {
+		const pageName = data.current_page || '';
+		const shortName = pageName.length > 40 ? '...' + pageName.slice(-37) : pageName;
+		statusText.textContent = shortName;
+		statusText.style.color = '#007bff';
+		waitTimer.style.display = 'none';
+	} else if (data.status === 'stopping') {
+		statusText.textContent = 'Stopping...';
+		statusText.style.color = '#dc3545';
+		waitTimer.style.display = 'none';
+	}
+}
+
+function pollStatus() {
+	fetch('/api/download/status')
+		.then(r => r.json())
+		.then(data => {
+			updateUI(data);
+			if (data.status === 'idle' && pollInterval) {
+				clearInterval(pollInterval);
+				pollInterval = null;
+			}
+		})
+		.catch(err => console.error('Poll error:', err));
+}
+
+function startPolling() {
+	if (pollInterval) return;
+	pollStatus();
+	pollInterval = setInterval(pollStatus, 1000);
+}
+
+// Check status on page load
+document.addEventListener('DOMContentLoaded', function() {
+	fetch('/api/download/status')
+		.then(r => r.json())
+		.then(data => {
+			updateUI(data);
+			if (data.status !== 'idle') {
+				startPolling();
+			}
+		});
+});
+</script>
 </body>
 </html>

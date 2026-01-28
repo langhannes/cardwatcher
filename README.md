@@ -51,6 +51,7 @@ A Flask web application for tracking CardMarket trading card listings over time.
 cardmarket/
 ├── app/                      # Core application modules
 │   ├── autogui.py           # Legacy PyAutoGUI automation (deprecated)
+│   ├── download_manager.py  # Background download manager for web UI
 │   ├── language_libraries.py # Language/country mappings and flag sprites
 │   ├── listing.py           # Listing class - represents a single seller listing
 │   ├── page.py              # Page class - represents a tracked card with all listings
@@ -103,7 +104,21 @@ The card will now appear in your gallery and a `.json` file will be created in `
 
 #### Updating Existing Cards
 
-Once cards are set up, you can update them using the Selenium downloader:
+Once cards are set up, you can update them directly from the web interface:
+
+1. Open the web application (`http://localhost:5000`)
+2. Click the **Start Download** button in the control bar below the search
+3. The browser will open minimized and automatically download all tracked pages
+4. Progress is shown in real-time with a progress bar
+5. Click **Stop** to cancel the download at any time
+
+The download control bar shows:
+- Current progress (completed / total pages)
+- Number of skipped pages (already downloaded)
+- Current page being downloaded or wait time until next download
+- Final summary when complete
+
+Alternatively, run the downloader from the command line:
 
 ```bash
 python -m app.selenium_downloader
@@ -114,6 +129,7 @@ Features:
 - Skips already-downloaded pages
 - 5-10 minute random delay between downloads to avoid detection
 - Automatically clicks "Show More" buttons to load all listings
+- Browser runs minimized to stay out of the way
 
 #### Manual Updates
 
@@ -127,6 +143,7 @@ You can also manually update cards the same way you added them:
 ### Using the Web Interface
 
 **Search View (Home Page):**
+- **Download control bar** at the top to start/stop automated downloads with progress tracking
 - Browse all tracked cards as a gallery
 - Use the search box to filter by card name
 - Sort by: Name, Price, Price Change (€), Percentage Change (%)

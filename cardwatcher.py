@@ -1,9 +1,16 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, jsonify
 from flask_session import Session
 from app.language_libraries import *
 from app.watcherbase import watcherbase
 import app.watchersearch as watchersearch
 import app.autogui as autogui
+from app.download_manager import download_manager
+import logging
+
+# Filter out noisy status endpoint from logs
+class StatusFilter(logging.Filter):
+    def filter(self, record):
+        return '/api/download/status' not in record.getMessage()
 
 # TODO:
 #  Important:
@@ -24,6 +31,9 @@ app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
+
+# Apply filter to suppress status endpoint logging
+logging.getLogger('werkzeug').addFilter(StatusFilter())
 
 @app.route('/', methods=['GET','POST'])
 def cardwatcher():
@@ -88,6 +98,24 @@ def cardwatcher():
         price_period = request.args.get('pricePeriod', 'last')
         search = watchersearch.build_search("", sort_by, sort_order, price_period)
         return render_template('search.htm',search_elements=search, sort_order=sort_order)
+
+@app.route('/api/download/start', methods=['POST'])
+def start_download():
+    result = download_manager.start()
+    return jsonify(result)
+
+
+@app.route('/api/download/stop', methods=['POST'])
+def stop_download():
+    result = download_manager.stop()
+    return jsonify(result)
+
+
+@app.route('/api/download/status', methods=['GET'])
+def download_status():
+    status = download_manager.get_status()
+    return jsonify(status)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
