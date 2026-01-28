@@ -1,9 +1,9 @@
 from flask import Flask, render_template, request, redirect
 from flask_session import Session
-from language_libraries import *
-from watcherbase import watcherbase
-import watchersearch
-import autogui
+from app.language_libraries import *
+from app.watcherbase import watcherbase
+import app.watchersearch as watchersearch
+import app.autogui as autogui
 
 # TODO:
 #  Important:

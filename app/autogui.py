@@ -3,8 +3,8 @@ import time
 import os
 import pyautogui
 import pyperclip
-from language_libraries import *
-from watcherbase import watcherbase
+from app.language_libraries import *
+from app.watcherbase import watcherbase
 import threading
 
 def create_window_to_stop_updating(stopper):

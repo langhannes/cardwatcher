@@ -13,7 +13,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         price_period: Price comparison period (last, 1w, 1m, 2m, 6m)
     """
     changes = {}
-    with open("changes.txt","r") as f:
+    with open("changes/changes.txt","r") as f:
         for line in f.readlines():
             line = line.strip()
             if line == "":
@@ -21,7 +21,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             changes[line.split(" ")[0]] = line.split(" ")[1]
     f.close()
     price_changes = {}
-    with open("price_changes.txt","r") as f:
+    with open("changes/price_changes.txt","r") as f:
         for line in f.readlines():
             line = line.strip()
             if line == "":
@@ -31,9 +31,9 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
 
     # Load price history for period-based comparisons
     price_history = {}
-    if os.path.exists("price_history.json"):
+    if os.path.exists("changes/price_history.json"):
         try:
-            with open("price_history.json", "r", encoding="utf-8") as f:
+            with open("changes/price_history.json", "r", encoding="utf-8") as f:
                 price_history = json.load(f)
         except (json.JSONDecodeError, IOError):
             price_history = {}

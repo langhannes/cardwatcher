@@ -4,14 +4,12 @@
 /pages
 /archive
 /temp
-/__pycache__
+/app/__pycache__
 deprecatedtools.py
 /flask_session
-changes.txt
+/changes/*
 /dist
-price_changes.txt
 /backups
 /build
 /.claude
 CLAUDE.md
-price_history.json

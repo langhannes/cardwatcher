@@ -3,8 +3,8 @@ import json
 from datetime import datetime
 import time
 import math
-from listing import Listing, Seller
-from language_libraries import *
+from app.listing import Listing, Seller
+from app.language_libraries import *
 
 class Page:
         
@@ -122,8 +122,7 @@ class Page:
             if not listing.ended:
                 prices.append(listing.price)
 
-        from watcherbase import watcherbase
-        self.price_average = watcherbase.calculate_price_average_robust(prices)
+        self.price_average = Page.calculate_price_average_robust(prices)
 
         return True
 
@@ -175,7 +174,7 @@ class Page:
             if not listing.ended:
                 prices.append(listing.price)
         from watcherbase import watcherbase
-        self.price_average = watcherbase.calculate_price_average_robust(prices)
+        self.price_average = self.calculate_price_average_robust(prices)
 
     def update_page(self,page):
         if self.canonical_name != page.canonical_name:
@@ -359,6 +358,62 @@ class Page:
                                 </label>
                             </div>"""
         return selection
+    
+    def calculate_price_average_robust(prices):
+        """
+        Calculate price average with IQR-based outlier filtering.
+        Falls back to simple mean for small datasets.
+
+        Uses the Interquartile Range (IQR) method to detect and filter outliers:
+        - Q1 = 25th percentile
+        - Q3 = 75th percentile
+        - IQR = Q3 - Q1
+        - Lower bound = Q1 - 1.5 * IQR
+        - Upper bound = Q3 + 1.5 * IQR
+        - Values outside these bounds are considered outliers and excluded
+
+        Args:
+            prices: List of prices (floats)
+
+        Returns:
+            float: Filtered average price
+        """
+        if not prices:
+            return 0.0
+
+        if len(prices) < 4:
+            # Too few data points for IQR, use simple mean
+            return sum(prices) / len(prices)
+
+        # Sort prices for quartile calculation
+        sorted_prices = sorted(prices)
+        n = len(sorted_prices)
+
+        # Calculate quartiles (using simple method)
+        q1_idx = n // 4
+        q3_idx = 3 * n // 4
+        q1 = sorted_prices[q1_idx]
+        q3 = sorted_prices[q3_idx]
+
+        # Calculate IQR and bounds
+        iqr = q3 - q1
+
+        # If IQR is 0 (all prices very similar), no filtering needed
+        if iqr == 0:
+            return sum(prices) / len(prices)
+
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+
+        # Filter outliers
+        filtered_prices = [p for p in prices if lower_bound <= p <= upper_bound]
+
+        # Ensure we don't filter out everything
+        if not filtered_prices:
+            # All were outliers? Use original data
+            return sum(prices) / len(prices)
+
+        return sum(filtered_prices) / len(filtered_prices)
 
 
     def build_graphs():

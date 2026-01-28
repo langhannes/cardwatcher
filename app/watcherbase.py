@@ -4,9 +4,9 @@ import os
 import shutil
 import json
 import time
-from page import Page
-from listing import Listing
-from language_libraries import *
+from app.page import Page
+from app.listing import Listing
+from app.language_libraries import *
 
 class watcherbase():
     
@@ -95,61 +95,7 @@ class watcherbase():
 
         return weighted_sum / total_weight
 
-    def calculate_price_average_robust(prices):
-        """
-        Calculate price average with IQR-based outlier filtering.
-        Falls back to simple mean for small datasets.
-
-        Uses the Interquartile Range (IQR) method to detect and filter outliers:
-        - Q1 = 25th percentile
-        - Q3 = 75th percentile
-        - IQR = Q3 - Q1
-        - Lower bound = Q1 - 1.5 * IQR
-        - Upper bound = Q3 + 1.5 * IQR
-        - Values outside these bounds are considered outliers and excluded
-
-        Args:
-            prices: List of prices (floats)
-
-        Returns:
-            float: Filtered average price
-        """
-        if not prices:
-            return 0.0
-
-        if len(prices) < 4:
-            # Too few data points for IQR, use simple mean
-            return sum(prices) / len(prices)
-
-        # Sort prices for quartile calculation
-        sorted_prices = sorted(prices)
-        n = len(sorted_prices)
-
-        # Calculate quartiles (using simple method)
-        q1_idx = n // 4
-        q3_idx = 3 * n // 4
-        q1 = sorted_prices[q1_idx]
-        q3 = sorted_prices[q3_idx]
-
-        # Calculate IQR and bounds
-        iqr = q3 - q1
-
-        # If IQR is 0 (all prices very similar), no filtering needed
-        if iqr == 0:
-            return sum(prices) / len(prices)
-
-        lower_bound = q1 - 1.5 * iqr
-        upper_bound = q3 + 1.5 * iqr
-
-        # Filter outliers
-        filtered_prices = [p for p in prices if lower_bound <= p <= upper_bound]
-
-        # Ensure we don't filter out everything
-        if not filtered_prices:
-            # All were outliers? Use original data
-            return sum(prices) / len(prices)
-
-        return sum(filtered_prices) / len(filtered_prices)
+    
 
     def get_price_at_time(listing, target_time):
         """
@@ -241,7 +187,7 @@ class watcherbase():
             historical_prices.append(historical_price)
 
         if historical_prices:
-            return watcherbase.calculate_price_average_robust(historical_prices)
+            return Page.calculate_price_average_robust(historical_prices)
         return None
 
     def calculate_historical_ended_average(page, days_ago):
@@ -398,7 +344,7 @@ class watcherbase():
 
         # Calculate current average (all active listings)
         current_prices = [l.price for l in page.listings if not l.ended]
-        current_avg = watcherbase.calculate_price_average_robust(current_prices) if current_prices else 0
+        current_avg = Page.calculate_price_average_robust(current_prices) if current_prices else 0
 
         # Count current available listings
         current_available = len(current_prices)
@@ -594,7 +540,7 @@ class watcherbase():
                 listing.canonical_name = page.canonical_name
                 page.listings.append(listing)
                 prices.append(listing.price)
-            page.price_average = watcherbase.calculate_price_average_robust(prices)
+            page.price_average = Page.calculate_price_average_robust(prices)
 
             # open the corresponding old page and compare it with the newly created one
             old_page = Page()
@@ -611,7 +557,7 @@ class watcherbase():
             # Calculate period-based price averages
             price_history[page.canonical_name] = watcherbase.calculate_all_period_averages(old_page)
         # print changes to files
-        with open("changes.txt", "r") as f:
+        with open("changes/changes.txt", "r") as f:
             old_changes = {}
             for line in f.read().split('\n'):
                 if len(line.split(" ")) < 2:
@@ -620,12 +566,12 @@ class watcherbase():
             for key, value in changes.items():
                 old_changes[key] = value
         f.close()
-        with open("changes.txt", "w") as f:
+        with open("changes/changes.txt", "w") as f:
             for key,value in old_changes.items():
                 f.write(key + " " + str(value) + "\n")
         f.close()
 
-        with open("price_changes.txt", "r") as f:
+        with open("changes/price_changes.txt", "r") as f:
             old_changes = {}
             for line in f.read().split('\n'):
                 if len(line.split(" ")) < 2:
@@ -634,16 +580,16 @@ class watcherbase():
             for key, value in price_changes.items():
                 old_changes[key] = value
         f.close()
-        with open("price_changes.txt", "w") as f:
+        with open("changes/price_changes.txt", "w") as f:
             for key,value in old_changes.items():
                 f.write(key + " " + str(value) + "\n")
         f.close()
 
         # Load existing price_history.json, merge with new data, and save
         existing_price_history = {}
-        if os.path.exists("price_history.json"):
+        if os.path.exists("changes/price_history.json"):
             try:
-                with open("price_history.json", "r", encoding="utf-8") as f:
+                with open("changes/price_history.json", "r", encoding="utf-8") as f:
                     existing_price_history = json.load(f)
             except (json.JSONDecodeError, IOError):
                 existing_price_history = {}
@@ -653,5 +599,5 @@ class watcherbase():
             existing_price_history[key] = value
 
         # Save updated price history
-        with open("price_history.json", "w", encoding="utf-8") as f:
+        with open("changes/price_history.json", "w", encoding="utf-8") as f:
             json.dump(existing_price_history, f, indent=2)
