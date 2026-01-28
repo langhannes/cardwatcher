@@ -95,5 +95,6 @@ location_to_english = { "Artikelstandort: Italien":"Item location: Italy","Item 
                         "Artikelstandort: Lettland":"Item location: Latvia","Item location: Latvia":"Item location: Latvia",
                         "Artikelstandort: Estland":"Item location: Estonia","Item location: Estonia":"Item location: Estonia",
                         "Artikelstandort: Ungarn":"Item location: Hungary","Item location: Hungary":"Item location: Hungary",
-                        "Artikelstandort: Island":"Item location: Iceland","Item location: Iceland":"Item location: Iceland"
+                        "Artikelstandort: Island":"Item location: Iceland","Item location: Iceland":"Item location: Iceland",
+                        "Artikelstandort: Tschechien":"Item location: Czech Republic","Item location: Czech Republic":"Item location: Czech Republic"
                        }

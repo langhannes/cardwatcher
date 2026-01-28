@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 import time
 import math
@@ -27,6 +28,8 @@ class Page:
         self.ydata = []
 
         self.loadMoreButton = False
+
+        self.isArchived = False
             
     def __str__(self):
         output = self.card
@@ -44,33 +47,135 @@ class Page:
         return output
 
     def save(self):
-        with open(os.path.join("pages",(self.canonical_name+".page")),'w',encoding="utf-8") as f:
-            f.write(str(self))
+        # Save in JSON format only
+        self.save_json()
+
+    def save_json(self):
+        """Save page in JSON format."""
+        folder = "archive" if self.isArchived else "pages"
+        filepath = os.path.join(folder, self.canonical_name + ".json")
+
+        page_data = {
+            'version': '1.0',
+            'card': self.card,
+            'set': self.set,
+            'canonical_name': self.canonical_name,
+            'image': self.image,
+            'languages': self.languages,
+            'only_germany': self.only_germany,
+            'available': self.available,
+            'sold': self.sold,
+            'inserted': self.inserted,
+            'listings': []
+        }
+
+        # Convert all listings to JSON
+        for listing in self.listings:
+            listing_data = listing.to_json()
+            page_data['listings'].append(listing_data)
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(page_data, f, indent=2, ensure_ascii=False)
+
+    def load_json(self, file):
+        """Load page from JSON format."""
+        self.isArchived = False
+        filepath = None
+
+        # Try pages directory first
+        pages_path = os.path.join("pages", os.path.basename(file))
+        if os.path.exists(pages_path):
+            filepath = pages_path
+        else:
+            # Try archive directory
+            archive_path = os.path.join("archive", os.path.basename(file))
+            if os.path.exists(archive_path):
+                filepath = archive_path
+                self.isArchived = True
+
+        if not filepath:
+            print("No JSON page found.")
+            return False
+
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Load page metadata
+        self.card = data.get('card', '')
+        self.set = data.get('set', '')
+        self.canonical_name = data.get('canonical_name', '')
+        self.image = data.get('image', '')
+        self.languages = data.get('languages', [])
+        self.only_germany = data.get('only_germany', False)
+        self.available = data.get('available', 0)
+
+        # Load listings
+        self.listings = []
+        prices = []
+
+        for listing_data in data.get('listings', []):
+            listing = Listing()
+            listing.from_json(listing_data)
+            listing.canonical_name = self.canonical_name
+            self.listings.append(listing)
+
+            if not listing.ended:
+                prices.append(listing.price)
+
+        from watcherbase import watcherbase
+        self.price_average = watcherbase.calculate_price_average_robust(prices)
+
+        return True
 
     def import_page(self,file):
-        try:
-            with open(file,'r',encoding='utf-8') as f:
-                lines = f.read()
-                first = True
+        # Try JSON format first (preferred)
+        json_file = os.path.basename(file) + '.json' if not file.endswith('.json') else os.path.basename(file)
+        json_pages_path = os.path.join("pages", json_file)
+        json_archive_path = os.path.join("archive", json_file)
 
-                for line in lines.split('\n'):
-                    if first:
-                        card_,set_,languages_,only_germany_,image_,available_ = line.split(',')
-                        self.card = card_
-                        self.set = set_
-                        self.languages = languages_[1:-1].split(';')
-                        self.only_germany = True if only_germany_ == "True" else "False"
-                        self.image = image_
-                        self.available = int(available_)
-                        first = False
-                        continue
-                    listing = Listing()
-                    listing.import_listing(line)
-                    listing.canonical_name = self.canonical_name
-                    self.listings.append(listing)
+        if os.path.exists(json_pages_path) or os.path.exists(json_archive_path):
+            # Use JSON format
+            if self.load_json(json_file):
+                return
+            else:
+                print("Failed to load JSON format, falling back to old format")
+
+        # Fall back to old format
+        lines = ""
+        first = True
+        self.isArchived = False
+        try:
+            with open(os.path.join("pages",os.path.basename(file)),'r',encoding='utf-8') as f:
+                lines = f.read()
         except FileNotFoundError:
-            print("No previous page found.")
-            return
+            try:
+                with open(os.path.join("archive",os.path.basename(file)),'r',encoding='utf-8') as f:
+                    lines = f.read()
+                    self.isArchived = True
+            except FileNotFoundError:
+                print("No previous page found.")
+                return
+
+        prices = []
+        for line in lines.split('\n'):
+            if first:
+                card_,set_,languages_,only_germany_,image_,available_ = line.split(',')
+                self.card = card_
+                self.set = set_
+                self.languages = languages_[1:-1].split(';')
+                self.only_germany = True if only_germany_ == "True" else "False"
+                self.image = image_
+                self.available = int(available_)
+                first = False
+                continue
+            listing = Listing()
+            listing.import_listing(line)
+            listing.canonical_name = self.canonical_name
+            self.listings.append(listing)
+            if not listing.ended:
+                prices.append(listing.price)
+        from watcherbase import watcherbase
+        self.price_average = watcherbase.calculate_price_average_robust(prices)
 
     def update_page(self,page):
         if self.canonical_name != page.canonical_name:
@@ -82,6 +187,8 @@ class Page:
         self.set = page.set
         self.canonical_name = page.canonical_name
         self.image = page.image
+        self.sold = 0
+        self.inserted = 0
 
         highest_price = page.listings[-1].price if len(page.listings) > 0 else 0
 
@@ -190,6 +297,13 @@ class Page:
         for language in page.languages:
             if language not in self.languages:
                 self.languages.append(language)
+
+        if "price_average" in self.__dict__:
+            self.price_change = page.price_average - self.price_average
+        else:
+            self.price_change = 0
+            
+        self.price_average = page.price_average
 
     def delete_listings(self,delete_list):
         print("delete_listings | delete: " + str(delete_list))

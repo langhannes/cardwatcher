@@ -1,0 +1,1113 @@
+{
+  "timestamp": "20260122_142251",
+  "duration_seconds": 8.84489,
+  "successful": [
+    {
+      "file": "OnePiece_Products_Booster-Boxes_Carrying-on-his-Will-Booster-Box-Non-English.page",
+      "old_size": 24434,
+      "new_size": 87771
+    },
+    {
+      "file": "OnePiece_Products_Booster-Boxes_The-Best-Vol2-Booster-Box-Non-English.page",
+      "old_size": 25655,
+      "new_size": 94721
+    },
+    {
+      "file": "OnePiece_Products_Promo-Products_1st-Anniversary-Set-English-Version.page",
+      "old_size": 15257,
+      "new_size": 56428
+    },
+    {
+      "file": "OnePiece_Products_Promo-Products_Chinese-Anniversary-Nami-Gift-Box.page",
+      "old_size": 2021,
+      "new_size": 6706
+    },
+    {
+      "file": "OnePiece_Products_Singles_Awakening-of-the-New-Era-Japanese_Nami-OP01-016.page",
+      "old_size": 32016,
+      "new_size": 136811
+    },
+    {
+      "file": "OnePiece_Products_Singles_Awakening-of-the-New-Era-Japanese_Uta-OP02-120.page",
+      "old_size": 25220,
+      "new_size": 107910
+    },
+    {
+      "file": "OnePiece_Products_Singles_Awakening-of-the-New-Era-Japanese_Yamato-OP01-121.page",
+      "old_size": 30235,
+      "new_size": 128987
+    },
+    {
+      "file": "OnePiece_Products_Singles_Bonds-of-Master-and-Disciple-Non-English_Jewelry-Bonney-OP12-118-V3.page",
+      "old_size": 6833,
+      "new_size": 26791
+    },
+    {
+      "file": "OnePiece_Products_Singles_Carrying-on-his-Will-Non-English_PortgasDAce-OP13-119-V3.page",
+      "old_size": 4294,
+      "new_size": 16757
+    },
+    {
+      "file": "OnePiece_Products_Singles_Carrying-on-his-Will-Non-English_Sabo-OP13-120-V3.page",
+      "old_size": 5157,
+      "new_size": 20213
+    },
+    {
+      "file": "OnePiece_Products_Singles_Emperors-in-the-New-World-Non-English_Boa-Hancock-OP07-051.page",
+      "old_size": 25851,
+      "new_size": 106144
+    },
+    {
+      "file": "OnePiece_Products_Singles_Emperors-in-the-New-World-Non-English_Nami-OP08-106.page",
+      "old_size": 15497,
+      "new_size": 63949
+    },
+    {
+      "file": "OnePiece_Products_Singles_Emperors-in-the-New-World-Non-English_Zoro-Juurou-OP05-067.page",
+      "old_size": 12425,
+      "new_size": 50211
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn-Japanese_Nami-OP01-016-V2.page",
+      "old_size": 38175,
+      "new_size": 156457
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn-Japanese_Roronoa-Zoro-OP01-001-V2.page",
+      "old_size": 34172,
+      "new_size": 134866
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn-Japanese_Yamato-OP01-121-V2.page",
+      "old_size": 30751,
+      "new_size": 124324
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournament-Promos-Japanese_Dracule-Mihawk-OP01-070.page",
+      "old_size": 13573,
+      "new_size": 54055
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournament-Promos-Japanese_Shanks-OP01-120.page",
+      "old_size": 9879,
+      "new_size": 38315
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Roronoa-Zoro-OP01-025.page",
+      "old_size": 24882,
+      "new_size": 98201
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Roronoa-Zoro-OP12-020-V1.page",
+      "old_size": 1496,
+      "new_size": 5520
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Roronoa-Zoro-ST12-008.page",
+      "old_size": 13542,
+      "new_size": 56693
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Yamato-OP01-121.page",
+      "old_size": 18558,
+      "new_size": 79319
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Azure-Seas-Seven-Asia-Region-Legal_Boa-Hancock-OP14-112-V3.page",
+      "old_size": 3274,
+      "new_size": 13358
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Azure-Seas-Seven-Asia-Region-Legal_Dracule-Mihawk-OP12-030.page",
+      "old_size": 4700,
+      "new_size": 19182
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Azure-Seas-Seven-Asia-Region-Legal_Kid-Killer-EB01-003.page",
+      "old_size": 3514,
+      "new_size": 14097
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Azure-Seas-Seven-Asia-Region-Legal_Perona-OP06-093.page",
+      "old_size": 3463,
+      "new_size": 14166
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Azure-Seas-Seven-Asia-Region-Legal_Sengoku-OP07-046.page",
+      "old_size": 3441,
+      "new_size": 14494
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Azure-Seas-Seven-Asia-Region-Legal_Sugar-OP10-065.page",
+      "old_size": 2198,
+      "new_size": 8892
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Best-Non-English_Don-PRB-Zoro-V3.page",
+      "old_size": 11223,
+      "new_size": 44564
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Boa-Hancock-OP07-051-V3.page",
+      "old_size": 699,
+      "new_size": 2631
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_MonkeyDLuffy-ST10-006-V1.page",
+      "old_size": 6545,
+      "new_size": 25376
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Nami-OP01-016-V3.page",
+      "old_size": 16682,
+      "new_size": 63775
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Roronoa-Zoro-OP01-025.page",
+      "old_size": 5643,
+      "new_size": 22702
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Sanji-OP01-013-V2.page",
+      "old_size": 6569,
+      "new_size": 25890
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Tony-TonyChopper-ST01-006-V3.page",
+      "old_size": 8173,
+      "new_size": 31562
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos_MonkeyDLuffy-ST21-014-V1.page",
+      "old_size": 33996,
+      "new_size": 128937
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain-Japanese_Roronoa-Zoro-OP06-118-V3.page",
+      "old_size": 34134,
+      "new_size": 136352
+    },
+    {
+      "file": "Pokemon_Products_Booster-Boxes_MEGA-Dream-ex-Booster-Box-Case.page",
+      "old_size": 3913,
+      "new_size": 14201
+    },
+    {
+      "file": "Pokemon_Products_Box-Sets_Pokemon-Card-Game-Classic.page",
+      "old_size": 27239,
+      "new_size": 101988
+    },
+    {
+      "file": "Pokemon_Products_Box-Sets_Pokemon-Center-Fukuoka-Special-Box.page",
+      "old_size": 16779,
+      "new_size": 64037
+    },
+    {
+      "file": "Pokemon_Products_Box-Sets_Pokemon-Center-Hiroshima-Special-Box.page",
+      "old_size": 28644,
+      "new_size": 105374
+    },
+    {
+      "file": "Pokemon_Products_Box-Sets_Pokemon-Center-Tohoku-Special-Box.page",
+      "old_size": 32994,
+      "new_size": 123428
+    },
+    {
+      "file": "Pokemon_Products_Singles_Bandit-Ring_Giratina-EX-V2-XY7091.page",
+      "old_size": 6252,
+      "new_size": 23943
+    },
+    {
+      "file": "Pokemon_Products_Singles_Bandit-Ring_Lugia-EX-V2.page",
+      "old_size": 6712,
+      "new_size": 26668
+    },
+    {
+      "file": "Pokemon_Products_Singles_BW-Promos_Giratina-EX.page",
+      "old_size": 334,
+      "new_size": 1105
+    },
+    {
+      "file": "Pokemon_Products_Singles_BW-Promos_Pikachu-V5.page",
+      "old_size": 7194,
+      "new_size": 27331
+    },
+    {
+      "file": "Pokemon_Products_Singles_BW-Promos_Rayquaza-EX.page",
+      "old_size": 531,
+      "new_size": 1846
+    },
+    {
+      "file": "Pokemon_Products_Singles_Emerald-Break_MRayquaza-EX-V2.page",
+      "old_size": 2475,
+      "new_size": 9534
+    },
+    {
+      "file": "Pokemon_Products_Singles_Gaia-Volcano_Teammates-V2.page",
+      "old_size": 647,
+      "new_size": 2473
+    },
+    {
+      "file": "Pokemon_Products_Singles_Hyper-Metal-Chain-Deck_Dialga-EX-V2-XYb019.page",
+      "old_size": 2108,
+      "new_size": 8230
+    },
+    {
+      "file": "Pokemon_Products_Singles_Inferno-X_Mega-Charizard-X-ex-V3-m2110.page",
+      "old_size": 54572,
+      "new_size": 205434
+    },
+    {
+      "file": "Pokemon_Products_Singles_Magma-Gang-VS-Aqua-Gang-Double-Crisis_Team-Aquas-Kyogre-EX-CP1006.page",
+      "old_size": 28036,
+      "new_size": 109091
+    },
+    {
+      "file": "Pokemon_Products_Singles_Magma-Gang-VS-Aqua-Gang-Double-Crisis_Team-Magmas-Groudon-EX-CP1015.page",
+      "old_size": 27028,
+      "new_size": 105600
+    },
+    {
+      "file": "Pokemon_Products_Singles_Phantom-Gate_Gengar-EX-V2.page",
+      "old_size": 5084,
+      "new_size": 20218
+    },
+    {
+      "file": "Pokemon_Products_Singles_Plasma-Gale_Charizard.page",
+      "old_size": 6378,
+      "new_size": 25302
+    },
+    {
+      "file": "Pokemon_Products_Singles_Plasma-Gale_Skyla.page",
+      "old_size": 3654,
+      "new_size": 13780
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rage-of-the-Broken-Heavens_Gyarados-EX-V2.page",
+      "old_size": 3117,
+      "new_size": 12321
+    },
+    {
+      "file": "Pokemon_Products_Singles_Red-Collection_N-V2.page",
+      "old_size": 2028,
+      "new_size": 7597
+    },
+    {
+      "file": "Pokemon_Products_Singles_Scarlet-Violet-Promos_Hiroshimas-Pikachu-SV-P261.page",
+      "old_size": 23778,
+      "new_size": 88539
+    },
+    {
+      "file": "Pokemon_Products_Singles_Scarlet-Violet-Promos_Tohokus-Pikachu-SV-P260.page",
+      "old_size": 23477,
+      "new_size": 90372
+    },
+    {
+      "file": "Pokemon_Products_Singles_SV-Black-Star-Promos_Mew-ex-SVP053.page",
+      "old_size": 94170,
+      "new_size": 393792
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Hex-Maniac-V2.page",
+      "old_size": 1592,
+      "new_size": 6126
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Karen-V2.page",
+      "old_size": 1006,
+      "new_size": 3777
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_N-V2.page",
+      "old_size": 2210,
+      "new_size": 8302
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Shauna-V2.page",
+      "old_size": 1728,
+      "new_size": 7044
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Yveltal-EX-V2.page",
+      "old_size": 3222,
+      "new_size": 11761
+    },
+    {
+      "file": "Pokemon_Products_Singles_Tidal-Storm_Kyogre-EX-V2.page",
+      "old_size": 4595,
+      "new_size": 18245
+    },
+    {
+      "file": "Pokemon_Products_Singles_Wild-Blaze_Charizard-EX-V2-XY2081.page",
+      "old_size": 14302,
+      "new_size": 55419
+    },
+    {
+      "file": "Pokemon_Products_Singles_Wild-Blaze_MCharizard-EX-V2.page",
+      "old_size": 2460,
+      "new_size": 8827
+    },
+    {
+      "file": "Pokemon_Products_Singles_Wild-Blaze_MCharizard-EX-V3.page",
+      "old_size": 3462,
+      "new_size": 13207
+    },
+    {
+      "file": "Pokemon_Products_Singles_Wild-Blaze_Pokemon-Center-Lady-V2.page",
+      "old_size": 3563,
+      "new_size": 12982
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Charizard-EX-V4-XY-P276.page",
+      "old_size": 11460,
+      "new_size": 43595
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Mega-Tokyos-Pikachu-V1-XY-P098.page",
+      "old_size": 33927,
+      "new_size": 132408
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Pikachu-V9.page",
+      "old_size": 8325,
+      "new_size": 30675
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Skyla.page",
+      "old_size": 1768,
+      "new_size": 7026
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Steven.page",
+      "old_size": 1154,
+      "new_size": 4463
+    },
+    {
+      "file": "Magic_Products_Booster-Boxes_Magic-The-Gathering-Avatar-The-Last-Airbender-Play-Booster-Box.page",
+      "old_size": 100049,
+      "new_size": 353126
+    },
+    {
+      "file": "OnePiece_Products_Singles_500-Years-into-the-Future-Japanese_Boa-Hancock-OP07-038-V2.page",
+      "old_size": 16116,
+      "new_size": 65786
+    },
+    {
+      "file": "OnePiece_Products_Singles_Awakening-of-the-New-Era-Japanese_MonkeyDLuffy-OP05-119-V3.page",
+      "old_size": 2080,
+      "new_size": 7964
+    },
+    {
+      "file": "OnePiece_Products_Singles_Awakening-of-the-New-Era-Japanese_Trafalgar-Law-OP05-069-V3.page",
+      "old_size": 6844,
+      "new_size": 27300
+    },
+    {
+      "file": "OnePiece_Products_Singles_Kingdoms-of-Intrigue-Japanese_EdwardNewgate-OP02-004.page",
+      "old_size": 8044,
+      "new_size": 33085
+    },
+    {
+      "file": "OnePiece_Products_Singles_Kingdoms-of-Intrigue-Japanese_Trafalgar-Law-OP01-047.page",
+      "old_size": 5786,
+      "new_size": 23846
+    },
+    {
+      "file": "OnePiece_Products_Singles_Kingdoms-of-Intrigue-Japanese_Yamato-OP04-112-V2.page",
+      "old_size": 8299,
+      "new_size": 34171
+    },
+    {
+      "file": "OnePiece_Products_Singles_Kingdoms-of-Intrigue_Sabo-OP04-083-V3.page",
+      "old_size": 38694,
+      "new_size": 152475
+    },
+    {
+      "file": "OnePiece_Products_Singles_Paramount-War_EdwardNewgate-OP02-004-V2.page",
+      "old_size": 55568,
+      "new_size": 225974
+    },
+    {
+      "file": "OnePiece_Products_Singles_Paramount-War_Smoker-OP02-093-V2.page",
+      "old_size": 66191,
+      "new_size": 270860
+    },
+    {
+      "file": "OnePiece_Products_Singles_Pillars-of-Strength_Charlotte-Cracker-OP03-108-V1.page",
+      "old_size": 97345,
+      "new_size": 402982
+    },
+    {
+      "file": "OnePiece_Products_Singles_Pillars-of-Strength_Charlotte-Cracker-OP03-108-V2.page",
+      "old_size": 77766,
+      "new_size": 312936
+    },
+    {
+      "file": "OnePiece_Products_Singles_Pillars-of-Strength_Charlotte-Katakuri-OP03-123-V1.page",
+      "old_size": 88113,
+      "new_size": 358395
+    },
+    {
+      "file": "OnePiece_Products_Singles_Promos_Yamato-P-008-V2.page",
+      "old_size": 21480,
+      "new_size": 86800
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn_Nami-OP01-016-V2.page",
+      "old_size": 115371,
+      "new_size": 470050
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn_Roronoa-Zoro-OP01-001-V2.page",
+      "old_size": 100579,
+      "new_size": 395848
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn_Roronoa-Zoro-OP01-025-V2.page",
+      "old_size": 111278,
+      "new_size": 443589
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn_Trafalgar-Law-OP01-002-V2.page",
+      "old_size": 102001,
+      "new_size": 401434
+    },
+    {
+      "file": "OnePiece_Products_Singles_Romance-Dawn_Yamato-OP01-121-V2.page",
+      "old_size": 111098,
+      "new_size": 452495
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournament-Promos-Japanese_Charlotte-Linlin-ST07-010.page",
+      "old_size": 9431,
+      "new_size": 38242
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournament-Promos-Japanese_Koby-OP02-098-V1.page",
+      "old_size": 15877,
+      "new_size": 66282
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournament-Promos-Japanese_Perona-OP06-093.page",
+      "old_size": 14785,
+      "new_size": 59673
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Koby-OP02-098-V7.page",
+      "old_size": 8946,
+      "new_size": 37641
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Queen-ST04-005.page",
+      "old_size": 17315,
+      "new_size": 70666
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Roronoa-Zoro-ST01-013-V2.page",
+      "old_size": 6741,
+      "new_size": 26514
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Shanks-OP01-120.page",
+      "old_size": 8928,
+      "new_size": 36063
+    },
+    {
+      "file": "OnePiece_Products_Singles_Special-Tournaments-Promos_Trafalgar-Law-ST10-010.page",
+      "old_size": 6178,
+      "new_size": 23945
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Best-Non-English_Don-PRB-Yamato-V3.page",
+      "old_size": 2200,
+      "new_size": 8650
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Best-Non-English_Don-PRB-Zoro-V2.page",
+      "old_size": 3007,
+      "new_size": 12497
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Best-Non-English_Yamato-OP01-121-V2.page",
+      "old_size": 3633,
+      "new_size": 14722
+    },
+    {
+      "file": "OnePiece_Products_Singles_The-Best-Non-English_Yamato-OP04-112.page",
+      "old_size": 2544,
+      "new_size": 10501
+    },
+    {
+      "file": "OnePiece_Products_Singles_Ultra-Deck-The-Three-Brothers-Japanese_Yamato-ST13-016-V2.page",
+      "old_size": 7936,
+      "new_size": 33310
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Nami-OP01-016-V4.page",
+      "old_size": 686,
+      "new_size": 2523
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Nami-OP01-016.page",
+      "old_size": 6029,
+      "new_size": 25874
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos-Japanese_Perona-OP01-077.page",
+      "old_size": 3382,
+      "new_size": 14096
+    },
+    {
+      "file": "OnePiece_Products_Singles_Unnumbered-Promos_Nefeltari-Vivi-ST01-009-V2.page",
+      "old_size": 43128,
+      "new_size": 172203
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain-Japanese_Charlotte-Linlin-OP03-114.page",
+      "old_size": 7491,
+      "new_size": 30822
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain-Japanese_Gecko-Moria-OP06-080-V2.page",
+      "old_size": 20198,
+      "new_size": 82353
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain-Japanese_Gecko-Moria-OP06-086-V2.page",
+      "old_size": 7699,
+      "new_size": 31131
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain-Japanese_Perona-OP06-093-V2.page",
+      "old_size": 9126,
+      "new_size": 37632
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain-Japanese_Roronoa-Zoro-OP06-118-V2.page",
+      "old_size": 14695,
+      "new_size": 59109
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain-Japanese_Yamato-OP06-022-V2.page",
+      "old_size": 21624,
+      "new_size": 89025
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain_Absalom-OP06-081-V2.page",
+      "old_size": 121930,
+      "new_size": 508775
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain_Borsalino-OP05-051.page",
+      "old_size": 29478,
+      "new_size": 123455
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain_Gecko-Moria-OP06-086-V1.page",
+      "old_size": 82764,
+      "new_size": 347491
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain_Roronoa-Zoro-OP06-118-V1.page",
+      "old_size": 69809,
+      "new_size": 290802
+    },
+    {
+      "file": "OnePiece_Products_Singles_Wings-of-the-Captain_Roronoa-Zoro-OP06-118-V3.page",
+      "old_size": 69421,
+      "new_size": 269083
+    },
+    {
+      "file": "Pokemon_Products_Singles_Ancient-Origins_Hex-Maniac-V2-AOR75a.page",
+      "old_size": 10774,
+      "new_size": 42787
+    },
+    {
+      "file": "Pokemon_Products_Singles_Awakening-Psychic-King_Alakazam-EX-V3-XY10088.page",
+      "old_size": 5964,
+      "new_size": 24001
+    },
+    {
+      "file": "Pokemon_Products_Singles_Awakening-Psychic-King_Altaria-EX-V2.page",
+      "old_size": 665,
+      "new_size": 2486
+    },
+    {
+      "file": "Pokemon_Products_Singles_Awakening-Psychic-King_Glaceon-EX-V2.page",
+      "old_size": 515,
+      "new_size": 1826
+    },
+    {
+      "file": "Pokemon_Products_Singles_Awakening-Psychic-King_Team-Rockets-Handiwork-V2.page",
+      "old_size": 419,
+      "new_size": 1244
+    },
+    {
+      "file": "Pokemon_Products_Singles_Awakening-Psychic-King_Umbreon-EX-V2.page",
+      "old_size": 1098,
+      "new_size": 4449
+    },
+    {
+      "file": "Pokemon_Products_Singles_Bandit-Ring_MRayquaza-EX.page",
+      "old_size": 8273,
+      "new_size": 31286
+    },
+    {
+      "file": "Pokemon_Products_Singles_Bandit-Ring_Tyranitar-EX-V2.page",
+      "old_size": 303,
+      "new_size": 1086
+    },
+    {
+      "file": "Pokemon_Products_Singles_Black-Collection_Reshiram-V2.page",
+      "old_size": 1489,
+      "new_size": 5424
+    },
+    {
+      "file": "Pokemon_Products_Singles_Blue-Shock_Brigette-V2.page",
+      "old_size": 1249,
+      "new_size": 4479
+    },
+    {
+      "file": "Pokemon_Products_Singles_Blue-Shock_Mewtwo-EX-V3.page",
+      "old_size": 2997,
+      "new_size": 11902
+    },
+    {
+      "file": "Pokemon_Products_Singles_Blue-Shock_MGlalie-EX-V2.page",
+      "old_size": 1870,
+      "new_size": 7725
+    },
+    {
+      "file": "Pokemon_Products_Singles_Blue-Shock_MMewtwo-EX-V2.page",
+      "old_size": 643,
+      "new_size": 2416
+    },
+    {
+      "file": "Pokemon_Products_Singles_BREAK-Starter-Pack_Articuno.page",
+      "old_size": 1189,
+      "new_size": 4526
+    },
+    {
+      "file": "Pokemon_Products_Singles_BREAK-Starter-Pack_Zapdos.page",
+      "old_size": 1267,
+      "new_size": 5040
+    },
+    {
+      "file": "Pokemon_Products_Singles_Brilliant-Stars_Charizard-V-V3-BRS154.page",
+      "old_size": 69828,
+      "new_size": 286729
+    },
+    {
+      "file": "Pokemon_Products_Singles_BW-Promos_Reshiram-EX.page",
+      "old_size": 2332,
+      "new_size": 9043
+    },
+    {
+      "file": "Pokemon_Products_Singles_Celebrations_Charizard-V2.page",
+      "old_size": 65862,
+      "new_size": 262666
+    },
+    {
+      "file": "Pokemon_Products_Singles_Cold-Flare_Altaria-BW6c065.page",
+      "old_size": 2107,
+      "new_size": 8437
+    },
+    {
+      "file": "Pokemon_Products_Singles_Cold-Flare_Bianca.page",
+      "old_size": 668,
+      "new_size": 2413
+    },
+    {
+      "file": "Pokemon_Products_Singles_Cold-Flare_Celebi-EX-V2.page",
+      "old_size": 4150,
+      "new_size": 16552
+    },
+    {
+      "file": "Pokemon_Products_Singles_Cruel-Traitor_Gardevoir-EX-V3.page",
+      "old_size": 551,
+      "new_size": 1841
+    },
+    {
+      "file": "Pokemon_Products_Singles_Cruel-Traitor_Pokemon-Ranger-V2.page",
+      "old_size": 667,
+      "new_size": 2468
+    },
+    {
+      "file": "Pokemon_Products_Singles_Dark-Rush_Darkrai-EX-V2-BW4072.page",
+      "old_size": 4738,
+      "new_size": 17763
+    },
+    {
+      "file": "Pokemon_Products_Singles_Dark-Rush_Gardevoir.page",
+      "old_size": 145,
+      "new_size": 416
+    },
+    {
+      "file": "Pokemon_Products_Singles_Dragon-Blade_Ho-Oh-EX-V2.page",
+      "old_size": 2008,
+      "new_size": 7765
+    },
+    {
+      "file": "Pokemon_Products_Singles_Dragon-Blade_Rayquaza-EX-V2.page",
+      "old_size": 2824,
+      "new_size": 11349
+    },
+    {
+      "file": "Pokemon_Products_Singles_Dragon-Blast_Mew-EX-V2.page",
+      "old_size": 3501,
+      "new_size": 12897
+    },
+    {
+      "file": "Pokemon_Products_Singles_Dragon-Blast_Rayquaza.page",
+      "old_size": 2174,
+      "new_size": 7589
+    },
+    {
+      "file": "Pokemon_Products_Singles_Emerald-Break_Rayquaza-EX-V2.page",
+      "old_size": 889,
+      "new_size": 3269
+    },
+    {
+      "file": "Pokemon_Products_Singles_Emerald-Break_VS-Seeker.page",
+      "old_size": 458,
+      "new_size": 1730
+    },
+    {
+      "file": "Pokemon_Products_Singles_Emerald-Break_Winona-V2.page",
+      "old_size": 1190,
+      "new_size": 4548
+    },
+    {
+      "file": "Pokemon_Products_Singles_Evolving-Skies_Umbreon-VMAX-V3.page",
+      "old_size": 45052,
+      "new_size": 174580
+    },
+    {
+      "file": "Pokemon_Products_Singles_EX-Battle-Boost_Reshiram-V2.page",
+      "old_size": 2195,
+      "new_size": 8086
+    },
+    {
+      "file": "Pokemon_Products_Singles_EX-Battle-Boost_Zekrom-V2.page",
+      "old_size": 2159,
+      "new_size": 7831
+    },
+    {
+      "file": "Pokemon_Products_Singles_EX-Legend-Maker_Mew-LM10.page",
+      "old_size": 44126,
+      "new_size": 184579
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Blastoise-EX-V2.page",
+      "old_size": 2738,
+      "new_size": 11425
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Brocks-Grit-V2-CP6100.page",
+      "old_size": 1336,
+      "new_size": 5382
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Charizard-EX-V2.page",
+      "old_size": 2781,
+      "new_size": 10356
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Dragonite-EX-V2-CP6098.page",
+      "old_size": 2081,
+      "new_size": 8247
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_MBlastoise-EX-V2.page",
+      "old_size": 3301,
+      "new_size": 13295
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_MCharizard-EX-V2.page",
+      "old_size": 2718,
+      "new_size": 10573
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Mistys-Determination-V2.page",
+      "old_size": 2784,
+      "new_size": 11029
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_MPidgeot-EX-V2.page",
+      "old_size": 2006,
+      "new_size": 8167
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_MVenusaur-EX-V2.page",
+      "old_size": 2790,
+      "new_size": 11185
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Pidgeot-EX-V2.page",
+      "old_size": 2491,
+      "new_size": 10155
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Pikachu-EX.page",
+      "old_size": 3063,
+      "new_size": 12223
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expansion-Pack-20th-Anniversary_Venusaur-EX-V2.page",
+      "old_size": 2793,
+      "new_size": 11083
+    },
+    {
+      "file": "Pokemon_Products_Singles_Expedition-Base-Set_Dragonite-EX9.page",
+      "old_size": 50138,
+      "new_size": 210193
+    },
+    {
+      "file": "Pokemon_Products_Singles_Fever-Burst-Fighter_Pokemon-Ranger-V2.page",
+      "old_size": 358,
+      "new_size": 1161
+    },
+    {
+      "file": "Pokemon_Products_Singles_Fever-Burst-Fighter_Steelix-EX-V2.page",
+      "old_size": 1527,
+      "new_size": 5920
+    },
+    {
+      "file": "Pokemon_Products_Singles_Fever-Burst-Fighter_Volcanion-EX-V2-XY11f055.page",
+      "old_size": 1559,
+      "new_size": 6002
+    },
+    {
+      "file": "Pokemon_Products_Singles_Fossil_Gengar-V1-FO5.page",
+      "old_size": 78345,
+      "new_size": 323974
+    },
+    {
+      "file": "Pokemon_Products_Singles_Gaia-Volcano_Primal-Groudon-EX-V2.page",
+      "old_size": 726,
+      "new_size": 2584
+    },
+    {
+      "file": "Pokemon_Products_Singles_McDonalds-Original-Minimum-Pack_Lightning-Energy.page",
+      "old_size": 3718,
+      "new_size": 14070
+    },
+    {
+      "file": "Pokemon_Products_Singles_Megalo-Cannon_Iris-V2.page",
+      "old_size": 873,
+      "new_size": 3624
+    },
+    {
+      "file": "Pokemon_Products_Singles_Megalo-Cannon_Rare-Candy.page",
+      "old_size": 307,
+      "new_size": 1084
+    },
+    {
+      "file": "Pokemon_Products_Singles_Mystery-of-the-Fossils_Gengar.page",
+      "old_size": 31223,
+      "new_size": 128996
+    },
+    {
+      "file": "Pokemon_Products_Singles_Phantom-Forces_Dialga-EX-PHF122.page",
+      "old_size": 22551,
+      "new_size": 88864
+    },
+    {
+      "file": "Pokemon_Products_Singles_Phantom-Gate_MGengar-EX-V2.page",
+      "old_size": 1829,
+      "new_size": 6710
+    },
+    {
+      "file": "Pokemon_Products_Singles_Plasma-Gale_Articuno-EX-V2.page",
+      "old_size": 2019,
+      "new_size": 7947
+    },
+    {
+      "file": "Pokemon_Products_Singles_Plasma-Gale_Blastoise.page",
+      "old_size": 867,
+      "new_size": 3123
+    },
+    {
+      "file": "Pokemon_Products_Singles_Plasma-Gale_Random-Receiver.page",
+      "old_size": 161,
+      "new_size": 440
+    },
+    {
+      "file": "Pokemon_Products_Singles_Pokemon-Card-Game-Classic-Charizard-Ho-Oh-ex-Deck_Charizard-CLL003.page",
+      "old_size": 29510,
+      "new_size": 117935
+    },
+    {
+      "file": "Pokemon_Products_Singles_Psycho-Drive_Mewtwo-EX-V2.page",
+      "old_size": 5456,
+      "new_size": 21035
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rage-of-the-Broken-Heavens_Darkrai-EX-V2.page",
+      "old_size": 504,
+      "new_size": 1827
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rage-of-the-Broken-Heavens_Espeon-EX-V2.page",
+      "old_size": 1663,
+      "new_size": 6712
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rage-of-the-Broken-Heavens_Gyarados-EX-V3.page",
+      "old_size": 4799,
+      "new_size": 18910
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rage-of-the-Broken-Heavens_Scizor-EX-V2.page",
+      "old_size": 855,
+      "new_size": 3201
+    },
+    {
+      "file": "Pokemon_Products_Singles_Red-Collection_Meowth.page",
+      "old_size": 1491,
+      "new_size": 5825
+    },
+    {
+      "file": "Pokemon_Products_Singles_Red-Flash_MMewtwo-EX-V2.page",
+      "old_size": 941,
+      "new_size": 3704
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rising-Fist_Heracross-EX-V2.page",
+      "old_size": 2178,
+      "new_size": 8570
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rising-Fist_Korrina-V2.page",
+      "old_size": 950,
+      "new_size": 3807
+    },
+    {
+      "file": "Pokemon_Products_Singles_Rising-Fist_MLucario-EX-V2.page",
+      "old_size": 609,
+      "new_size": 2390
+    },
+    {
+      "file": "Pokemon_Products_Singles_Spiral-Force_Ultra-Ball.page",
+      "old_size": 615,
+      "new_size": 2384
+    },
+    {
+      "file": "Pokemon_Products_Singles_Team-Plasma-Battle-Gift-Set_Darkrai.page",
+      "old_size": 3277,
+      "new_size": 12876
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Aegislash-EX-V2-BXY179.page",
+      "old_size": 787,
+      "new_size": 2711
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Blacksmith-V2.page",
+      "old_size": 732,
+      "new_size": 2529
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Delinquent-V2.page",
+      "old_size": 847,
+      "new_size": 3235
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Jolteon-EX-V2.page",
+      "old_size": 1590,
+      "new_size": 5653
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_MCamerupt-EX-V2.page",
+      "old_size": 174,
+      "new_size": 464
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_MLucario-EX-V2.page",
+      "old_size": 649,
+      "new_size": 2450
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_MManectric-EX-V2.page",
+      "old_size": 339,
+      "new_size": 1138
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Shaymin-EX-V2-BXY188.page",
+      "old_size": 716,
+      "new_size": 2639
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Team-Flare-Grunt-V2.page",
+      "old_size": 692,
+      "new_size": 2513
+    },
+    {
+      "file": "Pokemon_Products_Singles_The-Best-of-XY_Zygarde-EX-V2.page",
+      "old_size": 527,
+      "new_size": 1911
+    },
+    {
+      "file": "Pokemon_Products_Singles_Theater-Limited-VS-Pack_Alto-Mares-Latias.page",
+      "old_size": 7223,
+      "new_size": 27379
+    },
+    {
+      "file": "Pokemon_Products_Singles_Theater-Limited-VS-Pack_Alto-Mares-Latios.page",
+      "old_size": 4716,
+      "new_size": 18252
+    },
+    {
+      "file": "Pokemon_Products_Singles_Thunder-Knuckle_Garchomp.page",
+      "old_size": 606,
+      "new_size": 1972
+    },
+    {
+      "file": "Pokemon_Products_Singles_Thunder-Knuckle_Professor-Juniper.page",
+      "old_size": 2274,
+      "new_size": 8746
+    },
+    {
+      "file": "Pokemon_Products_Singles_White-Collection_Pikachu.page",
+      "old_size": 775,
+      "new_size": 3046
+    },
+    {
+      "file": "Pokemon_Products_Singles_White-Collection_Zekrom-V2.page",
+      "old_size": 1771,
+      "new_size": 7150
+    },
+    {
+      "file": "Pokemon_Products_Singles_Wild-Blaze_Lysandre-V2-XY2085.page",
+      "old_size": 671,
+      "new_size": 2513
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Black-Star-Promos_Champions-Festival-V3-XYPR176.page",
+      "old_size": 8939,
+      "new_size": 33981
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Pikachu-V12.page",
+      "old_size": 9494,
+      "new_size": 37851
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Professor-Sycamore-V2.page",
+      "old_size": 490,
+      "new_size": 1786
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Rayquaza-EX-V1.page",
+      "old_size": 10527,
+      "new_size": 40989
+    },
+    {
+      "file": "Pokemon_Products_Singles_XY-Promos_Rayquaza-V1-XY-P100.page",
+      "old_size": 5049,
+      "new_size": 20107
+    }
+  ],
+  "failed": [],
+  "warnings": []
+}

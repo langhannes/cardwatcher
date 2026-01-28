@@ -75,6 +75,13 @@ CardWatcher
 	</div>
 	</a>
 	<div class="align-self-end mb-md-1">
+		<a href="/?name={{ page_name }}&archive=toggle" class="btn btn-sm {% if is_archived %}btn-success{% else %}btn-secondary{% endif %}" title="{% if is_archived %}Unarchive this page{% else %}Archive this page{% endif %}">
+			{% if is_archived %}
+				Unarchive
+			{% else %}
+				Archive
+			{% endif %}
+		</a>
 	</div>
 </div>
 
@@ -747,12 +754,15 @@ CardWatcher
 		var firstDate = new Date(data[0][0].split('.').reverse().join('-'));
 		var current_index = 0;
 		var date_at_index = new Date(data[0][0].split('.').reverse().join('-'));
+		date_at_index.setHours(1);
 		for (var i = firstDate; i <= currentDate; i.setDate(i.getDate()+1)){
+			i.setHours(1);
 			var sum = 0;
 			var num = 0;
 			console.log("i: " + i);
-			console.log("date_at_index: " + date_at_index);
+			console.log("date_at_index: " + current_index + " -> " + date_at_index);
 			while (date_at_index.getTime() === i.getTime()){
+				console.log("found common date");
 				sum += data[current_index][1];
 				num++;
 				current_index++;
@@ -761,7 +771,7 @@ CardWatcher
 					break;
 				}
 				date_at_index = new Date(data[current_index][0].split('.').reverse().join('-'));
-				console.log("date_at_index: " + date_at_index);
+				date_at_index.setHours(1);
 			}
 			var day = i.getDate(); // Returns the day of the month (1-31)
 			var month = i.getMonth() + 1; // Returns the month (0-11), so we add 1 to get the correct month

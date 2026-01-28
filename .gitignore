@@ -2,8 +2,15 @@
 *.page
 /downloads
 /pages
+/archive
 /temp
 /__pycache__
 deprecatedtools.py
 /flask_session
 changes.txt
+/dist
+price_changes.txt
+/backups
+/build
+/.claude
+CLAUDE.md
