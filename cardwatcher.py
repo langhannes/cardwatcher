@@ -6,29 +6,19 @@ import watchersearch
 import autogui
 
 # TODO:
-#  Generell:
+#  Important:
 #   - Button to stop "update all"
+#  Generell:
 #   - Graphen überarbeiten
 #       - Buttons für Zeitraum: Month, 6 Months, All Time
 #   - Extra update button for Page
-#   - Make the quantity change also permanently visible
-#       - how? new ended listing that shows the quantity decrease?
-#       - how do we keep that ended listing?
-#           - what if it gets relisted?
-#       - remember all quantity changes like the price changes, in a list?
+#   - (Make the quantity change also permanently visible) 
 #   - include quantity changes in the price graph
 #   - Show date when hovering over price change
 #   - multithread the import function
 #       - make import run in the background
-#       - lock for changes.txt file
-#   - add button to blanko.htm: "archive/unarchive"
-#       - simply move file from one folder to another
-#       - current solution: just move file to "archive" folder
-#   - add progress bar to update_all_pages_old()
-#   - define regions for autogui to find buttons faster
-#   - make autogui check if its still inside cardmarket
-#   - add time threshold for when a listing is counted as "relisted"
-#       - change old listings seller name to some special character
+#       - lock for changes file
+#   - keep deleted listings around to not import them again?
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'your_secret_key'
