@@ -550,8 +550,6 @@ class watcherbase():
             old_page.save()
             print("import_all_pages | page saved under " + os.path.join("pages",(old_page.canonical_name+".json")))
             watcherbase.delete_download(file_name)
-            print(old_page.inserted)
-            print(old_page.sold)
             changes[page.canonical_name] = str(old_page.inserted) + "/" + str(old_page.sold)
             price_changes[page.canonical_name] = str(old_page.price_average) + "/" + str(old_page.price_change)
             # Calculate period-based price averages

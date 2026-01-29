@@ -23,6 +23,7 @@ class DownloadStatus(Enum):
     RUNNING = "running"
     STOPPING = "stopping"
     WAITING = "waiting"
+    IMPORTING = "importing"
 
 
 class DownloadManager:
@@ -118,18 +119,26 @@ class DownloadManager:
         driver = None
 
         try:
-            # Get list of pages to download
-            page_files = [f for f in os.listdir("pages") if f.endswith(".json")]
+            # Get list of pages to download with their modification times
+            page_files = []
+            for f in os.listdir("pages"):
+                if f.endswith(".json"):
+                    filepath = os.path.join("pages", f)
+                    mtime = os.path.getmtime(filepath)
+                    page_files.append((f, mtime))
 
             if not page_files:
                 self._last_error = "No pages found in pages/ directory"
                 return
 
+            # Sort by modification time (oldest first)
+            page_files.sort(key=lambda x: x[1])
+
             # Check which pages have already been downloaded
             already_downloaded = get_already_downloaded()
             pages_to_download = []
 
-            for page in page_files:
+            for page, mtime in page_files:
                 page_name_no_ext = page[:-5]
                 if page_name_no_ext in already_downloaded:
                     self._skipped_pages += 1
@@ -180,6 +189,16 @@ class DownloadManager:
                     self._completed_pages += 1
                     counter += 1
                     i += 1
+
+                    # Import immediately after successful download
+                    self._status = DownloadStatus.IMPORTING
+                    self._current_page = "Importing downloaded pages..."
+                    try:
+                        watcherbase.import_all_pages()
+                    except Exception as e:
+                        print(f"[WARNING] Import failed: {e}")
+                    self._status = DownloadStatus.RUNNING
+
                 elif result == "invalid_session":
                     # Retry after restarting browser
                     try:
@@ -210,14 +229,6 @@ class DownloadManager:
                         self._wait_remaining -= 1
 
                     self._status = DownloadStatus.RUNNING
-
-            # Import downloaded pages
-            if self._completed_pages > 0 and not self._stop_requested:
-                self._current_page = "Importing downloaded pages..."
-                try:
-                    watcherbase.import_all_pages()
-                except Exception as e:
-                    self._last_error = f"Import failed: {str(e)}"
 
         except Exception as e:
             self._last_error = str(e)

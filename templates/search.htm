@@ -162,7 +162,7 @@ function updateUI(data) {
 	const statusText = document.getElementById('downloadStatus');
 	const waitTimer = document.getElementById('waitTimer');
 
-	const isRunning = data.status === 'running' || data.status === 'waiting' || data.status === 'stopping';
+	const isRunning = data.status === 'running' || data.status === 'waiting' || data.status === 'stopping' || data.status === 'importing';
 
 	startBtn.style.display = isRunning ? 'none' : 'inline-block';
 	stopBtn.style.display = isRunning ? 'inline-block' : 'none';
@@ -207,6 +207,10 @@ function updateUI(data) {
 	} else if (data.status === 'stopping') {
 		statusText.textContent = 'Stopping...';
 		statusText.style.color = '#dc3545';
+		waitTimer.style.display = 'none';
+	} else if (data.status === 'importing') {
+		statusText.textContent = 'Importing...';
+		statusText.style.color = '#17a2b8';
 		waitTimer.style.display = 'none';
 	}
 }
