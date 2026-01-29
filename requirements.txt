@@ -5,16 +5,9 @@ Flask-Session==0.8.0
 # HTML parsing
 beautifulsoup4==4.12.3
 
-# Browser automation (legacy PyAutoGUI approach)
-pyautogui==0.9.54
-pyperclip==1.9.0
-
-# Browser automation (Selenium approach)
+# Browser automation (Selenium)
 undetected-chromedriver==3.5.5
 selenium==4.40.0
 
 # Progress bars and UI
 tqdm==4.67.1
-
-# Note: selenium is automatically installed with undetected-chromedriver,
-# but listed explicitly for clarity

@@ -3,7 +3,6 @@ from flask_session import Session
 from app.language_libraries import *
 from app.watcherbase import watcherbase
 import app.watchersearch as watchersearch
-import app.autogui as autogui
 from app.download_manager import download_manager
 import logging
 
@@ -11,21 +10,6 @@ import logging
 class StatusFilter(logging.Filter):
     def filter(self, record):
         return '/api/download/status' not in record.getMessage()
-
-# TODO:
-#  Important:
-#   - Button to stop "update all"
-#  Generell:
-#   - Graphen überarbeiten
-#       - Buttons für Zeitraum: Month, 6 Months, All Time
-#   - Extra update button for Page
-#   - (Make the quantity change also permanently visible) 
-#   - include quantity changes in the price graph
-#   - Show date when hovering over price change
-#   - multithread the import function
-#       - make import run in the background
-#       - lock for changes file
-#   - keep deleted listings around to not import them again?
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -38,12 +22,6 @@ logging.getLogger('werkzeug').addFilter(StatusFilter())
 @app.route('/', methods=['GET','POST'])
 def cardwatcher():
     # methods for search site
-    if request.args.get('update','') == "true":
-        autogui.update_all_pages_old()
-        return redirect('/')
-        #watcherbase.import_all_pages()
-        #search = watchersearch.build_search()
-        #return render_template('search.htm',search_elements=search)
     if request.args.get('searchString',''):
         print("cardwatcher | search: " +request.args.get('searchString',''))
         page = watcherbase.import_all_pages()
@@ -118,6 +96,6 @@ def download_status():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5001)
 
 

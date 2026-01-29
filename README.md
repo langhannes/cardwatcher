@@ -2,6 +2,8 @@
 
 A Flask web application for tracking CardMarket trading card listings over time. Monitor price changes, new listings, sold items, and relisting activity for your favorite cards.
 
+![Search View](image-files/main-page.jpeg)
+
 ## Features
 
 - **Price Tracking**: Track average prices and price changes over time (1 week, 1 month, 2 months, 6 months)
@@ -50,7 +52,6 @@ A Flask web application for tracking CardMarket trading card listings over time.
 ```
 cardmarket/
 ├── app/                      # Core application modules
-│   ├── autogui.py           # Legacy PyAutoGUI automation (deprecated)
 │   ├── download_manager.py  # Background download manager for web UI
 │   ├── language_libraries.py # Language/country mappings and flag sprites
 │   ├── listing.py           # Listing class - represents a single seller listing
@@ -82,7 +83,7 @@ cardmarket/
 python cardwatcher.py
 ```
 
-The application runs at `http://localhost:5000`
+The application runs at `http://localhost:5001`
 
 ### Adding Cards to Track
 
@@ -98,7 +99,7 @@ To start tracking a new card, you need to manually download it once:
 
 3. **Save the page** - Press `Ctrl+S` and save as "Webpage, Complete" into the `downloads/` folder. The filename doesn't matter - the app extracts the card identity from the HTML content.
 
-4. **Import the card** - Open the web application (`http://localhost:5000`) - it will automatically detect and import files from `downloads/`
+4. **Import the card** - Open the web application (`http://localhost:5001`) - it will automatically detect and import files from `downloads/`
 
 The card will now appear in your gallery and a `.json` file will be created in `pages/` with the correct naming convention (e.g., `Pokemon_Products_Singles_Base-Set_Charizard.json`).
 
@@ -106,7 +107,7 @@ The card will now appear in your gallery and a `.json` file will be created in `
 
 Once cards are set up, you can update them directly from the web interface:
 
-1. Open the web application (`http://localhost:5000`)
+1. Open the web application (`http://localhost:5001`)
 2. Click the **Start Download** button in the control bar below the search
 3. The browser will open minimized and automatically download all tracked pages
 4. Progress is shown in real-time with a progress bar
@@ -151,6 +152,9 @@ You can also manually update cards the same way you added them:
 - Green badges show newly added listings, red badges show removed/sold listings
 
 **Card Detail View:**
+
+![Card Detail View](image-files/individual-page.jpeg)
+
 - Click any card to see all listings
 - View individual seller prices, conditions, and languages
 - See price history per listing
