@@ -57,7 +57,7 @@ A Flask web application for tracking CardMarket trading card listings over time.
    The directory structure should look like:
    ```
    parent/
-   ├── cardmarket/          (this repo)
+   ├── cardwatcher/         (this repo)
    └── cardwatcher-data/    (data repo)
    ```
 
@@ -67,24 +67,24 @@ A Flask web application for tracking CardMarket trading card listings over time.
 
 ```
 parent/
-├── cardmarket/                   # Application repo
+├── cardwatcher/                  # Application repo
 │   ├── app/                      # Core application modules
-│   │   ├── config.py            # Data directory configuration
-│   │   ├── download_manager.py  # Background download manager for web UI
+│   │   ├── config.py             # Data directory configuration
+│   │   ├── download_manager.py   # Background download manager for web UI
 │   │   ├── language_libraries.py # Language/country mappings and flag sprites
-│   │   ├── listing.py           # Listing class - represents a single seller listing
-│   │   ├── page.py              # Page class - represents a tracked card with all listings
+│   │   ├── listing.py            # Listing class - represents a single seller listing
+│   │   ├── page.py               # Page class - represents a tracked card with all listings
 │   │   ├── selenium_downloader.py # Automated downloader using Selenium
-│   │   ├── watcherbase.py       # Core utilities for importing and processing pages
-│   │   └── watchersearch.py     # Search view HTML generation
+│   │   ├── watcherbase.py        # Core utilities for importing and processing pages
+│   │   └── watchersearch.py      # Search view HTML generation
 │   ├── downloads/                # Temporary folder for downloaded HTML files
 │   ├── static/                   # CSS, sprites, JS assets
 │   ├── templates/                # Jinja2 HTML templates
-│   │   ├── blanko.htm           # Individual card page template
-│   │   └── search.htm           # Search/gallery view template
-│   ├── cardwatcher.py           # Flask application entry point
-│   ├── requirements.txt         # Python dependencies
-│   └── README.md                # This file
+│   │   ├── blanko.htm            # Individual card page template
+│   │   └── search.htm            # Search/gallery view template
+│   ├── cardwatcher.py            # Flask application entry point
+│   ├── requirements.txt          # Python dependencies
+│   └── README.md                 # This file
 │
 └── cardwatcher-data/             # Data repo (separate git repository)
     ├── pages/                    # Active card tracking data (JSON files)
