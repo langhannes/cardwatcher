@@ -16,6 +16,7 @@ from app.selenium_downloader import (
     download_page_with_selenium
 )
 from app.watcherbase import watcherbase
+from app.config import PAGES_DIR
 
 
 class DownloadStatus(Enum):
@@ -121,9 +122,9 @@ class DownloadManager:
         try:
             # Get list of pages to download with their modification times
             page_files = []
-            for f in os.listdir("pages"):
+            for f in os.listdir(PAGES_DIR):
                 if f.endswith(".json"):
-                    filepath = os.path.join("pages", f)
+                    filepath = os.path.join(PAGES_DIR, f)
                     mtime = os.path.getmtime(filepath)
                     page_files.append((f, mtime))
 

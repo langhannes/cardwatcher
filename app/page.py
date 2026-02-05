@@ -5,6 +5,7 @@ import time
 import math
 from app.listing import Listing, Seller
 from app.language_libraries import *
+from app.config import PAGES_DIR, ARCHIVE_DIR
 
 class Page:
         
@@ -52,7 +53,7 @@ class Page:
 
     def save_json(self):
         """Save page in JSON format."""
-        folder = "archive" if self.isArchived else "pages"
+        folder = ARCHIVE_DIR if self.isArchived else PAGES_DIR
         filepath = os.path.join(folder, self.canonical_name + ".json")
 
         page_data = {
@@ -83,12 +84,12 @@ class Page:
         filepath = None
 
         # Try pages directory first
-        pages_path = os.path.join("pages", os.path.basename(file))
+        pages_path = os.path.join(PAGES_DIR, os.path.basename(file))
         if os.path.exists(pages_path):
             filepath = pages_path
         else:
             # Try archive directory
-            archive_path = os.path.join("archive", os.path.basename(file))
+            archive_path = os.path.join(ARCHIVE_DIR, os.path.basename(file))
             if os.path.exists(archive_path):
                 filepath = archive_path
                 self.isArchived = True
@@ -104,7 +105,11 @@ class Page:
         self.card = data.get('card', '')
         self.set = data.get('set', '')
         self.canonical_name = data.get('canonical_name', '')
-        self.image = data.get('image', '')
+        image = data.get('image', '')
+        # Remap old image path format to new
+        if image.startswith("static/Blanko/images/"):
+            image = "data/images/" + image[len("static/Blanko/images/"):]
+        self.image = image
         self.languages = data.get('languages', [])
         self.only_germany = data.get('only_germany', False)
         self.available = data.get('available', 0)
@@ -129,8 +134,8 @@ class Page:
     def import_page(self,file):
         # Try JSON format first (preferred)
         json_file = os.path.basename(file) + '.json' if not file.endswith('.json') else os.path.basename(file)
-        json_pages_path = os.path.join("pages", json_file)
-        json_archive_path = os.path.join("archive", json_file)
+        json_pages_path = os.path.join(PAGES_DIR, json_file)
+        json_archive_path = os.path.join(ARCHIVE_DIR, json_file)
 
         if os.path.exists(json_pages_path) or os.path.exists(json_archive_path):
             # Use JSON format
@@ -144,11 +149,11 @@ class Page:
         first = True
         self.isArchived = False
         try:
-            with open(os.path.join("pages",os.path.basename(file)),'r',encoding='utf-8') as f:
+            with open(os.path.join(PAGES_DIR,os.path.basename(file)),'r',encoding='utf-8') as f:
                 lines = f.read()
         except FileNotFoundError:
             try:
-                with open(os.path.join("archive",os.path.basename(file)),'r',encoding='utf-8') as f:
+                with open(os.path.join(ARCHIVE_DIR,os.path.basename(file)),'r',encoding='utf-8') as f:
                     lines = f.read()
                     self.isArchived = True
             except FileNotFoundError:

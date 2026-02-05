@@ -7,6 +7,7 @@ import time
 from app.page import Page
 from app.listing import Listing
 from app.language_libraries import *
+from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR
 
 class watcherbase():
     
@@ -399,7 +400,7 @@ class watcherbase():
     def get_page(page_name):
         active_page = Page()
         active_page.canonical_name = page_name[:-5]
-        active_page.import_page(os.path.join("pages",page_name))
+        active_page.import_page(os.path.join(PAGES_DIR,page_name))
         return active_page
 
     def toggle_archive(page_name):
@@ -414,8 +415,8 @@ class watcherbase():
         Returns:
             bool: True if archived, False if unarchived
         """
-        pages_path = os.path.join("pages", page_name)
-        archive_path = os.path.join("archive", page_name)
+        pages_path = os.path.join(PAGES_DIR, page_name)
+        archive_path = os.path.join(ARCHIVE_DIR, page_name)
 
         # Check if file is currently in pages/ (active)
         if os.path.exists(pages_path):
@@ -440,11 +441,15 @@ class watcherbase():
             shutil.copy2(path, new_path)
         except Exception as e:
             print("save_image: ERROR: " + str(e))
+        print("watcherbase.save_image | new image saved under " + new_path)
 
     def import_all_pages():
         changes = {}
         price_changes = {}
         price_history = {}
+        if not os.path.isdir("downloads"):
+            print("watcherbase | no downloads folder found")
+            return
         file_list = os.listdir("downloads")
         file_info_list = [(file_name, os.path.getmtime(os.path.join("downloads",file_name))) for file_name in file_list if file_name.lower().endswith(".htm")]
         sorted_file_info_list = sorted(file_info_list, key=lambda x: x[1])
@@ -454,7 +459,7 @@ class watcherbase():
             with open(os.path.join("downloads",file_name),'r',encoding="utf-8") as f:
                 content = f.read()
 
-            parsed_html = BeautifulSoup(content)
+            parsed_html = BeautifulSoup(content,features="lxml")
             if not parsed_html.body:
                 watcherbase.delete_download(file_name)
                 print("import_all_pages | no html found")
@@ -508,9 +513,9 @@ class watcherbase():
                 image_path = card_slideshow.find_all('div',attrs={'class':'slide'})[1].find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
             else:
                 image_path = parsed_html.body.find('section',attrs={'id':'image'}).find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
-            page.image = "static/Blanko/images/" + (page.canonical_name) + ".jpg" 
-            watcherbase.save_image(os.path.join("downloads",image_path),page.image)
-            print("import_all_pages | image saved under " + page.image)
+            page.image = "data/images/" + (page.canonical_name) + ".jpg"
+            image_dest = os.path.join(IMAGES_DIR, page.canonical_name + ".jpg")
+            watcherbase.save_image(os.path.join("downloads",image_path), image_dest)
             
             # get the set the product is from    
             page.set = parsed_html.body.find('div',attrs={'class':'page-title-container'}).find('h1').find('span').text.replace('Ã©','e')
@@ -548,14 +553,14 @@ class watcherbase():
             old_page.import_page(old_page.canonical_name+".json")
             old_page.update_page(page)
             old_page.save()
-            print("import_all_pages | page saved under " + os.path.join("pages",(old_page.canonical_name+".json")))
+            print("import_all_pages | page saved under " + os.path.join(PAGES_DIR,(old_page.canonical_name+".json")))
             watcherbase.delete_download(file_name)
             changes[page.canonical_name] = str(old_page.inserted) + "/" + str(old_page.sold)
             price_changes[page.canonical_name] = str(old_page.price_average) + "/" + str(old_page.price_change)
             # Calculate period-based price averages
             price_history[page.canonical_name] = watcherbase.calculate_all_period_averages(old_page)
         # print changes to files
-        with open("changes/changes.txt", "r") as f:
+        with open(os.path.join(CHANGES_DIR, "changes.txt"), "r") as f:
             old_changes = {}
             for line in f.read().split('\n'):
                 if len(line.split(" ")) < 2:
@@ -564,12 +569,12 @@ class watcherbase():
             for key, value in changes.items():
                 old_changes[key] = value
         f.close()
-        with open("changes/changes.txt", "w") as f:
+        with open(os.path.join(CHANGES_DIR, "changes.txt"), "w") as f:
             for key,value in old_changes.items():
                 f.write(key + " " + str(value) + "\n")
         f.close()
 
-        with open("changes/price_changes.txt", "r") as f:
+        with open(os.path.join(CHANGES_DIR, "price_changes.txt"), "r") as f:
             old_changes = {}
             for line in f.read().split('\n'):
                 if len(line.split(" ")) < 2:
@@ -578,16 +583,16 @@ class watcherbase():
             for key, value in price_changes.items():
                 old_changes[key] = value
         f.close()
-        with open("changes/price_changes.txt", "w") as f:
+        with open(os.path.join(CHANGES_DIR, "price_changes.txt"), "w") as f:
             for key,value in old_changes.items():
                 f.write(key + " " + str(value) + "\n")
         f.close()
 
         # Load existing price_history.json, merge with new data, and save
         existing_price_history = {}
-        if os.path.exists("changes/price_history.json"):
+        if os.path.exists(os.path.join(CHANGES_DIR, "price_history.json")):
             try:
-                with open("changes/price_history.json", "r", encoding="utf-8") as f:
+                with open(os.path.join(CHANGES_DIR, "price_history.json"), "r", encoding="utf-8") as f:
                     existing_price_history = json.load(f)
             except (json.JSONDecodeError, IOError):
                 existing_price_history = {}
@@ -597,5 +602,5 @@ class watcherbase():
             existing_price_history[key] = value
 
         # Save updated price history
-        with open("changes/price_history.json", "w", encoding="utf-8") as f:
+        with open(os.path.join(CHANGES_DIR, "price_history.json"), "w", encoding="utf-8") as f:
             json.dump(existing_price_history, f, indent=2)

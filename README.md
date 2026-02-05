@@ -42,37 +42,58 @@ A Flask web application for tracking CardMarket trading card listings over time.
    pip install -r requirements.txt
    ```
 
-4. **Create required directories:**
+4. **Set up the data repository:**
    ```bash
-   mkdir pages archive downloads
+   # Clone or create the data repo as a sibling directory
+   cd ..
+   git clone <data-repository-url> cardwatcher-data
+   # Or create a new one:
+   mkdir cardwatcher-data
+   cd cardwatcher-data
+   mkdir pages archive images changes
+   git init
    ```
+
+   The directory structure should look like:
+   ```
+   parent/
+   ├── cardmarket/          (this repo)
+   └── cardwatcher-data/    (data repo)
+   ```
+
+   The app will create missing directories on startup automatically.
 
 ## Project Structure
 
 ```
-cardmarket/
-├── app/                      # Core application modules
-│   ├── download_manager.py  # Background download manager for web UI
-│   ├── language_libraries.py # Language/country mappings and flag sprites
-│   ├── listing.py           # Listing class - represents a single seller listing
-│   ├── page.py              # Page class - represents a tracked card with all listings
-│   ├── selenium_downloader.py # Automated downloader using Selenium
-│   ├── watcherbase.py       # Core utilities for importing and processing pages
-│   └── watchersearch.py     # Search view HTML generation
-├── changes/                  # Tracking data
-│   ├── changes.txt          # Inserted/sold counts per card (last download)
-│   ├── price_changes.txt    # Average price and change per card
-│   └── price_history.json   # Historical price data for period comparisons
-├── pages/                    # Active card tracking data (JSON files)
-├── archive/                  # Archived cards no longer actively tracked
-├── downloads/                # Temporary folder for downloaded HTML files
-├── static/                   # CSS, images, sprites
-├── templates/                # Jinja2 HTML templates
-│   ├── blanko.htm           # Individual card page template
-│   └── search.htm           # Search/gallery view template
-├── cardwatcher.py           # Flask application entry point
-├── requirements.txt         # Python dependencies
-└── README.md                # This file
+parent/
+├── cardmarket/                   # Application repo
+│   ├── app/                      # Core application modules
+│   │   ├── config.py            # Data directory configuration
+│   │   ├── download_manager.py  # Background download manager for web UI
+│   │   ├── language_libraries.py # Language/country mappings and flag sprites
+│   │   ├── listing.py           # Listing class - represents a single seller listing
+│   │   ├── page.py              # Page class - represents a tracked card with all listings
+│   │   ├── selenium_downloader.py # Automated downloader using Selenium
+│   │   ├── watcherbase.py       # Core utilities for importing and processing pages
+│   │   └── watchersearch.py     # Search view HTML generation
+│   ├── downloads/                # Temporary folder for downloaded HTML files
+│   ├── static/                   # CSS, sprites, JS assets
+│   ├── templates/                # Jinja2 HTML templates
+│   │   ├── blanko.htm           # Individual card page template
+│   │   └── search.htm           # Search/gallery view template
+│   ├── cardwatcher.py           # Flask application entry point
+│   ├── requirements.txt         # Python dependencies
+│   └── README.md                # This file
+│
+└── cardwatcher-data/             # Data repo (separate git repository)
+    ├── pages/                    # Active card tracking data (JSON files)
+    ├── archive/                  # Archived cards no longer actively tracked
+    ├── images/                   # Card product images
+    └── changes/                  # Tracking data
+        ├── changes.txt          # Inserted/sold counts per card (last download)
+        ├── price_changes.txt    # Average price and change per card
+        └── price_history.json   # Historical price data for period comparisons
 ```
 
 ## Usage
@@ -101,7 +122,7 @@ To start tracking a new card, you need to manually download it once:
 
 4. **Import the card** - Open the web application (`http://localhost:5001`) - it will automatically detect and import files from `downloads/`
 
-The card will now appear in your gallery and a `.json` file will be created in `pages/` with the correct naming convention (e.g., `Pokemon_Products_Singles_Base-Set_Charizard.json`).
+The card will now appear in your gallery and a `.json` file will be created in `cardwatcher-data/pages/` with the correct naming convention (e.g., `Pokemon_Products_Singles_Base-Set_Charizard.json`).
 
 #### Updating Existing Cards
 
@@ -165,8 +186,11 @@ You can also manually update cards the same way you added them:
 
 ### Data Files
 
+All data files are stored in the `cardwatcher-data/` sibling directory (a separate git repo):
+
 - **`pages/*.json`**: Active card tracking data with full listing history
 - **`archive/*.json`**: Archived cards (still viewable, not updated)
+- **`images/*.jpg`**: Card product images
 - **`changes/changes.txt`**: Inserted/sold counts per card from last download
 - **`changes/price_changes.txt`**: Current average price and change per card
 - **`changes/price_history.json`**: Historical averages for period-based comparisons

@@ -24,6 +24,7 @@ import random
 import os
 from tqdm import tqdm
 from app.watcherbase import watcherbase
+from app.config import PAGES_DIR
 
 
 def create_browser():
@@ -196,6 +197,8 @@ def download_page_with_selenium(driver, page_name, counter):
 
         # Save to downloads folder with counter prefix
         filename = f"{counter}_{page_name[:-5]}.htm"
+        if not os.path.isdir("downloads"):
+            os.mkdir("downloads")
         filepath = os.path.join("downloads", filename)
 
         with open(filepath, "w", encoding="utf-8") as f:
@@ -243,7 +246,7 @@ def download_all_pages(max_pages=None):
 
     # Get list of pages to download (only from pages/, not archive/)
     try:
-        page_files = [f for f in os.listdir("pages") if f.endswith(".json")]
+        page_files = [f for f in os.listdir(PAGES_DIR) if f.endswith(".json")]
         if max_pages:
             page_files = page_files[:max_pages]  # Limit if specified
 

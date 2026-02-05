@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, jsonify
+from flask import Flask, render_template, request, redirect, jsonify, send_from_directory
 from flask_session import Session
 from app.language_libraries import *
 from app.watcherbase import watcherbase
 import app.watchersearch as watchersearch
 from app.download_manager import download_manager
+from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR
 import logging
+import os
 
 # Filter out noisy status endpoint from logs
 class StatusFilter(logging.Filter):
@@ -95,7 +97,15 @@ def download_status():
     return jsonify(status)
 
 
+@app.route('/data/images/<path:filename>')
+def serve_image(filename):
+    return send_from_directory(IMAGES_DIR, filename)
+
+
 if __name__ == '__main__':
+    # Ensure data directories exist
+    for d in [PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR]:
+        os.makedirs(d, exist_ok=True)
     app.run(host='0.0.0.0', port=5001)
 
 

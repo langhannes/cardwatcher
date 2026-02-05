@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import json
+from app.config import PAGES_DIR, ARCHIVE_DIR, CHANGES_DIR
 
 def build_search(search_term="", sort_by="name", sort_order="asc", price_period="last"):
     """
@@ -13,7 +14,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         price_period: Price comparison period (last, 1w, 1m, 2m, 6m)
     """
     changes = {}
-    with open("changes/changes.txt","r") as f:
+    with open(os.path.join(CHANGES_DIR, "changes.txt"),"r") as f:
         for line in f.readlines():
             line = line.strip()
             if line == "":
@@ -21,7 +22,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             changes[line.split(" ")[0]] = line.split(" ")[1]
     f.close()
     price_changes = {}
-    with open("changes/price_changes.txt","r") as f:
+    with open(os.path.join(CHANGES_DIR, "price_changes.txt"),"r") as f:
         for line in f.readlines():
             line = line.strip()
             if line == "":
@@ -31,15 +32,15 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
 
     # Load price history for period-based comparisons
     price_history = {}
-    if os.path.exists("changes/price_history.json"):
+    if os.path.exists(os.path.join(CHANGES_DIR, "price_history.json")):
         try:
-            with open("changes/price_history.json", "r", encoding="utf-8") as f:
+            with open(os.path.join(CHANGES_DIR, "price_history.json"), "r", encoding="utf-8") as f:
                 price_history = json.load(f)
         except (json.JSONDecodeError, IOError):
             price_history = {}
 
     # Build data structure with all sort-relevant information
-    file_list = [f for f in os.listdir("pages") if f.endswith('.json')]
+    file_list = [f for f in os.listdir(PAGES_DIR) if f.endswith('.json')]
     file_data_list = []
 
     search_terms = search_term.lower().split() if search_term else []
@@ -49,7 +50,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             continue
             
         canonical_name = file_name[:-5]
-        timestamp = os.path.getmtime(os.path.join("pages", file_name))
+        timestamp = os.path.getmtime(os.path.join(PAGES_DIR, file_name))
 
         # Extract price data for sorting based on selected period
         price_avg = 0.0
@@ -240,7 +241,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         search += "<div class=\"d-flex mb-4 col-12 col-sm-6 col-md-4 col-lg-2\">" + \
                     "<a name=\"" + file_name + "\" href=\"?name="+file_name+"\" class=\"card text-center w-100 galleryBox\" style=\"position: relative;\">" + \
                         availability_badges + \
-                        "<img src=\"static/Blanko/images/" + file_name[:-5] +".jpg" + \
+                        "<img src=\"data/images/" + file_name[:-5] +".jpg" + \
                         "\" alt=\"" + article_name + "\" class=\"lazy card-img-top img-fluid\">" + \
                         "<div class=\"card-body d-flex flex-column p-2\" style=\"gap: 2px;\">" + \
                             "<div class=\"card-title\" style=\"font-size: 0.9em; font-weight: bold; margin-bottom: 2px;\">" + \
@@ -257,8 +258,8 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                     "</a>" + \
                   "</div>"
     search += "<h1 class=\"page-header\">Archive</h1>"
-    file_list = [f for f in os.listdir("archive") if f.endswith('.json')]
-    file_info_list = [(file_name, os.path.getmtime(os.path.join("archive",file_name))) for file_name in file_list]
+    file_list = [f for f in os.listdir(ARCHIVE_DIR) if f.endswith('.json')]
+    file_info_list = [(file_name, os.path.getmtime(os.path.join(ARCHIVE_DIR,file_name))) for file_name in file_list]
     sorted_file_list = sorted(file_info_list, key=lambda x: x[0])
     for file_name,timestamp in sorted_file_list:
         if search_term and search_term.lower() not in file_name.lower():
@@ -266,7 +267,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         article_name = file_name[:-5].split('_')[-1].replace('-',' ')
         search += "<div class=\"d-flex mb-4 col-12 col-sm-6 col-md-4 col-lg-2\">" + \
                     "<a name=\"" + file_name + "\" href=\"?name="+file_name+"\" class=\"card text-center w-100 galleryBox\">" + \
-                        "<img src=\"static/Blanko/images/" + file_name[:-5] +".jpg" + \
+                        "<img src=\"data/images/" + file_name[:-5] +".jpg" + \
                         "\" alt=\"" + article_name + "\" class=\"lazy card-img-top img-fluid\">" + \
                         "<div class=\"card-body d-flex flex-column p-2\" style=\"gap: 2px;\">" + \
                             "<div class=\"card-title\" style=\"font-size: 0.9em; font-weight: bold; margin-bottom: 2px;\">" + \
