@@ -42,10 +42,12 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
     file_list = [f for f in os.listdir("pages") if f.endswith('.json')]
     file_data_list = []
 
+    search_terms = search_term.lower().split() if search_term else []
     for file_name in file_list:
-        if search_term and search_term.lower() not in file_name.lower():
+        # if there is a search term, all words in the term have to be in the canonical name
+        if search_term and any([term not in file_name.lower() for term in search_terms]):
             continue
-
+            
         canonical_name = file_name[:-5]
         timestamp = os.path.getmtime(os.path.join("pages", file_name))
 
@@ -98,8 +100,6 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         file_name = data['file_name']
         canonical_name = data['canonical_name']
         timestamp = data['timestamp']
-        if search_term and search_term.lower() not in file_name.lower():
-            continue
         # Get canonical name (strip .json extension) for lookup
         canonical_name = file_name[:-5]
 
