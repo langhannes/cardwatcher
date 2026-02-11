@@ -74,7 +74,11 @@ CardWatcher
 		</h1>
 	</div>
 	</a>
-	<div class="align-self-end mb-md-1">
+	<div class="align-self-end mb-md-1 d-flex gap-2">
+		<button id="downloadBtn" class="btn btn-sm btn-primary" title="Download latest data for this page">
+			<span id="downloadBtnText">Download</span>
+			<span id="downloadSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+		</button>
 		<a href="/?name={{ page_name }}&archive=toggle" class="btn btn-sm {% if is_archived %}btn-success{% else %}btn-secondary{% endif %}" title="{% if is_archived %}Unarchive this page{% else %}Archive this page{% endif %}">
 			{% if is_archived %}
 				Unarchive
@@ -840,6 +844,47 @@ CardWatcher
 		});
 	}
 	generate_Graph();
+
+	// Download button handler
+	document.getElementById('downloadBtn').addEventListener('click', function() {
+		var btn = this;
+		var btnText = document.getElementById('downloadBtnText');
+		var spinner = document.getElementById('downloadSpinner');
+
+		// Disable button and show spinner
+		btn.disabled = true;
+		btnText.textContent = 'Downloading...';
+		spinner.classList.remove('d-none');
+
+		fetch('/api/download/single', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				page_name: '{{ page_name }}'
+			})
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.success) {
+				// Reload the page to show updated data
+				window.location.reload();
+			} else {
+				alert('Download failed: ' + data.message);
+				// Re-enable button
+				btn.disabled = false;
+				btnText.textContent = 'Download';
+				spinner.classList.add('d-none');
+			}
+		})
+		.catch(error => {
+			alert('Error: ' + error);
+			btn.disabled = false;
+			btnText.textContent = 'Download';
+			spinner.classList.add('d-none');
+		});
+	});
 </script>
 </body>
 </html>

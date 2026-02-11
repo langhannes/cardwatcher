@@ -346,6 +346,7 @@ class watcherbase():
         # Calculate current average (all active listings)
         current_prices = [l.price for l in page.listings if not l.ended]
         current_avg = Page.calculate_price_average_robust(current_prices) if current_prices else 0
+        current_min = min(current_prices) if current_prices else 0
 
         # Count current available listings
         current_available = len(current_prices)
@@ -361,7 +362,8 @@ class watcherbase():
         result = {
             'current_avg': round(current_avg, 2),
             'current_ended_avg': round(current_ended_avg, 2),
-            'current_available': current_available
+            'current_available': current_available,
+            'current_min': round(current_min, 2)
         }
 
         for period_name, days in periods.items():
@@ -444,8 +446,6 @@ class watcherbase():
         print("watcherbase.save_image | new image saved under " + new_path)
 
     def import_all_pages():
-        changes = {}
-        price_changes = {}
         price_history = {}
         if not os.path.isdir("downloads"):
             print("watcherbase | no downloads folder found")
@@ -551,43 +551,33 @@ class watcherbase():
             old_page = Page()
             old_page.canonical_name = page.canonical_name
             old_page.import_page(old_page.canonical_name+".json")
+
+            # Calculate ended avg BEFORE update
+            old_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended]
+            old_ended_avg = watcherbase.calculate_price_average_time_weighted(old_ended_prices) if old_ended_prices else 0
+
             old_page.update_page(page)
             old_page.save()
             print("import_all_pages | page saved under " + os.path.join(PAGES_DIR,(old_page.canonical_name+".json")))
             watcherbase.delete_download(file_name)
-            changes[page.canonical_name] = str(old_page.inserted) + "/" + str(old_page.sold)
-            price_changes[page.canonical_name] = str(old_page.price_average) + "/" + str(old_page.price_change)
+
+            # Calculate ended avg AFTER update (includes newly sold listings)
+            new_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended]
+            new_ended_avg = watcherbase.calculate_price_average_time_weighted(new_ended_prices) if new_ended_prices else 0
+            ended_avg_change = new_ended_avg - old_ended_avg
+
             # Calculate period-based price averages
             price_history[page.canonical_name] = watcherbase.calculate_all_period_averages(old_page)
-        # print changes to files
-        with open(os.path.join(CHANGES_DIR, "changes.txt"), "r") as f:
-            old_changes = {}
-            for line in f.read().split('\n'):
-                if len(line.split(" ")) < 2:
-                    continue
-                old_changes[line.split(" ")[0]] = line.split(" ")[1]
-            for key, value in changes.items():
-                old_changes[key] = value
-        f.close()
-        with open(os.path.join(CHANGES_DIR, "changes.txt"), "w") as f:
-            for key,value in old_changes.items():
-                f.write(key + " " + str(value) + "\n")
-        f.close()
 
-        with open(os.path.join(CHANGES_DIR, "price_changes.txt"), "r") as f:
-            old_changes = {}
-            for line in f.read().split('\n'):
-                if len(line.split(" ")) < 2:
-                    continue
-                old_changes[line.split(" ")[0]] = line.split(" ")[1]
-            for key, value in price_changes.items():
-                old_changes[key] = value
-        f.close()
-        with open(os.path.join(CHANGES_DIR, "price_changes.txt"), "w") as f:
-            for key,value in old_changes.items():
-                f.write(key + " " + str(value) + "\n")
-        f.close()
-
+            # Add last_download section with all metrics
+            price_history[page.canonical_name]['last_download'] = {
+                'avg': round(old_page.price_average, 2),
+                'avg_change': round(old_page.price_change, 2),
+                'ended_avg': round(new_ended_avg, 2),
+                'ended_avg_change': round(ended_avg_change, 2),
+                'inserted': old_page.inserted,
+                'sold': old_page.sold
+            }
         # Load existing price_history.json, merge with new data, and save
         existing_price_history = {}
         if os.path.exists(os.path.join(CHANGES_DIR, "price_history.json")):

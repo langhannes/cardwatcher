@@ -115,6 +115,61 @@ class DownloadManager:
         self._wait_remaining = 0
         self._last_error = ""
 
+    def download_single_page(self, page_name):
+        """Download a single page synchronously. Returns result dict."""
+        with self._lock:
+            if self._status != DownloadStatus.IDLE:
+                return {"success": False, "message": "Another download is in progress"}
+
+            self._status = DownloadStatus.RUNNING
+            self._reset_progress()
+            self._total_pages = 1
+            self._current_page = page_name
+
+        driver = None
+        result = {"success": False, "message": ""}
+
+        try:
+            # Initialize browser
+            driver = create_browser()
+            if driver is None:
+                result["message"] = "Failed to initialize browser"
+                return result
+
+            # Download the page
+            download_result = download_page_with_selenium(driver, page_name + ".json", 0)
+
+            if download_result == "success":
+                self._completed_pages = 1
+                # Import the downloaded page
+                self._status = DownloadStatus.IMPORTING
+                self._current_page = "Importing..."
+                try:
+                    watcherbase.import_all_pages()
+                except Exception as e:
+                    print(f"[WARNING] Import failed: {e}")
+                result["success"] = True
+                result["message"] = "Download and import completed"
+            elif download_result == "invalid_session":
+                result["message"] = "Session invalid - please try again"
+            else:
+                self._failed_pages = 1
+                result["message"] = "Download failed"
+
+        except Exception as e:
+            result["message"] = str(e)
+
+        finally:
+            if driver is not None:
+                try:
+                    driver.quit()
+                except:
+                    pass
+            self._current_page = ""
+            self._status = DownloadStatus.IDLE
+
+        return result
+
     def _download_worker(self):
         """Background worker that performs the downloads."""
         driver = None

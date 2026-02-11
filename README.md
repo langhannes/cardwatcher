@@ -7,9 +7,12 @@ A Flask web application for tracking CardMarket trading card listings over time.
 ## Features
 
 - **Price Tracking**: Track average prices and price changes over time (1 week, 1 month, 2 months, 6 months)
+- **Sold Price Tracking**: Monitor ended/sold listing prices separately from available listings
+- **Lowest Price Display**: See the minimum price for each card at a glance
 - **Listing History**: See when listings were added, sold, or relisted
-- **Search & Sort**: Search by card name, sort by price, price change, or percentage change
+- **Search & Sort**: Search by card name, sort by price, price change, percentage change, or lowest price
 - **Visual Indicators**: Color-coded badges showing availability changes (+added/-removed)
+- **Single-Page Download**: Download button on each card's detail page for quick updates
 - **Archive Support**: Archive cards you no longer want to actively track
 - **Historical Data**: Maintains complete listing history including price changes per seller
 
@@ -76,7 +79,8 @@ parent/
 │   │   ├── page.py               # Page class - represents a tracked card with all listings
 │   │   ├── selenium_downloader.py # Automated downloader using Selenium
 │   │   ├── watcherbase.py        # Core utilities for importing and processing pages
-│   │   └── watchersearch.py      # Search view HTML generation
+│   │   ├── watchersearch.py      # Search view HTML generation
+│   │   └── recalculate_metrics.py # Utility to recalculate all price metrics
 │   ├── downloads/                # Temporary folder for downloaded HTML files
 │   ├── static/                   # CSS, sprites, JS assets
 │   ├── templates/                # Jinja2 HTML templates
@@ -91,9 +95,7 @@ parent/
     ├── archive/                  # Archived cards no longer actively tracked
     ├── images/                   # Card product images
     └── changes/                  # Tracking data
-        ├── changes.txt          # Inserted/sold counts per card (last download)
-        ├── price_changes.txt    # Average price and change per card
-        └── price_history.json   # Historical price data for period comparisons
+        └── price_history.json   # Unified price history with all metrics
 ```
 
 ## Usage
@@ -104,7 +106,15 @@ parent/
 python cardwatcher.py
 ```
 
-The application runs at `http://localhost:5001`
+The application runs at `http://localhost:5000` by default.
+
+**Command line options:**
+```bash
+python cardwatcher.py -p 5001    # Run on port 5001
+python cardwatcher.py --port 8080  # Run on port 8080
+```
+
+Use a different port if you get "Address already in use" errors.
 
 ### Adding Cards to Track
 
@@ -168,8 +178,9 @@ You can also manually update cards the same way you added them:
 - **Download control bar** at the top to start/stop automated downloads with progress tracking
 - Browse all tracked cards as a gallery
 - Use the search box to filter by card name
-- Sort by: Name, Price, Price Change (€), Percentage Change (%)
+- Sort by: Name, Price, Price Change (€), Percentage Change (%), Lowest Price
 - Select time period: Last Download, 1 Week, 1 Month, 2 Months, 6 Months
+- Each card shows: available price average, sold price average, and lowest price ("From: X€")
 - Green badges show newly added listings, red badges show removed/sold listings
 
 **Card Detail View:**
@@ -177,6 +188,7 @@ You can also manually update cards the same way you added them:
 ![Card Detail View](image-files/individual-page.jpeg)
 
 - Click any card to see all listings
+- **Download button** to update this specific card immediately (uses Selenium)
 - View individual seller prices, conditions, and languages
 - See price history per listing
 - Color-coded rows: green = new listing, red = ended/sold, yellow = price changed
@@ -191,9 +203,21 @@ All data files are stored in the `cardwatcher-data/` sibling directory (a separa
 - **`pages/*.json`**: Active card tracking data with full listing history
 - **`archive/*.json`**: Archived cards (still viewable, not updated)
 - **`images/*.jpg`**: Card product images
-- **`changes/changes.txt`**: Inserted/sold counts per card from last download
-- **`changes/price_changes.txt`**: Current average price and change per card
-- **`changes/price_history.json`**: Historical averages for period-based comparisons
+- **`changes/price_history.json`**: Unified price history containing:
+  - Current averages (available and sold listings)
+  - Lowest price per card
+  - Last download changes (inserted/sold counts, price changes)
+  - Historical data for period comparisons (1w, 1m, 2m, 6m)
+
+### Recalculating Metrics
+
+If you need to recalculate price metrics without re-downloading pages (e.g., after code changes):
+
+```bash
+python -m app.recalculate_metrics
+```
+
+This updates `price_history.json` with current metrics from all page files.
 
 ## Configuration
 

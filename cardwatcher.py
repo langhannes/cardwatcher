@@ -5,6 +5,7 @@ from app.watcherbase import watcherbase
 import app.watchersearch as watchersearch
 from app.download_manager import download_manager
 from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR
+import argparse
 import logging
 import os
 
@@ -97,15 +98,35 @@ def download_status():
     return jsonify(status)
 
 
+@app.route('/api/download/single', methods=['POST'])
+def download_single():
+    """Download a single page by name."""
+    data = request.get_json()
+    if not data or 'page_name' not in data:
+        return jsonify({"success": False, "message": "Missing page_name parameter"})
+
+    page_name = data['page_name']
+    # Remove .json extension if present
+    if page_name.endswith('.json'):
+        page_name = page_name[:-5]
+
+    result = download_manager.download_single_page(page_name)
+    return jsonify(result)
+
+
 @app.route('/data/images/<path:filename>')
 def serve_image(filename):
     return send_from_directory(IMAGES_DIR, filename)
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='CardWatcher Flask Application')
+    parser.add_argument('-p', '--port', type=int, default=5000, help='Port to run the server on (default: 5000)')
+    args = parser.parse_args()
+
     # Ensure data directories exist
     for d in [PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR]:
         os.makedirs(d, exist_ok=True)
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=args.port)
 
 
