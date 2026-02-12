@@ -178,7 +178,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             if sort_by == "percentChange":
                 price_string = f"Avail: {price_average}€ ({sign}{round(percentage_change,1)}%){price_arrow}"
             else:
-                price_change = round(price_change,2) if price_average < 1000 else int(price_change)
+                price_change = round(price_change,2) if (price_average < 1000 or price_change < 1) else int(price_change)
                 price_string = f"Avail: {price_average}€ ({sign}{price_change}€){price_arrow}"
 
             # Add color styling: green for price increase (good), red for price decrease
