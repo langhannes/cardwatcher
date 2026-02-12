@@ -249,7 +249,7 @@ The card naming convention follows CardMarket's URL structure:
 
 **Listing** (`app/listing.py`):
 - Represents a single listing from a seller
-- Tracks: price, quantity, condition, language, seller info, price history
+- Tracks: price, quantity, condition, reverse holo, language, seller info, price history
 - Methods: `parse_from_row()`, `build_row()`, `to_json()`, `from_json()`
 
 **watcherbase** (`app/watcherbase.py`):
