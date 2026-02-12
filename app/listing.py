@@ -116,6 +116,12 @@ class Listing:
 
     def to_json(self):
         """Convert listing to JSON-serializable dictionary."""
+        # Ensure dates are stored as floats for consistency
+        date_float = float(self.date) if self.date else 0.0
+        first_date_float = float(self.first_date) if self.first_date else 0.0
+        last_date_float = float(self.last_date) if self.last_date else 0.0
+        # Convert previous_prices tuples to lists with float values
+        prev_prices_normalized = [[float(p[0]), float(p[1])] for p in self.previous_prices if len(p) >= 2]
         return {
             'card': self.card,
             'canonical_name': self.canonical_name,
@@ -128,12 +134,12 @@ class Listing:
             'quantity': self.quantity,
             'condition': self.condition,
             'comment': self.comment,
-            'date': self.date,
+            'date': date_float,
             'ended': self.ended,
             'new': self.new,
-            'previous_prices': self.previous_prices,
-            'first_date': self.first_date,
-            'last_date': self.last_date,
+            'previous_prices': prev_prices_normalized,
+            'first_date': first_date_float,
+            'last_date': last_date_float,
             'price_is_new': self.price_is_new,
             'quantity_change': self.quantity_change,
             'first_ed': self.first_ed,
@@ -155,12 +161,24 @@ class Listing:
         self.quantity = data.get('quantity', 0)
         self.condition = data.get('condition', '')
         self.comment = data.get('comment', '')
-        self.date = data.get('date', '')
+        # Normalize date to float for consistency
+        date_val = data.get('date', '')
+        self.date = float(date_val) if date_val else 0.0
         self.ended = data.get('ended', False)
         self.new = data.get('new', True)
-        self.previous_prices = data.get('previous_prices', [])
-        self.first_date = data.get('first_date', '')
-        self.last_date = data.get('last_date', '')
+        # Normalize previous_prices: ensure price and date are floats
+        raw_prices = data.get('previous_prices', [])
+        self.previous_prices = []
+        for entry in raw_prices:
+            if len(entry) >= 2:
+                price = float(entry[0]) if entry[0] else 0.0
+                date = float(entry[1]) if entry[1] else 0.0
+                self.previous_prices.append((price, date))
+        # Normalize first_date and last_date to float
+        first_date_val = data.get('first_date', '')
+        self.first_date = float(first_date_val) if first_date_val else 0.0
+        last_date_val = data.get('last_date', '')
+        self.last_date = float(last_date_val) if last_date_val else 0.0
         self.price_is_new = data.get('price_is_new', False)
         self.quantity_change = data.get('quantity_change', 0)
         self.first_ed = data.get('first_ed', 2)
@@ -220,9 +238,12 @@ class Listing:
             list_of_previous_prices = ""
             for prev_price in self.previous_prices:
                 prev_price_date = "            "
-                float_date = float(prev_price[1]) if prev_price[1] else 0
-                if str(float_date) == prev_price[1] and float_date > 17000000:
-                    prev_price_date = datetime.fromtimestamp(float_date).date()
+                try:
+                    float_date = float(prev_price[1]) if prev_price[1] else 0
+                    if float_date > 17000000:
+                        prev_price_date = datetime.fromtimestamp(float_date).date()
+                except (ValueError, TypeError):
+                    pass
                 list_of_previous_prices += f"{prev_price_date} {prev_price[0]}€\n"
             price_string+= "€"
             price_string = f"<span title=\"{list_of_previous_prices}\">{price_string}</span>"
