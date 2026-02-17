@@ -3,7 +3,7 @@ import os
 import json
 from app.config import PAGES_DIR, ARCHIVE_DIR, CHANGES_DIR
 
-def build_search(search_term="", sort_by="name", sort_order="asc", price_period="last"):
+def build_search(search_term="", sort_by="name", sort_order="asc", price_period="last", price_type="available"):
     """
     Build the search view HTML.
 
@@ -12,6 +12,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         sort_by: Sort field (name, price, priceChange, percentChange)
         sort_order: Sort direction (asc, desc)
         price_period: Price comparison period (last, 1w, 1m, 2m, 6m)
+        price_type: Price type for sorting (available, sold)
     """
     # Load unified price history (contains all metrics including last_download data)
     price_history = {}
@@ -40,6 +41,10 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         price_chg = 0.0
         percent_chg = 0.0
         price_min = 0.0
+        # Ended (sold) prices
+        ended_avg = 0.0
+        ended_chg = 0.0
+        ended_percent_chg = 0.0
 
         # Get lowest price from price_history (available for all periods)
         if canonical_name in price_history:
@@ -53,6 +58,11 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                 price_chg = last.get('avg_change', 0) or 0
                 if price_avg > 0:
                     percent_chg = (price_chg / price_avg) * 100
+                # Ended prices
+                ended_avg = last.get('ended_avg', 0) or 0
+                ended_chg = last.get('ended_avg_change', 0) or 0
+                if ended_avg > 0:
+                    ended_percent_chg = (ended_chg / ended_avg) * 100
         else:
             # Use period-based comparison
             if canonical_name in price_history:
@@ -63,6 +73,12 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                     price_chg = period_data['change']
                 if price_avg > 0:
                     percent_chg = (price_chg / price_avg) * 100
+                # Ended prices
+                ended_avg = hist.get('current_ended_avg', 0) or 0
+                if period_data and period_data.get('ended_change') is not None:
+                    ended_chg = period_data['ended_change']
+                if ended_avg > 0:
+                    ended_percent_chg = (ended_chg / ended_avg) * 100
 
         file_data_list.append({
             'file_name': file_name,
@@ -71,16 +87,29 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             'price_avg': price_avg,
             'price_chg': price_chg,
             'percent_chg': percent_chg,
-            'price_min': price_min
+            'price_min': price_min,
+            'ended_avg': ended_avg,
+            'ended_chg': ended_chg,
+            'ended_percent_chg': ended_percent_chg
         })
 
-    # Apply sorting based on parameters
+    # Apply sorting based on parameters and price type
+    # When sorting by price fields, use either available or sold prices based on price_type
     if sort_by == "price":
-        file_data_list.sort(key=lambda x: x['price_avg'], reverse=(sort_order == "desc"))
+        if price_type == "sold":
+            file_data_list.sort(key=lambda x: x['ended_avg'], reverse=(sort_order == "desc"))
+        else:
+            file_data_list.sort(key=lambda x: x['price_avg'], reverse=(sort_order == "desc"))
     elif sort_by == "priceChange":
-        file_data_list.sort(key=lambda x: x['price_chg'], reverse=(sort_order == "desc"))
+        if price_type == "sold":
+            file_data_list.sort(key=lambda x: x['ended_chg'], reverse=(sort_order == "desc"))
+        else:
+            file_data_list.sort(key=lambda x: x['price_chg'], reverse=(sort_order == "desc"))
     elif sort_by == "percentChange":
-        file_data_list.sort(key=lambda x: x['percent_chg'], reverse=(sort_order == "desc"))
+        if price_type == "sold":
+            file_data_list.sort(key=lambda x: x['ended_percent_chg'], reverse=(sort_order == "desc"))
+        else:
+            file_data_list.sort(key=lambda x: x['percent_chg'], reverse=(sort_order == "desc"))
     elif sort_by == "lowestPrice":
         file_data_list.sort(key=lambda x: x['price_min'], reverse=(sort_order == "desc"))
     else:  # default to name

@@ -33,7 +33,8 @@ def cardwatcher():
         default_order = 'asc' if sort_by == 'name' else 'desc'
         sort_order = request.args.get('order', default_order)
         price_period = request.args.get('pricePeriod', 'last')
-        search = watchersearch.build_search(request.args.get('searchString',''), sort_by, sort_order, price_period)
+        price_type = request.args.get('priceType', 'available')
+        search = watchersearch.build_search(request.args.get('searchString',''), sort_by, sort_order, price_period, price_type)
         return render_template('search.htm',search_elements=search, sort_order=sort_order)
 
     # otherwise we're leaving the search site
@@ -77,7 +78,8 @@ def cardwatcher():
         default_order = 'asc' if sort_by == 'name' else 'desc'
         sort_order = request.args.get('order', default_order)
         price_period = request.args.get('pricePeriod', 'last')
-        search = watchersearch.build_search("", sort_by, sort_order, price_period)
+        price_type = request.args.get('priceType', 'available')
+        search = watchersearch.build_search("", sort_by, sort_order, price_period, price_type)
         return render_template('search.htm',search_elements=search, sort_order=sort_order)
 
 @app.route('/api/download/start', methods=['POST'])

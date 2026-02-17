@@ -116,6 +116,15 @@
 					<option value="6m" {% if request.args.get('pricePeriod', 'last') == '6m' %}selected{% endif %}>6 Months</option>
 				</select>
 			</div>
+			<div class="col-auto">
+				<label for="priceType" class="col-form-label">Price Type:</label>
+			</div>
+			<div class="col-auto">
+				<select name="priceType" id="priceType" class="form-select form-select-sm" onchange="this.form.submit()">
+					<option value="available" {% if request.args.get('priceType', 'available') == 'available' %}selected{% endif %}>Available</option>
+					<option value="sold" {% if request.args.get('priceType', 'available') == 'sold' %}selected{% endif %}>Sold</option>
+				</select>
+			</div>
 		</form>
 	</div>
 </div>
