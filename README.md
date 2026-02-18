@@ -28,7 +28,7 @@ A Windows application for tracking CardMarket trading card listings over time. M
    - On first run, you'll be prompted to select your data directory - point it to the `cardwatcher-data` folder
    - The application opens automatically in your default browser
 
-That's it! Your browser will open to `http://localhost:5000` with all the card data ready to browse.
+That's it! Your browser will open automatically. If port 5000 is already in use, the app will automatically find an available port.
 
 ### Option 2: Run from Source
 
@@ -119,7 +119,7 @@ For a single card, click the **Download** button on its detail page.
 
 1. Open the CardMarket listing page in your browser
 2. Click all "Show More" buttons to load all listings
-3. Save the page (Ctrl+S) as "Webpage, Complete" into the `downloads/` folder
+3. Save the page (Ctrl+S) as "Webpage, Complete" into the `downloads/` folder inside your data directory
 4. Refresh CardWatcher - it automatically imports new downloads
 
 ### Adding a New Card
@@ -128,7 +128,7 @@ To start tracking a card that isn't in the data repository:
 
 1. Find the card on CardMarket
 2. Click all "Show More" buttons to load all listings
-3. Save the page (Ctrl+S) into the `downloads/` folder
+3. Save the page (Ctrl+S) into the `downloads/` folder inside your data directory
 4. Open CardWatcher - the card will be imported automatically
 
 ## Data Storage
@@ -138,6 +138,7 @@ To start tracking a card that isn't in the data repository:
   - `archive/` - Archived cards
   - `images/` - Card images
   - `changes/` - Price history metrics
+  - `downloads/` - Temporary folder for manually downloaded HTML files
 - **Your collection**: Stored privately in your home directory (`~/.cardwatcher_collection.json`)
 - **Settings**: Stored in your home directory (`~/.cardwatcher_settings.json`)
 

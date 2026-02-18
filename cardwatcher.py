@@ -33,7 +33,7 @@ import app.watchersearch as watchersearch
 from app.download_manager import download_manager
 from app.collection import Collection, calculate_collection_price, calculate_collection_value
 from app.sync import sync_manager
-from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR
+from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
 
 # Filter out noisy status endpoint from logs
 class StatusFilter(logging.Filter):
@@ -347,19 +347,49 @@ def sync_full():
     return jsonify(result)
 
 
+def is_port_available(port):
+    """Check if a port is available for binding."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(('0.0.0.0', port))
+            return True
+        except OSError:
+            return False
+
+
+def find_available_port(start_port, max_attempts=10):
+    """Find an available port starting from start_port."""
+    for offset in range(max_attempts):
+        port = start_port + offset
+        if is_port_available(port):
+            return port
+    return None
+
+
 if __name__ == '__main__':
     # Args were parsed and paths initialized in _early_init() above
     args = _startup_args
 
     # Ensure data directories exist
-    for d in [PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR]:
+    for d in [PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR]:
         os.makedirs(d, exist_ok=True)
+
+    # Find an available port
+    port = args.port
+    if not is_port_available(port):
+        print(f"Port {port} is in use, looking for an available port...")
+        port = find_available_port(port + 1)
+        if port is None:
+            print(f"Could not find an available port. Please close other applications or specify a different port with -p.")
+            exit(1)
+        print(f"Using port {port}")
 
     # Open browser automatically after short delay
     if not args.no_browser:
-        url = f'http://localhost:{args.port}'
+        url = f'http://localhost:{port}'
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
-    app.run(host='0.0.0.0', port=args.port)
+    app.run(host='0.0.0.0', port=port)
 
 

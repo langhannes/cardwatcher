@@ -17,8 +17,8 @@ class CollectionItem:
         self.canonical_name = canonical_name
         self.condition = condition
         self.language = language
-        self.first_ed = first_ed  # 0=unknown, 1=no, 2=yes
-        self.reverse_holo = reverse_holo  # 0=unknown, 1=no, 2=yes
+        self.first_ed = first_ed  # 0=no (unchecked), 2=yes (checked)
+        self.reverse_holo = reverse_holo  # 0=no (unchecked), 2=yes (checked)
         self.quantity = quantity
         self.added_at = added_at or time.time()
 
@@ -166,14 +166,15 @@ def calculate_collection_price(page, condition, language, first_ed, reverse_holo
     Priority order:
     1. Lowest available listing with exact match (condition, language, first_ed, reverse_holo)
     2. Latest ended listing with exact match
-    3. Overall average of available listings
+    3. Relaxed match: ignore first_ed, allow condition one grade better
+    4. Overall average of available listings
 
     Args:
         page: Page object with listings
         condition: Card condition (MT, NM, EX, GD, LP, PL, PO)
         language: Card language
-        first_ed: First edition flag (0=unknown, 1=no, 2=yes)
-        reverse_holo: Reverse holo flag (0=unknown, 1=no, 2=yes)
+        first_ed: First edition flag (0=no/unchecked, 2=yes/checked)
+        reverse_holo: Reverse holo flag (0=no/unchecked, 2=yes/checked)
 
     Returns:
         float: Calculated price, or 0 if no data
@@ -181,16 +182,51 @@ def calculate_collection_price(page, condition, language, first_ed, reverse_holo
     available = [l for l in page.listings if not l.ended]
     ended = [l for l in page.listings if l.ended]
 
+    # Condition grades from best to worst
+    condition_grades = ['MT', 'NM', 'EX', 'GD', 'LP', 'PL', 'PO']
+
+    def is_condition_same_or_one_better(listing_condition, target_condition):
+        """Check if listing condition is same or one grade better than target."""
+        try:
+            listing_idx = condition_grades.index(listing_condition)
+            target_idx = condition_grades.index(target_condition)
+            # Listing can be same grade or one better (lower index = better)
+            return listing_idx >= target_idx - 1 and listing_idx <= target_idx
+        except ValueError:
+            return listing_condition == target_condition
+
     def matches(listing):
         """Check if listing matches the specified attributes."""
         if listing.condition != condition:
             return False
         if listing.language != language:
             return False
-        # For first_ed and reverse_holo, 0 means unknown/any
-        if first_ed != 0 and listing.first_ed != first_ed:
+        # For first_ed and reverse_holo:
+        # Collection/UI convention: 0=unchecked (not first ed), 2=checked (is first ed)
+        # Listing convention: 0=no, 1=yes, 2=unknown
+        # When collection checkbox is checked (2), match listing "yes" (1)
+        # When collection checkbox is unchecked (0), match listing "no" (0)
+        if first_ed == 2 and listing.first_ed != 1:  # Want first ed, listing must be first ed
             return False
-        if reverse_holo != 0 and listing.reverse_holo != reverse_holo:
+        if first_ed == 0 and listing.first_ed != 0:  # Want non-first ed, listing must be non-first ed
+            return False
+        if reverse_holo == 2 and listing.reverse_holo != 1:  # Want reverse holo, listing must be reverse holo
+            return False
+        if reverse_holo == 0 and listing.reverse_holo != 0:  # Want non-reverse holo, listing must be non-reverse holo
+            return False
+        return True
+
+    def matches_relaxed(listing):
+        """Relaxed match: ignore first_ed, allow condition one grade better."""
+        if not is_condition_same_or_one_better(listing.condition, condition):
+            return False
+        if listing.language != language:
+            return False
+        # Ignore first_ed in relaxed matching
+        # Still check reverse_holo
+        if reverse_holo == 2 and listing.reverse_holo != 1:
+            return False
+        if reverse_holo == 0 and listing.reverse_holo != 0:
             return False
         return True
 
@@ -205,7 +241,12 @@ def calculate_collection_price(page, condition, language, first_ed, reverse_holo
         latest = max(exact_ended, key=lambda l: l.last_date or l.date or 0)
         return latest.price
 
-    # 3. Fallback to average of all available
+    # 3. Relaxed match: ignore first_ed, allow condition one grade better
+    relaxed_available = [l for l in available if matches_relaxed(l)]
+    if relaxed_available:
+        return min(l.price for l in relaxed_available)
+
+    # 4. Fallback to average of all available
     if available:
         return sum(l.price for l in available) / len(available)
 

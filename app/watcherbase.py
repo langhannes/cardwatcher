@@ -7,7 +7,7 @@ import time
 from app.page import Page
 from app.listing import Listing
 from app.language_libraries import *
-from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR
+from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
 
 class watcherbase():
     
@@ -19,10 +19,10 @@ class watcherbase():
 
     def delete_download(file_name):
         print("delete_download | deleting html " + file_name)
-        os.remove(os.path.join("downloads",file_name))
+        os.remove(os.path.join(DOWNLOADS_DIR, file_name))
         print("delete_download | deleting folder " + file_name[:-4] + "-Dateien")
         try:
-            shutil.rmtree(os.path.join("downloads",file_name[:-4]+"-Dateien"))
+            shutil.rmtree(os.path.join(DOWNLOADS_DIR, file_name[:-4]+"-Dateien"))
         except:
             print("delete_download | no folder to delete")
 
@@ -447,16 +447,16 @@ class watcherbase():
 
     def import_all_pages():
         price_history = {}
-        if not os.path.isdir("downloads"):
+        if not os.path.isdir(DOWNLOADS_DIR):
             print("watcherbase | no downloads folder found")
             return
-        file_list = os.listdir("downloads")
-        file_info_list = [(file_name, os.path.getmtime(os.path.join("downloads",file_name))) for file_name in file_list if file_name.lower().endswith(".htm")]
+        file_list = os.listdir(DOWNLOADS_DIR)
+        file_info_list = [(file_name, os.path.getmtime(os.path.join(DOWNLOADS_DIR, file_name))) for file_name in file_list if file_name.lower().endswith(".htm")]
         sorted_file_info_list = sorted(file_info_list, key=lambda x: x[1])
         for file_name,timestamp in sorted_file_info_list:
             print("import_all_pages | importing " + file_name)
             content = ""
-            with open(os.path.join("downloads",file_name),'r',encoding="utf-8") as f:
+            with open(os.path.join(DOWNLOADS_DIR, file_name),'r',encoding="utf-8") as f:
                 content = f.read()
 
             parsed_html = BeautifulSoup(content,features="lxml")
@@ -515,7 +515,7 @@ class watcherbase():
                 image_path = parsed_html.body.find('section',attrs={'id':'image'}).find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
             page.image = "data/images/" + (page.canonical_name) + ".jpg"
             image_dest = os.path.join(IMAGES_DIR, page.canonical_name + ".jpg")
-            watcherbase.save_image(os.path.join("downloads",image_path), image_dest)
+            watcherbase.save_image(os.path.join(DOWNLOADS_DIR, image_path), image_dest)
             
             # get the set the product is from    
             page.set = parsed_html.body.find('div',attrs={'class':'page-title-container'}).find('h1').find('span').text.replace('Ã©','e')

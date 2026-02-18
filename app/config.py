@@ -117,6 +117,7 @@ PAGES_DIR = os.path.join(DATA_DIR, "pages")
 ARCHIVE_DIR = os.path.join(DATA_DIR, "archive")
 IMAGES_DIR = os.path.join(DATA_DIR, "images")
 CHANGES_DIR = os.path.join(DATA_DIR, "changes")
+DOWNLOADS_DIR = os.path.join(DATA_DIR, "downloads")
 
 # Collection file location - stored in user's home directory (NOT in shared data dir)
 # This ensures each user has their own private collection
@@ -126,9 +127,10 @@ COLLECTION_FILE = os.path.join(os.path.expanduser("~"), ".cardwatcher_collection
 def update_paths(data_dir):
     """Update all path constants with a new data directory.
     Note: COLLECTION_FILE is NOT updated - it stays in user's home directory."""
-    global DATA_DIR, PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR
+    global DATA_DIR, PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
     DATA_DIR = data_dir
     PAGES_DIR = os.path.join(DATA_DIR, "pages")
     ARCHIVE_DIR = os.path.join(DATA_DIR, "archive")
     IMAGES_DIR = os.path.join(DATA_DIR, "images")
     CHANGES_DIR = os.path.join(DATA_DIR, "changes")
+    DOWNLOADS_DIR = os.path.join(DATA_DIR, "downloads")

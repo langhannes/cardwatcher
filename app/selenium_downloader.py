@@ -24,7 +24,7 @@ import random
 import os
 from tqdm import tqdm
 from app.watcherbase import watcherbase
-from app.config import PAGES_DIR
+from app.config import PAGES_DIR, DOWNLOADS_DIR
 
 
 def create_browser():
@@ -83,14 +83,14 @@ def is_session_valid(driver):
 def get_already_downloaded():
     """
     Get list of page names that have already been downloaded in this session.
-    Checks the downloads/ folder for .htm files.
+    Checks the downloads folder for .htm files.
 
     Returns:
         set: Set of page names (without .json extension) already downloaded
     """
     downloaded = set()
     try:
-        for filename in os.listdir("downloads"):
+        for filename in os.listdir(DOWNLOADS_DIR):
             if filename.endswith(".htm"):
                 # Extract page name from filename (format: counter_pagename.htm)
                 parts = filename[:-4].split("_", 1)  # Remove .htm and split on first _
@@ -197,9 +197,9 @@ def download_page_with_selenium(driver, page_name, counter):
 
         # Save to downloads folder with counter prefix
         filename = f"{counter}_{page_name[:-5]}.htm"
-        if not os.path.isdir("downloads"):
-            os.mkdir("downloads")
-        filepath = os.path.join("downloads", filename)
+        if not os.path.isdir(DOWNLOADS_DIR):
+            os.mkdir(DOWNLOADS_DIR)
+        filepath = os.path.join(DOWNLOADS_DIR, filename)
 
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_content)
