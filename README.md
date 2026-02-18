@@ -19,7 +19,7 @@ A Windows application for tracking CardMarket trading card listings over time. M
 
 ### Option 1: Download Pre-built Executable
 
-1. **Download the executable** from the releases page
+1. **Download the executable** from the dist folder
 2. **Download the data repository**:
    ```bash
    git clone https://github.com/hanfffff/cardwatcher-data.git
@@ -36,13 +36,13 @@ If you want to run from source or contribute to development:
 
 1. **Clone both repositories:**
    ```bash
-   git clone <this-repository-url> cardmarket
+   git clone <this-repository-url>
    git clone https://github.com/hanfffff/cardwatcher-data.git
    ```
 
 2. **Install Python 3.8+ and dependencies:**
    ```bash
-   cd cardmarket
+   cd cardwatcher
    pip install -r requirements.txt
    ```
 
