@@ -54,7 +54,7 @@
 			</div>
 		</form>
 	</nav>
-<!-- Download Control Bar -->
+<!-- Download & Sync Control Bar -->
 <nav class="navbar navbar-light" style="padding: 4px 16px; border-top: 1px solid #dee2e6;">
 	<div id="downloadBar" style="display: flex; align-items: center; gap: 12px; font-size: 14px; width: 100%;">
 		<button id="downloadStartBtn" onclick="startDownload()" class="btn btn-sm btn-success" style="min-width: 80px;">
@@ -71,28 +71,76 @@
 		</div>
 		<span id="downloadStatus" style="color: #6c757d;">Ready</span>
 		<span id="waitTimer" style="color: #6c757d; display: none;"></span>
+
+		<!-- Sync Buttons -->
+		<div style="border-left: 1px solid #dee2e6; padding-left: 12px; margin-left: auto; display: flex; align-items: center; gap: 8px;">
+			<button id="syncPullBtn" onclick="syncPull()" class="btn btn-sm btn-outline-primary" title="Pull latest data from GitHub">
+				&#8595; Pull
+			</button>
+			<button id="syncFullBtn" onclick="syncFull()" class="btn btn-sm btn-outline-primary" title="Pull and push changes (requires git credentials)">
+				&#8597; Full Sync
+			</button>
+			<span id="syncStatus" style="color: #6c757d; font-size: 12px;">Last sync: checking...</span>
+		</div>
 	</div>
 </nav>
 </header>
 
 
 <main class="container" style="padding-top: 140px;">
-<h1 class="H1_PageTitle page-header">Articles
-</h1>
+<!-- Collection Toggle Bar -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+	<h1 class="H1_PageTitle page-header mb-0">
+		{% if request.args.get('collection') == 'true' %}
+			My Collection
+		{% else %}
+			Articles
+		{% endif %}
+	</h1>
+	<div class="d-flex align-items-center gap-3">
+		{% if request.args.get('collection') == 'true' %}
+			<a href="/?searchString={{ request.args.get('searchString', '') }}&sortBy={{ request.args.get('sortBy', 'name') }}&order={{ request.args.get('order', 'asc') }}&pricePeriod={{ request.args.get('pricePeriod', 'last') }}&priceType={{ request.args.get('priceType', 'available') }}" class="btn btn-sm btn-outline-primary">
+				Show All Cards
+			</a>
+		{% else %}
+			<a href="/?collection=true&searchString={{ request.args.get('searchString', '') }}&sortBy={{ request.args.get('sortBy', 'name') }}&order={{ request.args.get('order', 'asc') }}&pricePeriod={{ request.args.get('pricePeriod', 'last') }}&priceType={{ request.args.get('priceType', 'available') }}" class="btn btn-success">
+				<span style="margin-right: 4px;">&#9829;</span> My Collection
+			</a>
+		{% endif %}
+	</div>
+</div>
+{% if request.args.get('collection') == 'true' %}
+<div id="collectionTotalBar" class="mb-4 p-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(40,167,69,0.3);">
+	<div class="d-flex justify-content-between align-items-center">
+		<div>
+			<div style="font-size: 0.9em; opacity: 0.9;">Total Collection Value</div>
+			<div id="collectionTotal" style="font-size: 2em; font-weight: bold; letter-spacing: 0.5px;">Loading...</div>
+		</div>
+		<div style="font-size: 3em; opacity: 0.3;">&#9829;</div>
+	</div>
+</div>
+{% endif %}
 <div class="row mb-3">
 	<div class="col-12">
 		<form method="GET" action="/" class="row g-2 align-items-center">
 			<input type="hidden" name="searchString" id="searchStringHidden" value="{{ request.args.get('searchString', '') }}">
+			{% if request.args.get('collection') == 'true' %}
+			<input type="hidden" name="collection" value="true">
+			{% endif %}
 			<div class="col-auto">
 				<label for="sortBy" class="col-form-label">Sort by:</label>
 			</div>
 			<div class="col-auto">
 				<select name="sortBy" id="sortBy" class="form-select form-select-sm" onchange="document.getElementById('order').value = (this.value === 'name' ? 'asc' : 'desc'); this.form.submit()">
 					<option value="name" {% if request.args.get('sortBy', 'name') == 'name' %}selected{% endif %}>Name</option>
+					{% if request.args.get('collection') == 'true' %}
+					<option value="collectionPrice" {% if request.args.get('sortBy', 'name') == 'collectionPrice' %}selected{% endif %}>Collection Value</option>
+					{% else %}
 					<option value="price" {% if request.args.get('sortBy', 'name') == 'price' %}selected{% endif %}>Price</option>
 					<option value="priceChange" {% if request.args.get('sortBy', 'name') == 'priceChange' %}selected{% endif %}>Price Change (€)</option>
 					<option value="percentChange" {% if request.args.get('sortBy', 'name') == 'percentChange' %}selected{% endif %}>Percentage Change (%)</option>
 					<option value="lowestPrice" {% if request.args.get('sortBy', 'name') == 'lowestPrice' %}selected{% endif %}>Lowest Price</option>
+					{% endif %}
 				</select>
 			</div>
 			<div class="col-auto">
@@ -104,6 +152,7 @@
 					<option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
 				</select>
 			</div>
+			{% if request.args.get('collection') != 'true' %}
 			<div class="col-auto">
 				<label for="pricePeriod" class="col-form-label">Price Period:</label>
 			</div>
@@ -125,6 +174,7 @@
 					<option value="sold" {% if request.args.get('priceType', 'available') == 'sold' %}selected{% endif %}>Sold</option>
 				</select>
 			</div>
+			{% endif %}
 		</form>
 	</div>
 </div>
@@ -244,6 +294,97 @@ function startPolling() {
 	pollInterval = setInterval(pollStatus, 1000);
 }
 
+// Sync functions
+function updateSyncStatus() {
+	fetch('/api/sync/status')
+		.then(r => r.json())
+		.then(data => {
+			var statusEl = document.getElementById('syncStatus');
+			var pullBtn = document.getElementById('syncPullBtn');
+			var fullBtn = document.getElementById('syncFullBtn');
+
+			if (!data.available) {
+				statusEl.textContent = data.message || 'Sync unavailable';
+				statusEl.style.color = '#dc3545';
+				pullBtn.disabled = true;
+				fullBtn.disabled = true;
+			} else {
+				statusEl.textContent = 'Last sync: ' + data.time_ago;
+				statusEl.style.color = '#6c757d';
+				pullBtn.disabled = false;
+				fullBtn.disabled = false;
+			}
+		})
+		.catch(err => {
+			document.getElementById('syncStatus').textContent = 'Error';
+			console.error('Sync status error:', err);
+		});
+}
+
+function syncPull() {
+	var btn = document.getElementById('syncPullBtn');
+	var statusEl = document.getElementById('syncStatus');
+	btn.disabled = true;
+	btn.innerHTML = '&#8595; Pulling...';
+	statusEl.textContent = 'Pulling from remote...';
+	statusEl.style.color = '#007bff';
+
+	fetch('/api/sync/pull', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8595; Pull';
+			if (data.success) {
+				statusEl.textContent = data.message;
+				statusEl.style.color = '#28a745';
+				// Reload page to show updated data
+				if (data.message !== 'Already up to date') {
+					setTimeout(() => window.location.reload(), 1500);
+				}
+			} else {
+				statusEl.textContent = 'Error: ' + data.message;
+				statusEl.style.color = '#dc3545';
+			}
+		})
+		.catch(err => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8595; Pull';
+			statusEl.textContent = 'Error: ' + err;
+			statusEl.style.color = '#dc3545';
+		});
+}
+
+function syncFull() {
+	var btn = document.getElementById('syncFullBtn');
+	var statusEl = document.getElementById('syncStatus');
+	btn.disabled = true;
+	btn.innerHTML = '&#8597; Syncing...';
+	statusEl.textContent = 'Full sync in progress...';
+	statusEl.style.color = '#007bff';
+
+	fetch('/api/sync/full', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8597; Full Sync';
+			if (data.success) {
+				statusEl.textContent = data.message;
+				statusEl.style.color = '#28a745';
+				// Reload page
+				setTimeout(() => window.location.reload(), 1500);
+			} else {
+				statusEl.textContent = 'Error: ' + data.message;
+				statusEl.style.color = '#dc3545';
+			}
+		})
+		.catch(err => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8597; Full Sync';
+			statusEl.textContent = 'Error: ' + err;
+			statusEl.style.color = '#dc3545';
+		});
+}
+
 // Check status on page load
 document.addEventListener('DOMContentLoaded', function() {
 	fetch('/api/download/status')
@@ -254,6 +395,23 @@ document.addEventListener('DOMContentLoaded', function() {
 				startPolling();
 			}
 		});
+
+	// Check sync status
+	updateSyncStatus();
+
+	// Load collection total if on collection page
+	var collectionTotal = document.getElementById('collectionTotal');
+	if (collectionTotal) {
+		fetch('/api/collection/value')
+			.then(r => r.json())
+			.then(data => {
+				collectionTotal.innerHTML = '€' + data.total_value.toFixed(2) + '<span style="font-size: 0.5em; margin-left: 12px; opacity: 0.9;">' + data.card_count + ' cards (' + data.item_count + ' items)</span>';
+			})
+			.catch(err => {
+				collectionTotal.textContent = 'Error loading';
+				console.error('Error loading collection value:', err);
+			});
+	}
 });
 </script>
 </body>

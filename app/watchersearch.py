@@ -2,8 +2,10 @@ from datetime import datetime
 import os
 import json
 from app.config import PAGES_DIR, ARCHIVE_DIR, CHANGES_DIR
+from app.collection import calculate_collection_price, Collection
+from app.page import Page
 
-def build_search(search_term="", sort_by="name", sort_order="asc", price_period="last", price_type="available"):
+def build_search(search_term="", sort_by="name", sort_order="asc", price_period="last", price_type="available", collection=None):
     """
     Build the search view HTML.
 
@@ -13,7 +15,27 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         sort_order: Sort direction (asc, desc)
         price_period: Price comparison period (last, 1w, 1m, 2m, 6m)
         price_type: Price type for sorting (available, sold)
+        collection: Optional Collection object to filter by (only show cards in collection)
     """
+    # Get collection canonical names for filtering
+    collection_names = collection.get_canonical_names() if collection else None
+
+    # Always load all collection names to show indicator on cards in collection
+    all_collection_names = set()
+    if collection:
+        all_collection_names = collection_names
+    else:
+        # Load collection just for the indicator badges
+        all_collection = Collection().load()
+        all_collection_names = all_collection.get_canonical_names()
+
+    # Build a map of canonical_name -> list of collection items for price calculation
+    collection_items_map = {}
+    if collection:
+        for item in collection.items:
+            if item.canonical_name not in collection_items_map:
+                collection_items_map[item.canonical_name] = []
+            collection_items_map[item.canonical_name].append(item)
     # Load unified price history (contains all metrics including last_download data)
     price_history = {}
     if os.path.exists(os.path.join(CHANGES_DIR, "price_history.json")):
@@ -32,8 +54,13 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         # if there is a search term, all words in the term have to be in the canonical name
         if search_term and any([term not in file_name.lower() for term in search_terms]):
             continue
-            
+
         canonical_name = file_name[:-5]
+
+        # If collection filter is active, only show cards in collection
+        if collection_names is not None and canonical_name not in collection_names:
+            continue
+
         timestamp = os.path.getmtime(os.path.join(PAGES_DIR, file_name))
 
         # Extract price data for sorting based on selected period
@@ -80,6 +107,26 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                 if ended_avg > 0:
                     ended_percent_chg = (ended_chg / ended_avg) * 100
 
+        # Calculate collection price if in collection view
+        collection_price = 0.0
+        collection_qty = 0
+        collection_unit_price = 0.0  # Average unit price across all items
+        if collection and canonical_name in collection_items_map:
+            # Load the page to calculate collection prices
+            page = Page()
+            page_path = os.path.join(PAGES_DIR, file_name)
+            if os.path.exists(page_path):
+                page.import_page(page_path)
+                for item in collection_items_map[canonical_name]:
+                    item_price = calculate_collection_price(
+                        page, item.condition, item.language, item.first_ed, item.reverse_holo
+                    )
+                    collection_price += item_price * item.quantity
+                    collection_qty += item.quantity
+                # Calculate average unit price
+                if collection_qty > 0:
+                    collection_unit_price = collection_price / collection_qty
+
         file_data_list.append({
             'file_name': file_name,
             'canonical_name': canonical_name,
@@ -90,7 +137,11 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             'price_min': price_min,
             'ended_avg': ended_avg,
             'ended_chg': ended_chg,
-            'ended_percent_chg': ended_percent_chg
+            'ended_percent_chg': ended_percent_chg,
+            'collection_price': collection_price,
+            'collection_qty': collection_qty,
+            'collection_unit_price': collection_unit_price,
+            'in_collection': canonical_name in all_collection_names
         })
 
     # Apply sorting based on parameters and price type
@@ -112,6 +163,9 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             file_data_list.sort(key=lambda x: x['percent_chg'], reverse=(sort_order == "desc"))
     elif sort_by == "lowestPrice":
         file_data_list.sort(key=lambda x: x['price_min'], reverse=(sort_order == "desc"))
+    elif sort_by == "collectionPrice":
+        # Sort by total collection value for this card
+        file_data_list.sort(key=lambda x: x['collection_price'], reverse=(sort_order == "desc"))
     else:  # default to name
         file_data_list.sort(key=lambda x: x['file_name'], reverse=(sort_order == "desc"))
 
@@ -288,26 +342,63 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         if lowest_price > 0:
             lowest_price_html = f'<div style="font-size: 0.85em; font-weight: bold; background: rgba(240,240,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;">From: {round(lowest_price,2)}€</div>'
 
-        search += "<div class=\"d-flex mb-4 col-12 col-sm-6 col-md-4 col-lg-2\">" + \
-                    "<a name=\"" + file_name + "\" href=\"?name="+file_name+"\" class=\"card text-center w-100 galleryBox\" style=\"position: relative;\">" + \
-                        availability_badges + \
-                        "<img src=\"data/images/" + file_name[:-5] +".jpg" + \
-                        "\" alt=\"" + article_name + "\" class=\"lazy card-img-top img-fluid\">" + \
-                        "<div class=\"card-body d-flex flex-column p-2\" style=\"gap: 2px;\">" + \
-                            "<div class=\"card-title\" style=\"font-size: 0.9em; font-weight: bold; margin-bottom: 2px;\">" + \
-                                article_name + \
+        # Build collection price HTML (only when in collection view)
+        collection_price_html = ""
+        if collection and data['collection_price'] > 0:
+            coll_total = round(data['collection_price'], 2)
+            coll_qty = data['collection_qty']
+            coll_unit = round(data['collection_unit_price'], 2)
+            collection_price_html = f'<div style="font-size: 0.85em; font-weight: bold; color: #28a745; background: rgba(40,167,69,0.15); padding: 4px 8px; border-radius: 4px; display: inline-block;">{coll_qty}x @ {coll_unit}€ = {coll_total}€</div>'
+
+        # In collection view, show collection price instead of regular prices
+        if collection:
+            search += "<div class=\"d-flex mb-4 col-12 col-sm-6 col-md-4 col-lg-2\">" + \
+                        "<a name=\"" + file_name + "\" href=\"?name="+file_name+"&collection=true\" class=\"card text-center w-100 galleryBox\" style=\"position: relative;\">" + \
+                            availability_badges + \
+                            "<img src=\"data/images/" + file_name[:-5] +".jpg" + \
+                            "\" alt=\"" + article_name + "\" class=\"lazy card-img-top img-fluid\">" + \
+                            "<div class=\"card-body d-flex flex-column p-2\" style=\"gap: 2px;\">" + \
+                                "<div class=\"card-title\" style=\"font-size: 0.9em; font-weight: bold; margin-bottom: 2px;\">" + \
+                                    article_name + \
+                                "</div>" + \
+                                "<div style=\"font-size: 0.75em; color: #666;\">(" + \
+                                    datetime.fromtimestamp(float(timestamp)).strftime('%d.%m.%Y') + \
+                                ")</div>" + \
+                                collection_price_html + \
                             "</div>" + \
-                            "<div style=\"font-size: 0.75em; color: #666;\">(" + \
-                                datetime.fromtimestamp(float(timestamp)).strftime('%d.%m.%Y') + \
-                            ")</div>" + \
-                            "<div style=\"" + price_style + "\">" + \
-                               price_string + \
+                        "</a>" + \
+                      "</div>"
+        else:
+            # Collection indicator badge (heart icon in top-left corner)
+            collection_badge = ""
+            if data['in_collection']:
+                collection_badge = '<div style="position: absolute; top: 4px; left: 4px; background: rgba(40,167,69,0.9); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;" title="In Collection">&#9829;</div>'
+
+            search += "<div class=\"d-flex mb-4 col-12 col-sm-6 col-md-4 col-lg-2\">" + \
+                        "<a name=\"" + file_name + "\" href=\"?name="+file_name+"\" class=\"card text-center w-100 galleryBox\" style=\"position: relative;\">" + \
+                            collection_badge + \
+                            availability_badges + \
+                            "<img src=\"data/images/" + file_name[:-5] +".jpg" + \
+                            "\" alt=\"" + article_name + "\" class=\"lazy card-img-top img-fluid\">" + \
+                            "<div class=\"card-body d-flex flex-column p-2\" style=\"gap: 2px;\">" + \
+                                "<div class=\"card-title\" style=\"font-size: 0.9em; font-weight: bold; margin-bottom: 2px;\">" + \
+                                    article_name + \
+                                "</div>" + \
+                                "<div style=\"font-size: 0.75em; color: #666;\">(" + \
+                                    datetime.fromtimestamp(float(timestamp)).strftime('%d.%m.%Y') + \
+                                ")</div>" + \
+                                "<div style=\"" + price_style + "\">" + \
+                                   price_string + \
+                                "</div>" + \
+                                ended_price_html + \
+                                lowest_price_html + \
                             "</div>" + \
-                            ended_price_html + \
-                            lowest_price_html + \
-                        "</div>" + \
-                    "</a>" + \
-                  "</div>"
+                        "</a>" + \
+                      "</div>"
+    # Don't show archive section when in collection view
+    if collection:
+        return search
+
     search += "<h1 class=\"page-header\">Archive</h1>"
     file_list = [f for f in os.listdir(ARCHIVE_DIR) if f.endswith('.json')]
     file_info_list = [(file_name, os.path.getmtime(os.path.join(ARCHIVE_DIR,file_name))) for file_name in file_list]

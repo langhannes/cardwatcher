@@ -74,17 +74,13 @@ CardWatcher
 		</h1>
 	</div>
 	</a>
-	<div class="align-self-end mb-md-1 d-flex gap-2">
-		<button id="downloadBtn" class="btn btn-sm btn-primary" title="Download latest data for this page">
+	<div class="align-self-end mb-md-1 d-flex gap-2" style="flex-shrink: 0;">
+		<button id="downloadBtn" class="btn btn-sm btn-primary" style="white-space: nowrap;" title="Download latest data for this page">
 			<span id="downloadBtnText">Download</span>
 			<span id="downloadSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
 		</button>
-		<a href="/?name={{ page_name }}&archive=toggle" class="btn btn-sm {% if is_archived %}btn-success{% else %}btn-secondary{% endif %}" title="{% if is_archived %}Unarchive this page{% else %}Archive this page{% endif %}">
-			{% if is_archived %}
-				Unarchive
-			{% else %}
-				Archive
-			{% endif %}
+		<a href="/?name={{ page_name }}&archive=toggle" class="btn btn-sm {% if is_archived %}btn-success{% else %}btn-secondary{% endif %}" style="white-space: nowrap;" title="{% if is_archived %}Unarchive this page{% else %}Archive this page{% endif %}">
+			{% if is_archived %}Unarchive{% else %}Archive{% endif %}
 		</a>
 	</div>
 </div>
@@ -100,9 +96,18 @@ CardWatcher
 <div class="tab-navigation">
 	<ul role="tablist" class="nav nav-tabs">
 		<li class="nav-item tab-info" role="presentation">
-			<a href="" data-bs-toggle="tab" role="tab" aria-controls="tabContent-info" aria-selected="true" class="nav-link active show">
+			<a href="#tabContent-info" data-bs-toggle="tab" role="tab" aria-controls="tabContent-info" aria-selected="true" class="nav-link active show" id="info-tab">
 				<span class="nav-link-title">
-					<span>Info
+					<span>Info</span>
+				</span>
+			</a>
+		</li>
+		<li class="nav-item tab-collection" role="presentation">
+			<a href="#tabContent-collection" data-bs-toggle="tab" role="tab" aria-controls="tabContent-collection" aria-selected="false" class="nav-link" id="collection-tab">
+				<span class="nav-link-title">
+					<span style="color: {% if in_collection %}#28a745{% else %}inherit{% endif %};">
+						&#9829; Collection
+						{% if in_collection %}<span class="badge bg-success ms-1">In Collection</span>{% endif %}
 					</span>
 				</span>
 			</a>
@@ -111,7 +116,7 @@ CardWatcher
 </div>
 
 <div class="tab-content">
-	<div id="tabContent-info" role="tabpanel" aria-labelledby="tabContent-info" class="tab-pane d-none h-100 px-3 pt-3 active">
+	<div id="tabContent-info" role="tabpanel" aria-labelledby="info-tab" class="tab-pane h-100 px-3 pt-3 active show">
 		<div class="row">
 			<div class="col-12 col-lg-12">
 				<div class="row g-0 small justify-content-center ">
@@ -124,6 +129,34 @@ CardWatcher
 							<dd class="col-6 col-xl-7">{{  available  }}
 							</dd>
 						</dl>
+						<!-- Price Summary -->
+						<div class="d-flex flex-wrap gap-2 mt-2 mb-2">
+							{% if price_info.available_avg > 0 %}
+							<div style="font-size: 0.9em; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block;
+								{% if price_info.available_change > 0 %}color: rgb(34,139,34); background: rgba(34,139,34,0.1);
+								{% elif price_info.available_change < 0 %}color: rgb(220,20,60); background: rgba(220,20,60,0.1);
+								{% else %}color: #333; background: rgba(0,0,0,0.05);{% endif %}">
+								Avail: {{ price_info.available_avg }}€
+								({% if price_info.available_change >= 0 %}+{% endif %}{{ price_info.available_change }}€)
+								{% if price_info.available_change > 0 %}↑{% elif price_info.available_change < 0 %}↓{% else %}→{% endif %}
+							</div>
+							{% endif %}
+							{% if price_info.sold_avg > 0 %}
+							<div style="font-size: 0.9em; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block;
+								{% if price_info.sold_change > 0 %}color: rgb(34,139,34); background: rgba(34,139,34,0.1);
+								{% elif price_info.sold_change < 0 %}color: rgb(220,20,60); background: rgba(220,20,60,0.1);
+								{% else %}color: #333; background: rgba(0,0,0,0.05);{% endif %}">
+								Sold: {{ price_info.sold_avg }}€
+								({% if price_info.sold_change >= 0 %}+{% endif %}{{ price_info.sold_change }}€)
+								{% if price_info.sold_change > 0 %}↑{% elif price_info.sold_change < 0 %}↓{% else %}→{% endif %}
+							</div>
+							{% endif %}
+							{% if price_info.lowest_price > 0 %}
+							<div style="font-size: 0.9em; font-weight: bold; background: rgba(240,240,255,0.85); padding: 4px 8px; border-radius: 4px; display: inline-block;">
+								From: {{ price_info.lowest_price }}€
+							</div>
+							{% endif %}
+						</div>
 					</div>
 				</div>
 				<div class="row g-0 small justify-content-center ">
@@ -131,6 +164,84 @@ CardWatcher
 				</div>
 			</div>
 			<div class="col-lg-0 d-none d-lg-block">
+			</div>
+		</div>
+	</div>
+
+	<!-- Collection Tab -->
+	<div id="tabContent-collection" role="tabpanel" aria-labelledby="collection-tab" class="tab-pane h-100 px-3 pt-3">
+		<div class="row">
+			<div class="col-12">
+				<!-- Add to Collection Form -->
+				<div class="card mb-3">
+					<div class="card-header">
+						<strong>Add to Collection</strong>
+					</div>
+					<div class="card-body">
+						<form id="addCollectionForm" class="row g-3">
+							<div class="col-md-2">
+								<label for="collectionQuantity" class="form-label">Quantity</label>
+								<input type="number" class="form-control" id="collectionQuantity" value="1" min="1" max="99">
+							</div>
+							<div class="col-md-3">
+								<label for="collectionLanguage" class="form-label">Language</label>
+								<select class="form-select" id="collectionLanguage">
+									<!-- Will be populated by JavaScript based on available languages -->
+								</select>
+							</div>
+							<div class="col-md-3">
+								<label for="collectionCondition" class="form-label">Condition</label>
+								<select class="form-select" id="collectionCondition">
+									<option value="MT">Mint (MT)</option>
+									<option value="NM" selected>Near Mint (NM)</option>
+									<option value="EX">Excellent (EX)</option>
+									<option value="GD">Good (GD)</option>
+									<option value="LP">Light Played (LP)</option>
+									<option value="PL">Played (PL)</option>
+									<option value="PO">Poor (PO)</option>
+								</select>
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Extra</label>
+								<div class="d-flex gap-3 mt-1">
+									<div class="form-check">
+										<input class="form-check-input" type="checkbox" id="collectionFirstEd">
+										<label class="form-check-label" for="collectionFirstEd">
+											<span style="display: inline-block; width: 16px; height: 16px; background-image:url('{{ url_for('static', filename='Blanko/ssMain2.png') }}'); background-position: -112px -16px;" class="icon align-self-center me-1"></span>
+											1st Ed
+										</label>
+									</div>
+									<div class="form-check">
+										<input class="form-check-input" type="checkbox" id="collectionReverseHolo">
+										<label class="form-check-label" for="collectionReverseHolo">
+											<span style="display: inline-block; width: 16px; height: 16px; background-image:url('{{ url_for('static', filename='Blanko/ssMain2.png') }}'); background-position: -416px -16px;" class="icon align-self-center me-1"></span>
+											Rev. Holo
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="col-12">
+								<button type="submit" class="btn btn-success" id="addToCollectionBtn">
+									<span id="addBtnText">Add to Collection</span>
+									<span id="addSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+
+				<!-- Current Collection Items for this Card -->
+				<div class="card">
+					<div class="card-header d-flex justify-content-between align-items-center">
+						<strong>Your Collection</strong>
+						<span id="collectionValue" class="badge bg-primary">Loading...</span>
+					</div>
+					<div class="card-body">
+						<div id="collectionItems">
+							<p class="text-muted">Loading collection...</p>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -844,6 +955,197 @@ CardWatcher
 		});
 	}
 	generate_Graph();
+
+	// Tab switching
+	document.querySelectorAll('.nav-link[data-bs-toggle="tab"]').forEach(function(tab) {
+		tab.addEventListener('click', function(e) {
+			e.preventDefault();
+			// Remove active from all tabs and panes
+			document.querySelectorAll('.nav-link[data-bs-toggle="tab"]').forEach(t => t.classList.remove('active', 'show'));
+			document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active', 'show'));
+			// Add active to clicked tab
+			this.classList.add('active', 'show');
+			// Show corresponding pane
+			var target = document.querySelector(this.getAttribute('href'));
+			if (target) {
+				target.classList.add('active', 'show');
+			}
+		});
+	});
+
+	// Collection functionality
+	var canonicalName = '{{ canonical_name }}';
+	var availableLanguages = {{ available_languages | tojson | safe }};
+
+	// Populate language dropdown with only available languages
+	function populateLanguageDropdown() {
+		var select = document.getElementById('collectionLanguage');
+		select.innerHTML = '';
+
+		// Default language options in preferred order
+		var allLanguages = ['English', 'German', 'French', 'Spanish', 'Italian', 'Portuguese', 'Japanese', 'Chinese', 'Korean', 'Traditional Chinese'];
+
+		// Filter to only available languages, maintaining order
+		var languagesToShow = allLanguages.filter(function(lang) {
+			return availableLanguages.includes(lang);
+		});
+
+		// If no matches found (maybe different language names), show all available
+		if (languagesToShow.length === 0) {
+			languagesToShow = availableLanguages;
+		}
+
+		languagesToShow.forEach(function(lang, index) {
+			var option = document.createElement('option');
+			option.value = lang;
+			option.textContent = lang;
+			if (index === 0) option.selected = true;
+			select.appendChild(option);
+		});
+	}
+	populateLanguageDropdown();
+
+	function loadCollectionItems() {
+		fetch('/api/collection/for-page/' + canonicalName)
+			.then(response => response.json())
+			.then(data => {
+				var container = document.getElementById('collectionItems');
+				if (data.items.length === 0) {
+					container.innerHTML = '<p class="text-muted">No items in collection for this card.</p>';
+					document.getElementById('collectionValue').textContent = '€0.00';
+					return;
+				}
+
+				var totalValue = 0;
+				var html = '<table class="table table-sm table-striped"><thead><tr><th>Qty</th><th>Condition</th><th>Language</th><th>Properties</th><th>Price</th><th>Value</th><th></th></tr></thead><tbody>';
+				data.items.forEach(function(item) {
+					totalValue += item.total_value;
+					var props = [];
+					if (item.first_ed === 2) props.push('1st Ed');
+					if (item.reverse_holo === 2) props.push('Rev. Holo');
+
+					html += '<tr>';
+					html += '<td>' + item.quantity + '</td>';
+					html += '<td><span class="badge bg-secondary">' + item.condition + '</span></td>';
+					html += '<td>' + item.language + '</td>';
+					html += '<td>' + (props.length > 0 ? props.join(', ') : '-') + '</td>';
+					html += '<td>' + item.calculated_price.toFixed(2) + '€</td>';
+					html += '<td><strong>' + item.total_value.toFixed(2) + '€</strong></td>';
+					html += '<td><button class="btn btn-sm btn-outline-danger remove-collection-btn" data-condition="' + item.condition + '" data-language="' + item.language + '" data-firsted="' + item.first_ed + '" data-reverse="' + item.reverse_holo + '">Remove</button></td>';
+					html += '</tr>';
+				});
+				html += '</tbody></table>';
+				container.innerHTML = html;
+				document.getElementById('collectionValue').textContent = 'Total: €' + totalValue.toFixed(2);
+
+				// Add remove handlers
+				document.querySelectorAll('.remove-collection-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						removeFromCollection(
+							this.dataset.condition,
+							this.dataset.language,
+							parseInt(this.dataset.firsted),
+							parseInt(this.dataset.reverse)
+						);
+					});
+				});
+			})
+			.catch(error => {
+				console.error('Error loading collection:', error);
+				document.getElementById('collectionItems').innerHTML = '<p class="text-danger">Error loading collection.</p>';
+			});
+	}
+
+	function removeFromCollection(condition, language, firstEd, reverseHolo) {
+		if (!confirm('Remove this item from your collection?')) return;
+
+		fetch('/api/collection/remove', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				canonical_name: canonicalName,
+				condition: condition,
+				language: language,
+				first_ed: firstEd,
+				reverse_holo: reverseHolo
+			})
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.success) {
+				loadCollectionItems();
+			} else {
+				alert('Failed to remove item.');
+			}
+		})
+		.catch(error => {
+			alert('Error: ' + error);
+		});
+	}
+
+	// Add to collection form handler
+	document.getElementById('addCollectionForm').addEventListener('submit', function(e) {
+		e.preventDefault();
+		var btn = document.getElementById('addToCollectionBtn');
+		var btnText = document.getElementById('addBtnText');
+		var spinner = document.getElementById('addSpinner');
+
+		btn.disabled = true;
+		btnText.textContent = 'Adding...';
+		spinner.classList.remove('d-none');
+
+		var quantity = parseInt(document.getElementById('collectionQuantity').value) || 1;
+		var language = document.getElementById('collectionLanguage').value;
+		var condition = document.getElementById('collectionCondition').value;
+		var firstEd = document.getElementById('collectionFirstEd').checked ? 2 : 0;
+		var reverseHolo = document.getElementById('collectionReverseHolo').checked ? 2 : 0;
+
+		fetch('/api/collection/add', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				canonical_name: canonicalName,
+				quantity: quantity,
+				language: language,
+				condition: condition,
+				first_ed: firstEd,
+				reverse_holo: reverseHolo
+			})
+		})
+		.then(response => response.json())
+		.then(data => {
+			btn.disabled = false;
+			btnText.textContent = 'Add to Collection';
+			spinner.classList.add('d-none');
+
+			if (data.success) {
+				// Reset form
+				document.getElementById('collectionQuantity').value = 1;
+				document.getElementById('collectionFirstEd').checked = false;
+				document.getElementById('collectionReverseHolo').checked = false;
+				// Reload collection items
+				loadCollectionItems();
+				// Update tab badge
+				var tabBadge = document.querySelector('#collection-tab .badge');
+				if (!tabBadge) {
+					var tabSpan = document.querySelector('#collection-tab .nav-link-title span');
+					tabSpan.innerHTML = '&#9829; Collection <span class="badge bg-success ms-1">In Collection</span>';
+					tabSpan.style.color = '#28a745';
+				}
+			} else {
+				alert('Failed to add to collection: ' + (data.message || 'Unknown error'));
+			}
+		})
+		.catch(error => {
+			btn.disabled = false;
+			btnText.textContent = 'Add to Collection';
+			spinner.classList.add('d-none');
+			alert('Error: ' + error);
+		});
+	});
+
+	// Load collection items on page load
+	loadCollectionItems();
 
 	// Download button handler
 	document.getElementById('downloadBtn').addEventListener('click', function() {
