@@ -46,6 +46,9 @@ CardWatcher
 			CardWatcher
 			</span>
 		</a>
+		<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings" style="margin-left: auto;">
+			&#9881; Settings
+		</a>
 	</nav>
 	<nav class="navbar navbar-light">
 		<form method="GET" id="searchForm" action="/" class="justify-content-center">
@@ -159,7 +162,13 @@ CardWatcher
 						</div>
 					</div>
 				</div>
-				<div class="row g-0 small justify-content-center ">
+				<div class="row g-0 small justify-content-center">
+					<div class="d-flex justify-content-center gap-1 mb-1">
+						<button type="button" class="btn btn-outline-primary btn-sm chart-period-btn" data-period="1m" style="font-size:0.7em; padding: 1px 6px;">1M</button>
+						<button type="button" class="btn btn-outline-primary btn-sm chart-period-btn" data-period="3m" style="font-size:0.7em; padding: 1px 6px;">3M</button>
+						<button type="button" class="btn btn-outline-primary btn-sm chart-period-btn" data-period="6m" style="font-size:0.7em; padding: 1px 6px;">6M</button>
+						<button type="button" class="btn btn-outline-primary btn-sm chart-period-btn active" data-period="all" style="font-size:0.7em; padding: 1px 6px;">All</button>
+					</div>
 					<canvas id="chart" width="400" height="120"></canvas>
 				</div>
 			</div>
@@ -179,17 +188,18 @@ CardWatcher
 					</div>
 					<div class="card-body">
 						<form id="addCollectionForm" class="row g-3">
-							<div class="col-md-2">
+							<!-- Row 1: Quantity, Language, Condition -->
+							<div class="col-md-2 col-4">
 								<label for="collectionQuantity" class="form-label">Quantity</label>
 								<input type="number" class="form-control" id="collectionQuantity" value="1" min="1" max="99">
 							</div>
-							<div class="col-md-3">
+							<div class="col-md-5 col-8">
 								<label for="collectionLanguage" class="form-label">Language</label>
 								<select class="form-select" id="collectionLanguage">
 									<!-- Will be populated by JavaScript based on available languages -->
 								</select>
 							</div>
-							<div class="col-md-3">
+							<div class="col-md-5">
 								<label for="collectionCondition" class="form-label">Condition</label>
 								<select class="form-select" id="collectionCondition">
 									<option value="MT">Mint (MT)</option>
@@ -201,25 +211,31 @@ CardWatcher
 									<option value="PO">Poor (PO)</option>
 								</select>
 							</div>
-							<div class="col-md-4">
-								<label class="form-label">Extra</label>
-								<div class="d-flex gap-3 mt-1">
+							<!-- Row 2: Extra options, Date Added -->
+							<div class="col-md-6">
+								<label class="form-label">Attributes</label>
+								<div class="d-flex gap-4">
 									<div class="form-check">
 										<input class="form-check-input" type="checkbox" id="collectionFirstEd">
 										<label class="form-check-label" for="collectionFirstEd">
 											<span style="display: inline-block; width: 16px; height: 16px; background-image:url('{{ url_for('static', filename='Blanko/ssMain2.png') }}'); background-position: -112px -16px;" class="icon align-self-center me-1"></span>
-											1st Ed
+											1st Edition
 										</label>
 									</div>
 									<div class="form-check">
 										<input class="form-check-input" type="checkbox" id="collectionReverseHolo">
 										<label class="form-check-label" for="collectionReverseHolo">
 											<span style="display: inline-block; width: 16px; height: 16px; background-image:url('{{ url_for('static', filename='Blanko/ssMain2.png') }}'); background-position: -416px -16px;" class="icon align-self-center me-1"></span>
-											Rev. Holo
+											Reverse Holo
 										</label>
 									</div>
 								</div>
 							</div>
+							<div class="col-md-6">
+								<label for="collectionAddedAt" class="form-label">Date Added</label>
+								<input type="date" class="form-control" id="collectionAddedAt">
+							</div>
+							<!-- Row 3: Submit button -->
 							<div class="col-12">
 								<button type="submit" class="btn btn-success" id="addToCollectionBtn">
 									<span id="addBtnText">Add to Collection</span>
@@ -250,8 +266,14 @@ CardWatcher
 <div class="clearfix w-100 mt-3">
 </div>
 
+<!-- Mobile filter toggle button -->
+<div class="d-lg-none w-100 mb-2">
+	<button class="btn btn-sm btn-outline-primary w-100" type="button" onclick="var f=document.getElementById('filter'); f.classList.toggle('d-none'); f.classList.toggle('d-block');">
+		&#9776; Show/Hide Filters
+	</button>
+</div>
 
-<section id="filter" style="width:15rem" class="d-none d-lg-block align-self-start collapse ps-0 pe-3 show">
+<section id="filter" class="d-none d-lg-block align-self-start collapse ps-0 pe-3 show" style="width:15rem; max-width:100%;">
 
 <form method="POST" id="FilterForm" action="/en/OnePiece/PostGetAction/Product_Filter_FilterProduct" class="article-filter-form">
 	<input type="hidden" name="__cmtkn" value="00f0119a1889792e299d7c3fa759a1369dcea69494d25633bed72ad1160c8da8" autocomplete="off">
@@ -482,7 +504,7 @@ CardWatcher
 					</div>
 				</div>
 			</div>
-			<div class="col-offer col-auto" style="width:20.5rem;">Angebot
+			<div class="col-offer col-auto" style="width:24rem;">Angebot
 			</div>
 		</div>
 	</div>
@@ -838,35 +860,48 @@ CardWatcher
 		generate_Graph();
 	});
 
-	// bar chart data
-	function getDataFromTable(){
+	// chart data
+	var currentChartPeriod = 'all';
+
+	function getDataFromTable(periodDays){
 		var currentDate = new Date();
+		var cutoffDate = null;
+		if (periodDays) {
+			cutoffDate = new Date();
+			cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+			cutoffDate.setHours(0,0,0,0);
+		}
 
 		var data = [];
 		var rows = document.querySelectorAll('.article-row');
 		rows.forEach(function(row) {
 			var isHidden = false;
 			row.classList.forEach(function(className) {
-				if (className.startsWith('hidden')) {
+				if (className.startsWith('hidden') || className === 'archived-listing') {
 					isHidden = true;
 				}
 			});
 			if (!isHidden){
-				var temp_list = [];
-				temp_list.push(row.querySelectorAll('.actions-container')[0].innerText);
-				temp_list.push(parseFloat(row.querySelectorAll('.price-container')[0].innerText.replace(' ','').replace('€','')));
-				data.push(temp_list);
+				var dateStr = row.querySelectorAll('.actions-container')[0].innerText;
+				var price = parseFloat(row.querySelectorAll('.price-container')[0].innerText.replace(' ','').replace('€',''));
+				var rowDate = new Date(dateStr.split('.').reverse().join('-'));
+				// Filter by period if set
+				if (cutoffDate && rowDate < cutoffDate) return;
+				data.push([dateStr, price]);
 			}
 		});
+		if (data.length === 0) return { labels: [], prices: [] };
+
 		data.sort(function(a,b) {
 			var dateA = new Date(a[0].split('.').reverse().join('-'));
 			var dateB = new Date(b[0].split('.').reverse().join('-'));
 			return dateA - dateB;
 		});
-		
+
 		var labels = [];
 		var prices = [];
-		var firstDate = new Date(data[0][0].split('.').reverse().join('-'));
+		var startDate = cutoffDate || new Date(data[0][0].split('.').reverse().join('-'));
+		var firstDate = new Date(startDate);
 		var current_index = 0;
 		var date_at_index = new Date(data[0][0].split('.').reverse().join('-'));
 		date_at_index.setHours(1);
@@ -874,23 +909,18 @@ CardWatcher
 			i.setHours(1);
 			var sum = 0;
 			var num = 0;
-			console.log("i: " + i);
-			console.log("date_at_index: " + current_index + " -> " + date_at_index);
-			while (date_at_index.getTime() === i.getTime()){
-				console.log("found common date");
+			while (current_index < data.length && date_at_index.getTime() === i.getTime()){
 				sum += data[current_index][1];
 				num++;
 				current_index++;
-				if(current_index >= data.length){
-					console.log("no more data points")
-					break;
+				if(current_index < data.length){
+					date_at_index = new Date(data[current_index][0].split('.').reverse().join('-'));
+					date_at_index.setHours(1);
 				}
-				date_at_index = new Date(data[current_index][0].split('.').reverse().join('-'));
-				date_at_index.setHours(1);
 			}
-			var day = i.getDate(); // Returns the day of the month (1-31)
-			var month = i.getMonth() + 1; // Returns the month (0-11), so we add 1 to get the correct month
-			var year = i.getFullYear(); // Returns the year (four digits)
+			var day = i.getDate();
+			var month = i.getMonth() + 1;
+			var year = i.getFullYear();
 			var formattedDate = ('0' + day).slice(-2) + '.' + ('0' + month).slice(-2) + '.' + year;
 			labels.push(formattedDate);
 			if (num){
@@ -906,30 +936,78 @@ CardWatcher
 
 	var mychart;
 
-	function generate_Graph(){
-		var data = getDataFromTable();
-			// Sort the data by date
-		data.labels.sort(function(a, b) {
-			return new Date(a) - new Date(b);
-		});
+	function smoothPrices(prices, window_size) {
+		// Centered moving average that skips nulls
+		var smoothed = [];
+		var half = Math.floor(window_size / 2);
+		for (var i = 0; i < prices.length; i++) {
+			var sum = 0;
+			var count = 0;
+			for (var j = Math.max(0, i - half); j <= Math.min(prices.length - 1, i + half); j++) {
+				if (prices[j] !== null) {
+					sum += prices[j];
+					count++;
+				}
+			}
+			smoothed.push(count > 0 ? sum / count : null);
+		}
+		return smoothed;
+	}
+
+	function getSmoothingWindow(totalDays) {
+		// Scale smoothing window based on timeframe
+		if (totalDays <= 35) return 5;       // 1 month: 5-day smoothing
+		if (totalDays <= 100) return 11;      // 3 months: 11-day smoothing
+		if (totalDays <= 200) return 21;      // 6 months: 21-day smoothing
+		return 31;                            // all time: 31-day smoothing
+	}
+
+	function generate_Graph(period){
+		period = period || currentChartPeriod;
+		currentChartPeriod = period;
+
+		var periodDays = { '1m': 30, '3m': 90, '6m': 180, 'all': null }[period];
+		var data = getDataFromTable(periodDays);
+		if (data.labels.length === 0) return;
+
+		// Scale smoothing to timeframe
+		var windowSize = getSmoothingWindow(data.labels.length);
+		var smoothed = smoothPrices(data.prices, windowSize);
+
 		var lineData = {
 			labels: data.labels,
-			datasets: [{
-				label: 'Price',
-				data: data.prices,
-				fill: false, // Don't fill the area under the line
+			datasets: [
+			{
+				label: 'Trend',
+				data: smoothed,
+				fill: false,
 				borderColor: 'rgba(54, 162, 235, 1)',
 				borderWidth: 3,
 				lineTension: 0.3,
-				spanGaps: true
+				spanGaps: true,
+				pointRadius: 0,
+				pointHitRadius: 5,
+				pointHoverRadius: 4
+			},
+			{
+				label: 'Raw',
+				data: data.prices,
+				fill: false,
+				borderColor: 'rgba(54, 162, 235, 0)',
+				borderWidth: 0,
+				pointRadius: 2,
+				pointBackgroundColor: 'rgba(54, 162, 235, 0.3)',
+				pointBorderColor: 'rgba(54, 162, 235, 0.3)',
+				pointHitRadius: 5,
+				pointHoverRadius: 4,
+				pointHoverBackgroundColor: 'rgba(54, 162, 235, 0.8)',
+				spanGaps: false
 			}]
 		}
 		if(mychart){
 			mychart.destroy();
 		}
-		// get bar chart canvas
 		var ctx = document.getElementById("chart").getContext("2d");
-		// Draw line chart
 		mychart = new Chart(ctx, {
 			type: 'line',
 			data: lineData,
@@ -941,19 +1019,29 @@ CardWatcher
 						}
 					}]
 				},
-				elements: {
-					point: {
-						radius: 3, // Set point radius to 0 to hide the dots
-						hitRadius: 5, // Set hitRadius to 5 to make it easier to interact with the line
-						hoverRadius: 5 // Set hoverRadius to 5 to maintain interactivity
-					}
-				},
 				legend: {
-					display: false // Hide the legend
+					display: false
+				},
+				tooltips: {
+					callbacks: {
+						label: function(tooltipItem) {
+							return tooltipItem.yLabel.toFixed(2) + ' €';
+						}
+					}
 				}
 			}
 		});
 	}
+
+	// Period button handlers
+	document.querySelectorAll('.chart-period-btn').forEach(function(btn) {
+		btn.addEventListener('click', function() {
+			document.querySelectorAll('.chart-period-btn').forEach(function(b) { b.classList.remove('active'); });
+			this.classList.add('active');
+			generate_Graph(this.dataset.period);
+		});
+	});
+
 	generate_Graph();
 
 	// Tab switching
@@ -1005,6 +1093,9 @@ CardWatcher
 	}
 	populateLanguageDropdown();
 
+	// Set default date to today
+	document.getElementById('collectionAddedAt').value = new Date().toISOString().split('T')[0];
+
 	function loadCollectionItems() {
 		fetch('/api/collection/for-page/' + canonicalName)
 			.then(response => response.json())
@@ -1017,26 +1108,112 @@ CardWatcher
 				}
 
 				var totalValue = 0;
-				var html = '<table class="table table-sm table-striped"><thead><tr><th>Qty</th><th>Condition</th><th>Language</th><th>Properties</th><th>Price</th><th>Value</th><th></th></tr></thead><tbody>';
-				data.items.forEach(function(item) {
+				var html = '<table class="table table-sm table-striped"><thead><tr><th>Qty</th><th>Condition</th><th>Language</th><th>Attributes</th><th>Added</th><th>Price</th><th>Value</th><th></th></tr></thead><tbody>';
+				data.items.forEach(function(item, index) {
 					totalValue += item.total_value;
 					var props = [];
 					if (item.first_ed === 2) props.push('1st Ed');
 					if (item.reverse_holo === 2) props.push('Rev. Holo');
 
-					html += '<tr>';
+					// Format added_at date for display and input
+					var addedDate = '-';
+					var addedDateInput = '';
+					if (item.added_at) {
+						var d = new Date(item.added_at * 1000);
+						addedDate = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+						addedDateInput = d.toISOString().split('T')[0];
+					}
+
+					// Display row
+					html += '<tr id="item-row-' + index + '">';
 					html += '<td>' + item.quantity + '</td>';
 					html += '<td><span class="badge bg-secondary">' + item.condition + '</span></td>';
 					html += '<td>' + item.language + '</td>';
 					html += '<td>' + (props.length > 0 ? props.join(', ') : '-') + '</td>';
+					html += '<td style="font-size: 0.85em; color: #6c757d;">' + addedDate + '</td>';
 					html += '<td>' + item.calculated_price.toFixed(2) + '€</td>';
 					html += '<td><strong>' + item.total_value.toFixed(2) + '€</strong></td>';
-					html += '<td><button class="btn btn-sm btn-outline-danger remove-collection-btn" data-condition="' + item.condition + '" data-language="' + item.language + '" data-firsted="' + item.first_ed + '" data-reverse="' + item.reverse_holo + '">Remove</button></td>';
+					html += '<td class="text-nowrap">';
+					html += '<button class="btn btn-sm btn-outline-primary edit-collection-btn me-1" data-index="' + index + '" data-condition="' + item.condition + '" data-language="' + item.language + '" data-firsted="' + item.first_ed + '" data-reverse="' + item.reverse_holo + '" data-qty="' + item.quantity + '" data-added="' + (item.added_at || '') + '" title="Edit">✎</button>';
+					html += '<button class="btn btn-sm btn-outline-danger remove-collection-btn" data-condition="' + item.condition + '" data-language="' + item.language + '" data-firsted="' + item.first_ed + '" data-reverse="' + item.reverse_holo + '" title="Remove">×</button>';
+					html += '</td>';
+					html += '</tr>';
+
+					// Edit row (hidden by default)
+					html += '<tr id="edit-row-' + index + '" style="display: none; background: #f8f9fa;">';
+					html += '<td colspan="8">';
+					html += '<div class="row g-2 align-items-end p-2">';
+					html += '<div class="col-auto"><label class="form-label mb-0 small">Qty</label><input type="number" class="form-control form-control-sm edit-qty" value="' + item.quantity + '" min="1" max="99" style="width: 60px;"></div>';
+					html += '<div class="col-auto"><label class="form-label mb-0 small">Condition</label><select class="form-select form-select-sm edit-condition">';
+					['MT', 'NM', 'EX', 'GD', 'LP', 'PL', 'PO'].forEach(function(c) {
+						html += '<option value="' + c + '"' + (c === item.condition ? ' selected' : '') + '>' + c + '</option>';
+					});
+					html += '</select></div>';
+					html += '<div class="col-auto"><label class="form-label mb-0 small">Language</label><select class="form-select form-select-sm edit-language">';
+					availableLanguages.forEach(function(lang) {
+						html += '<option value="' + lang + '"' + (lang === item.language ? ' selected' : '') + '>' + lang + '</option>';
+					});
+					html += '</select></div>';
+					html += '<div class="col-auto"><label class="form-label mb-0 small">Attributes</label><div class="d-flex gap-2">';
+					html += '<div class="form-check"><input class="form-check-input edit-firsted" type="checkbox"' + (item.first_ed === 2 ? ' checked' : '') + '><label class="form-check-label small">1st Ed</label></div>';
+					html += '<div class="form-check"><input class="form-check-input edit-reverse" type="checkbox"' + (item.reverse_holo === 2 ? ' checked' : '') + '><label class="form-check-label small">Rev Holo</label></div>';
+					html += '</div></div>';
+					html += '<div class="col-auto"><label class="form-label mb-0 small">Added</label><input type="date" class="form-control form-control-sm edit-added" value="' + addedDateInput + '"></div>';
+					html += '<div class="col-auto"><button class="btn btn-sm btn-success save-edit-btn" data-index="' + index + '" data-old-condition="' + item.condition + '" data-old-language="' + item.language + '" data-old-firsted="' + item.first_ed + '" data-old-reverse="' + item.reverse_holo + '">Save</button></div>';
+					html += '<div class="col-auto"><button class="btn btn-sm btn-secondary cancel-edit-btn" data-index="' + index + '">Cancel</button></div>';
+					html += '</div>';
+					html += '</td>';
 					html += '</tr>';
 				});
 				html += '</tbody></table>';
 				container.innerHTML = html;
 				document.getElementById('collectionValue').textContent = 'Total: €' + totalValue.toFixed(2);
+
+				// Add edit button handlers
+				document.querySelectorAll('.edit-collection-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						var index = this.dataset.index;
+						document.getElementById('item-row-' + index).style.display = 'none';
+						document.getElementById('edit-row-' + index).style.display = '';
+					});
+				});
+
+				// Add cancel edit handlers
+				document.querySelectorAll('.cancel-edit-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						var index = this.dataset.index;
+						document.getElementById('item-row-' + index).style.display = '';
+						document.getElementById('edit-row-' + index).style.display = 'none';
+					});
+				});
+
+				// Add save edit handlers
+				document.querySelectorAll('.save-edit-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						var index = this.dataset.index;
+						var editRow = document.getElementById('edit-row-' + index);
+						var newQty = parseInt(editRow.querySelector('.edit-qty').value) || 1;
+						var newCondition = editRow.querySelector('.edit-condition').value;
+						var newLanguage = editRow.querySelector('.edit-language').value;
+						var newFirstEd = editRow.querySelector('.edit-firsted').checked ? 2 : 0;
+						var newReverse = editRow.querySelector('.edit-reverse').checked ? 2 : 0;
+						var newAddedInput = editRow.querySelector('.edit-added').value;
+						var newAddedAt = newAddedInput ? new Date(newAddedInput + 'T12:00:00').getTime() / 1000 : null;
+
+						editCollectionItem(
+							this.dataset.oldCondition,
+							this.dataset.oldLanguage,
+							parseInt(this.dataset.oldFirsted),
+							parseInt(this.dataset.oldReverse),
+							newCondition,
+							newLanguage,
+							newFirstEd,
+							newReverse,
+							newQty,
+							newAddedAt
+						);
+					});
+				});
 
 				// Add remove handlers
 				document.querySelectorAll('.remove-collection-btn').forEach(function(btn) {
@@ -1054,6 +1231,63 @@ CardWatcher
 				console.error('Error loading collection:', error);
 				document.getElementById('collectionItems').innerHTML = '<p class="text-danger">Error loading collection.</p>';
 			});
+	}
+
+	function updateCollectionQuantity(condition, language, firstEd, reverseHolo, newQuantity) {
+		fetch('/api/collection/update', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				canonical_name: canonicalName,
+				condition: condition,
+				language: language,
+				first_ed: firstEd,
+				reverse_holo: reverseHolo,
+				quantity: newQuantity
+			})
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.success) {
+				loadCollectionItems();
+			} else {
+				alert('Failed to update quantity.');
+			}
+		})
+		.catch(error => {
+			alert('Error: ' + error);
+		});
+	}
+
+	function editCollectionItem(oldCondition, oldLanguage, oldFirstEd, oldReverse, newCondition, newLanguage, newFirstEd, newReverse, newQuantity, newAddedAt) {
+		fetch('/api/collection/edit', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				canonical_name: canonicalName,
+				old_condition: oldCondition,
+				old_language: oldLanguage,
+				old_first_ed: oldFirstEd,
+				old_reverse_holo: oldReverse,
+				new_condition: newCondition,
+				new_language: newLanguage,
+				new_first_ed: newFirstEd,
+				new_reverse_holo: newReverse,
+				new_quantity: newQuantity,
+				new_added_at: newAddedAt
+			})
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.success) {
+				loadCollectionItems();
+			} else {
+				alert('Failed to edit item: ' + (data.message || 'Unknown error'));
+			}
+		})
+		.catch(error => {
+			alert('Error: ' + error);
+		});
 	}
 
 	function removeFromCollection(condition, language, firstEd, reverseHolo) {
@@ -1099,6 +1333,8 @@ CardWatcher
 		var condition = document.getElementById('collectionCondition').value;
 		var firstEd = document.getElementById('collectionFirstEd').checked ? 2 : 0;
 		var reverseHolo = document.getElementById('collectionReverseHolo').checked ? 2 : 0;
+		var addedAtInput = document.getElementById('collectionAddedAt').value;
+		var addedAt = addedAtInput ? new Date(addedAtInput + 'T12:00:00').getTime() / 1000 : null;
 
 		fetch('/api/collection/add', {
 			method: 'POST',
@@ -1109,7 +1345,8 @@ CardWatcher
 				language: language,
 				condition: condition,
 				first_ed: firstEd,
-				reverse_holo: reverseHolo
+				reverse_holo: reverseHolo,
+				added_at: addedAt
 			})
 		})
 		.then(response => response.json())
@@ -1123,6 +1360,7 @@ CardWatcher
 				document.getElementById('collectionQuantity').value = 1;
 				document.getElementById('collectionFirstEd').checked = false;
 				document.getElementById('collectionReverseHolo').checked = false;
+				document.getElementById('collectionAddedAt').value = new Date().toISOString().split('T')[0];
 				// Reload collection items
 				loadCollectionItems();
 				// Update tab badge

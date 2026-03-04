@@ -49,6 +49,8 @@ class Listing:
         self.first_ed = 2
         # whether the card is a reverse holo (0 = no, 1 = yes, 2 = unknown)
         self.reverse_holo = 2
+        # whether this listing is archived (excluded from calculations but still visible)
+        self.archived = False
     
     def __str__(self):
         output = ("{" + \
@@ -143,7 +145,8 @@ class Listing:
             'price_is_new': self.price_is_new,
             'quantity_change': self.quantity_change,
             'first_ed': self.first_ed,
-            'reverse_holo': self.reverse_holo
+            'reverse_holo': self.reverse_holo,
+            'archived': self.archived
         }
 
     def from_json(self, data):
@@ -183,6 +186,7 @@ class Listing:
         self.quantity_change = data.get('quantity_change', 0)
         self.first_ed = data.get('first_ed', 2)
         self.reverse_holo = data.get('reverse_holo', 2)
+        self.archived = data.get('archived', False)
 
     def parse_from_row(self,row):
         self.seller.name = row.find('span',attrs={'class':'seller-name'}).find('a').text
@@ -212,7 +216,13 @@ class Listing:
     def build_row(self):
         date = self.date if self.ended else self.first_date
         status = ""
-        if self.ended:
+        row_extra_style = ""
+
+        # Archived listings get a distinct muted style
+        if self.archived:
+            status = " style=\"background:repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e8e8e8 10px, #e8e8e8 20px); opacity: 0.7;\""
+            row_extra_style = " archived-listing"
+        elif self.ended:
             status = " style=\"background:gray;\""
             gray = [128,128,128]
             red = [220,20,60]
@@ -247,9 +257,14 @@ class Listing:
                 list_of_previous_prices += f"{prev_price_date} {prev_price[0]}€\n"
             price_string+= "€"
             price_string = f"<span title=\"{list_of_previous_prices}\">{price_string}</span>"
-        else: 
+        else:
             price_string += "€"
-        
+
+        # Add strikethrough for archived listings
+        if self.archived:
+            price_string = f"<s style=\"opacity: 0.6;\">{price_string}</s>"
+            price_style = " style=\"color: #999 !important;\" "
+
         first_edition_marker = ""
         first_edition_hider = "none"
         if self.first_ed == 1:
@@ -262,6 +277,7 @@ class Listing:
             reverse_holo_hider = "is"
             reverse_holo_marker = """
             <span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position: -416px -16px;" data-original-title="Reverse Holo" data-bs-html="true" data-bs-placement="bottom" class="icon st_SpecialIcon mr-1" aria-label="Reverse Holo" data-bs-original-title="Reverse Holo"></span>"""
+
         table_element = ("<div id=\"articleRow1575860637\" " + \
                             "class=\"show-" + self.seller.country[15:] +\
                             " language-" + self.language +\
@@ -269,6 +285,7 @@ class Listing:
                             " condition-" + self.condition.lower() + "-val" +\
                             " firsted-" + first_edition_hider +\
                             " reverseholo-" + reverse_holo_hider +\
+                            row_extra_style +\
                             " row g-0 article-row\">" + \
                             "<div class=\"d-none col\">" + \
                             "</div>" + \
@@ -312,8 +329,10 @@ class Listing:
                                                 reverse_holo_marker + \
                                             "</div>" + \
                                             "<div class=\"product-comments me-1 col\">" + \
-                                                "<div class=\"d-none d-lg-block w-100\">" + \
-                                                    "<span class=\"d-block text-truncate text-muted fst-italic small\">" + \
+                                                "<div class=\"w-100\">" + \
+                                                    "<span class=\"d-block text-truncate text-muted fst-italic small\" title=\"" + \
+                                                        self.comment.replace('"', '&quot;') + \
+                                                    "\">" + \
                                                         self.comment + \
                                                     "</span>" + \
                                                 "</div>" + \
@@ -323,7 +342,7 @@ class Listing:
                                 "</div>" + \
                             "</div>" + \
                             "<div class=\"col-offer col-auto\""+status+">" + \
-                                "<div style=\"width:10rem\" class=\"price-container d-none d-md-flex justify-content-end\">" + \
+                                "<div style=\"width:10rem\" class=\"price-container d-flex justify-content-end\">" + \
                                     "<div class=\"d-flex flex-column\">" + \
                                         "<div class=\"d-flex align-items-center justify-content-end\">" + \
                                             "<span class=\"color-primary small text-end text-nowrap fw-bold\" " + price_style + ">" + \
@@ -332,7 +351,7 @@ class Listing:
                                         "</div>" + \
                                     "</div>" + \
                                 "</div>" + \
-                                "<div class=\"amount-container d-none d-md-flex justify-content-end me-3\">" + \
+                                "<div class=\"amount-container d-flex justify-content-end me-3\">" + \
                                     "<span class=\"item-count small text-end\">" + \
                                         quantity_string + \
                                     "</span>" + \
