@@ -82,6 +82,13 @@
 			</button>
 			<span id="syncStatus" style="color: #6c757d; font-size: 12px;">Last sync: checking...</span>
 		</div>
+
+		<!-- Settings -->
+		<div style="border-left: 1px solid #dee2e6; padding-left: 12px;">
+			<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings">
+				&#9881; Settings
+			</a>
+		</div>
 	</div>
 </nav>
 </header>
@@ -111,12 +118,34 @@
 </div>
 {% if request.args.get('collection') == 'true' %}
 <div id="collectionTotalBar" class="mb-4 p-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(40,167,69,0.3);">
-	<div class="d-flex justify-content-between align-items-center">
+	<div class="d-flex justify-content-between align-items-start">
 		<div>
 			<div style="font-size: 0.9em; opacity: 0.9;">Total Collection Value</div>
 			<div id="collectionTotal" style="font-size: 2em; font-weight: bold; letter-spacing: 0.5px;">Loading...</div>
+			<div id="collectionChange" style="font-size: 0.85em; opacity: 0.9; margin-top: 4px;"></div>
 		</div>
 		<div style="font-size: 3em; opacity: 0.3;">&#9829;</div>
+	</div>
+
+	<!-- Period Selector Buttons -->
+	<div id="historyPeriodBtns" class="mt-3" style="display: none;">
+		<div class="d-flex flex-wrap gap-3 align-items-center">
+			<div class="btn-group btn-group-sm" role="group">
+				<button type="button" class="btn btn-outline-light period-btn" data-period="2w">2 Weeks</button>
+				<button type="button" class="btn btn-outline-light period-btn active" data-period="2m">2 Months</button>
+				<button type="button" class="btn btn-outline-light period-btn" data-period="6m">6 Months</button>
+				<button type="button" class="btn btn-outline-light period-btn" data-period="1y">1 Year</button>
+			</div>
+			<div class="btn-group btn-group-sm" role="group">
+				<button type="button" class="btn btn-light mode-btn active" data-mode="acquisition" title="Shows value based on when items were added">Acquisition</button>
+				<button type="button" class="btn btn-outline-light mode-btn" data-mode="portfolio" title="Treats all items as always owned (pure market performance)">Portfolio</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Chart Container -->
+	<div id="historyChartContainer" class="mt-3" style="display: none; background: rgba(255,255,255,0.1); border-radius: 6px; padding: 10px;">
+		<canvas id="collectionHistoryChart" height="120"></canvas>
 	</div>
 </div>
 {% endif %}
@@ -140,6 +169,9 @@
 					<option value="priceChange" {% if request.args.get('sortBy', 'name') == 'priceChange' %}selected{% endif %}>Price Change (€)</option>
 					<option value="percentChange" {% if request.args.get('sortBy', 'name') == 'percentChange' %}selected{% endif %}>Percentage Change (%)</option>
 					<option value="lowestPrice" {% if request.args.get('sortBy', 'name') == 'lowestPrice' %}selected{% endif %}>Lowest Price</option>
+					<option value="netSupply" {% if request.args.get('sortBy', 'name') == 'netSupply' %}selected{% endif %}>Net Supply Change</option>
+					<option value="drainage" {% if request.args.get('sortBy', 'name') == 'drainage' %}selected{% endif %}>Drainage</option>
+					<option value="inflation" {% if request.args.get('sortBy', 'name') == 'inflation' %}selected{% endif %}>Inflation</option>
 					{% endif %}
 				</select>
 			</div>
@@ -186,8 +218,11 @@
 </section>
 </main>
 
+<script src="{{ url_for('static', filename='Blanko/Chart_2_7_2.min.js') }}"></script>
 <script>
 let pollInterval = null;
+let collectionChart = null;
+let currentPeriod = '2m';
 
 function startDownload() {
 	fetch('/api/download/start', { method: 'POST' })
@@ -385,6 +420,114 @@ function syncFull() {
 		});
 }
 
+// Collection history chart functions
+let currentMode = 'acquisition';
+
+function loadCollectionHistory(period, mode) {
+	currentPeriod = period || currentPeriod;
+	currentMode = mode || currentMode;
+
+	fetch('/api/collection/value-history?period=' + currentPeriod + '&mode=' + currentMode)
+		.then(r => r.json())
+		.then(data => {
+			if (data.labels.length === 0) {
+				document.getElementById('historyChartContainer').style.display = 'none';
+				document.getElementById('historyPeriodBtns').style.display = 'none';
+				return;
+			}
+
+			// Show containers
+			document.getElementById('historyChartContainer').style.display = 'block';
+			document.getElementById('historyPeriodBtns').style.display = 'block';
+
+			// Update change display
+			var changeEl = document.getElementById('collectionChange');
+			var changeSign = data.change >= 0 ? '+' : '';
+			var modeLabel = currentMode === 'portfolio' ? ' (market)' : '';
+			changeEl.innerHTML = changeSign + '€' + data.change.toFixed(2) +
+				' (' + changeSign + data.change_percent.toFixed(1) + '%)' + modeLabel + ' vs ' +
+				getPeriodLabel(currentPeriod) + ' ago';
+
+			// Destroy existing chart
+			if (collectionChart) {
+				collectionChart.destroy();
+			}
+
+			// Create new chart
+			var ctx = document.getElementById('collectionHistoryChart').getContext('2d');
+			collectionChart = new Chart(ctx, {
+				type: 'line',
+				data: {
+					labels: formatDateLabels(data.labels),
+					datasets: [{
+						label: 'Collection Value',
+						data: data.values,
+						fill: true,
+						backgroundColor: 'rgba(255,255,255,0.2)',
+						borderColor: 'rgba(255,255,255,0.9)',
+						borderWidth: 2,
+						lineTension: 0.3,
+						pointRadius: 2,
+						pointHoverRadius: 4,
+						spanGaps: true
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					scales: {
+						yAxes: [{
+							ticks: {
+								beginAtZero: false,
+								fontColor: 'rgba(255,255,255,0.8)',
+								callback: function(value) {
+									return '€' + value.toFixed(0);
+								}
+							},
+							gridLines: {
+								color: 'rgba(255,255,255,0.1)'
+							}
+						}],
+						xAxes: [{
+							ticks: {
+								fontColor: 'rgba(255,255,255,0.8)',
+								maxTicksLimit: 8
+							},
+							gridLines: {
+								color: 'rgba(255,255,255,0.1)'
+							}
+						}]
+					},
+					legend: {
+						display: false
+					},
+					tooltips: {
+						callbacks: {
+							label: function(item) {
+								return '€' + item.yLabel.toFixed(2);
+							}
+						}
+					}
+				}
+			});
+		})
+		.catch(err => {
+			console.error('Error loading collection history:', err);
+		});
+}
+
+function formatDateLabels(labels) {
+	return labels.map(function(dateStr) {
+		var parts = dateStr.split('-');
+		return parts[2] + '.' + parts[1];  // DD.MM format
+	});
+}
+
+function getPeriodLabel(period) {
+	var labels = { '2w': '2 weeks', '2m': '2 months', '6m': '6 months', '1y': '1 year' };
+	return labels[period] || period;
+}
+
 // Check status on page load
 document.addEventListener('DOMContentLoaded', function() {
 	fetch('/api/download/status')
@@ -406,11 +549,35 @@ document.addEventListener('DOMContentLoaded', function() {
 			.then(r => r.json())
 			.then(data => {
 				collectionTotal.innerHTML = '€' + data.total_value.toFixed(2) + '<span style="font-size: 0.5em; margin-left: 12px; opacity: 0.9;">' + data.card_count + ' cards (' + data.item_count + ' items)</span>';
+				// Load history chart
+				loadCollectionHistory('2m');
 			})
 			.catch(err => {
 				collectionTotal.textContent = 'Error loading';
 				console.error('Error loading collection value:', err);
 			});
+
+		// Period button click handlers
+		document.querySelectorAll('.period-btn').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
+				this.classList.add('active');
+				loadCollectionHistory(this.dataset.period, null);
+			});
+		});
+
+		// Mode button click handlers
+		document.querySelectorAll('.mode-btn').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				document.querySelectorAll('.mode-btn').forEach(function(b) {
+					b.classList.remove('active', 'btn-light');
+					b.classList.add('btn-outline-light');
+				});
+				this.classList.add('active', 'btn-light');
+				this.classList.remove('btn-outline-light');
+				loadCollectionHistory(null, this.dataset.mode);
+			});
+		});
 	}
 });
 </script>

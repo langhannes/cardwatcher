@@ -6,23 +6,59 @@ import json
 if getattr(sys, 'frozen', False):
     # Running as compiled executable
     _APP_ROOT = os.path.dirname(sys.executable)
+    IS_FROZEN = True
 else:
     # Running as a script
     _APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    IS_FROZEN = False
 
 # Settings file location (in user's home directory for persistence)
 SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".cardwatcher_settings.json")
 
+# Default settings schema
+DEFAULT_SETTINGS = {
+    # Data directory (set via prompt on first run)
+    "data_dir": None,
+    "collection_file": None,  # Path to collection JSON (default: ~/.cardwatcher_collection.json)
+
+    # Server settings
+    "port": 5000,
+    "auto_open_browser": True,
+    "show_console": True,  # Show console/terminal window
+
+    # Download settings
+    "download_wait_min": 5,       # Minimum wait between downloads (minutes)
+    "download_wait_max": 10,      # Maximum wait between downloads (minutes)
+    "page_load_timeout": 30,      # Cloudflare/page load timeout (seconds)
+    "show_more_limit": 20,        # Max "Show More" button clicks
+    "browser_headless": False,    # Run browser in headless mode
+    "browser_minimized": True,    # Start browser minimized
+
+    # Display defaults
+    "default_sort_by": "name",           # name, price, priceChange, percentChange, lowestPrice
+    "default_sort_order": "asc",         # asc, desc
+    "default_price_period": "last",      # last, 1w, 1m, 2m, 6m
+    "default_price_type": "available",   # available, sold
+
+    # Collection defaults
+    "default_condition": "NM",           # MT, NM, EX, GD, LP, PL, PO
+    "default_history_period": "2m",      # 2w, 2m, 6m, 1y
+    "default_history_mode": "acquisition",  # acquisition, portfolio
+}
+
 
 def load_settings():
-    """Load settings from file."""
+    """Load settings from file, merged with defaults."""
+    settings = DEFAULT_SETTINGS.copy()
     if os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                saved = json.load(f)
+                # Merge saved settings over defaults
+                settings.update(saved)
         except (json.JSONDecodeError, IOError):
             pass
-    return {}
+    return settings
 
 
 def save_settings(settings):
@@ -31,19 +67,32 @@ def save_settings(settings):
         json.dump(settings, f, indent=2)
 
 
+def get_setting(key, default=None):
+    """Get a single setting value."""
+    settings = load_settings()
+    if default is None and key in DEFAULT_SETTINGS:
+        default = DEFAULT_SETTINGS[key]
+    return settings.get(key, default)
+
+
+def set_setting(key, value):
+    """Set a single setting value."""
+    settings = load_settings()
+    settings[key] = value
+    save_settings(settings)
+
+
 def get_data_dir():
     """Get the data directory from settings or return default."""
-    settings = load_settings()
-    if "data_dir" in settings and os.path.isdir(settings["data_dir"]):
-        return settings["data_dir"]
+    data_dir = get_setting("data_dir")
+    if data_dir and os.path.isdir(data_dir):
+        return data_dir
     return None
 
 
 def set_data_dir(path):
     """Set the data directory in settings."""
-    settings = load_settings()
-    settings["data_dir"] = path
-    save_settings(settings)
+    set_setting("data_dir", path)
 
 
 def get_default_data_dir():
@@ -119,9 +168,10 @@ IMAGES_DIR = os.path.join(DATA_DIR, "images")
 CHANGES_DIR = os.path.join(DATA_DIR, "changes")
 DOWNLOADS_DIR = os.path.join(DATA_DIR, "downloads")
 
-# Collection file location - stored in user's home directory (NOT in shared data dir)
-# This ensures each user has their own private collection
-COLLECTION_FILE = os.path.join(os.path.expanduser("~"), ".cardwatcher_collection.json")
+# Collection file location - default in user's home directory, but configurable via settings
+_DEFAULT_COLLECTION_FILE = os.path.join(os.path.expanduser("~"), ".cardwatcher_collection.json")
+_saved_collection = get_setting("collection_file")
+COLLECTION_FILE = _saved_collection if _saved_collection else _DEFAULT_COLLECTION_FILE
 
 
 def update_paths(data_dir):

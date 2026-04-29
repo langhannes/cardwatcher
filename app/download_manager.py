@@ -16,7 +16,7 @@ from app.selenium_downloader import (
     download_page_with_selenium
 )
 from app.watcherbase import watcherbase
-from app.config import PAGES_DIR
+from app.config import PAGES_DIR, get_setting
 
 
 class DownloadStatus(Enum):
@@ -274,8 +274,11 @@ class DownloadManager:
                 # Wait between downloads (unless stopping or last page)
                 if not self._stop_requested and i < len(pages_to_download):
                     self._status = DownloadStatus.WAITING
-                    wait_seconds = int(5 * 60 + (5 * 60 * (i / len(pages_to_download))))  # 5-10 min
-                    wait_seconds = min(wait_seconds, 10 * 60)  # Cap at 10 min
+                    wait_min = get_setting('download_wait_min', 5)
+                    wait_max = get_setting('download_wait_max', 10)
+                    # Scale wait time from min to max based on progress
+                    wait_seconds = int(wait_min * 60 + ((wait_max - wait_min) * 60 * (i / len(pages_to_download))))
+                    wait_seconds = min(wait_seconds, wait_max * 60)  # Cap at max
 
                     self._wait_remaining = wait_seconds
                     self._current_page = "Waiting before next download..."

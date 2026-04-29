@@ -24,12 +24,13 @@ import random
 import os
 from tqdm import tqdm
 from app.watcherbase import watcherbase
-from app.config import PAGES_DIR, DOWNLOADS_DIR
+from app.config import PAGES_DIR, DOWNLOADS_DIR, get_setting
 
 
 def create_browser():
     """
     Create a new undetected Chrome browser instance.
+    Uses settings for headless mode and minimized state.
 
     Returns:
         WebDriver: Chrome driver instance, or None if creation failed
@@ -37,23 +38,50 @@ def create_browser():
     print("Initializing Chrome browser...")
     try:
         options = uc.ChromeOptions()
-        # Keep the browser window visible so you can see what's happening
-        # options.add_argument('--headless')  # Uncomment to run headless
 
-        # Start browser minimized (you can still check on it when needed)
-        options.add_argument('--start-minimized')
+        # Check settings for headless mode
+        if get_setting('browser_headless', False):
+            options.add_argument('--headless')
+            print("  Running in headless mode")
 
-        # Specify Chrome version to match your installed Chrome (143)
-        # undetected-chromedriver will auto-download the matching chromedriver
-        driver = uc.Chrome(options=options, version_main=143)
+        # Check settings for minimized start
+        browser_minimized = get_setting('browser_minimized', True)
+        if browser_minimized and not get_setting('browser_headless', False):
+            options.add_argument('--start-minimized')
+
+        # Detect installed Chrome version to avoid chromedriver mismatch
+        version_main = None
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['reg', 'query', r'HKEY_CURRENT_USER\Software\Google\Chrome\BLBeacon', '/v', 'version'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if 'version' in line.lower():
+                        ver = line.strip().split()[-1]
+                        version_main = int(ver.split('.')[0])
+                        print(f"  Detected Chrome version: {ver} (major: {version_main})")
+                        break
+        except Exception as e:
+            print(f"  Could not detect Chrome version: {e}")
+
+        if version_main:
+            driver = uc.Chrome(options=options, version_main=version_main)
+        else:
+            driver = uc.Chrome(options=options)
 
         # Minimize the window programmatically (more reliable than --start-minimized)
-        try:
-            driver.minimize_window()
-        except:
-            pass  # Some environments don't support minimize
+        if browser_minimized and not get_setting('browser_headless', False):
+            try:
+                driver.minimize_window()
+            except:
+                pass  # Some environments don't support minimize
+            print("[OK] Browser initialized (minimized)\n")
+        else:
+            print("[OK] Browser initialized\n")
 
-        print("[OK] Browser initialized (minimized)\n")
         return driver
 
     except Exception as e:
@@ -129,9 +157,10 @@ def download_page_with_selenium(driver, page_name, counter):
 
         # Check for Cloudflare challenge
         print("Checking for Cloudflare challenge...")
+        page_timeout = get_setting('page_load_timeout', 30)
         try:
-            # Wait up to 30 seconds for Cloudflare to resolve
-            WebDriverWait(driver, 30).until(
+            # Wait for Cloudflare to resolve
+            WebDriverWait(driver, page_timeout).until(
                 lambda d: "cardmarket.com" in d.current_url and "challenge" not in d.page_source.lower()
             )
             print("[OK] Cloudflare check passed or not present")
@@ -142,7 +171,7 @@ def download_page_with_selenium(driver, page_name, counter):
         # Wait for the listings table to load
         print("Waiting for listings table...")
         try:
-            WebDriverWait(driver, 15).until(
+            WebDriverWait(driver, page_timeout // 2).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "table-body"))
             )
             print("[OK] Listings table loaded")
@@ -183,8 +212,9 @@ def download_page_with_selenium(driver, page_name, counter):
                 time.sleep(random.uniform(2, 4))
 
                 # Safety limit to prevent infinite loops
-                if show_more_count > 20:
-                    print("[WARNING] Reached safety limit of 20 'Show More' clicks")
+                show_more_limit = get_setting('show_more_limit', 20)
+                if show_more_count >= show_more_limit:
+                    print(f"[WARNING] Reached safety limit of {show_more_limit} 'Show More' clicks")
                     break
 
             except Exception as e:
@@ -337,7 +367,9 @@ def download_all_pages(max_pages=None):
 
             # Wait between downloads (except after the last one)
             if i < len(pages_to_download):
-                wait_minutes = random.uniform(5, 10)
+                wait_min = get_setting('download_wait_min', 5)
+                wait_max = get_setting('download_wait_max', 10)
+                wait_minutes = random.uniform(wait_min, wait_max)
                 wait_seconds = int(wait_minutes * 60)
                 print(f"\n[TIMER] Waiting {wait_minutes:.1f} minutes before next download...")
                 print(f"   (This helps avoid Cloudflare detection)\n")

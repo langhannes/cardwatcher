@@ -31,7 +31,11 @@ from app.language_libraries import *
 from app.watcherbase import watcherbase
 import app.watchersearch as watchersearch
 from app.download_manager import download_manager
-from app.collection import Collection, calculate_collection_price, calculate_collection_value
+from app.collection import (
+    Collection, calculate_collection_price, calculate_collection_value,
+    update_value_history, get_value_history, backfill_value_history,
+    load_pages_for_collection
+)
 from app.sync import sync_manager
 from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
 
@@ -87,6 +91,19 @@ def cardwatcher():
         if request.args.get('delete',''):
             print("cardwatcher | delete: " +request.args.get('delete',''))
             page.delete_listings([int(request.args.get('delete',''))])
+
+        # Archive/unarchive individual listings
+        if request.args.get('archive','') and request.args.get('archive','') != 'toggle':
+            listing_idx = int(request.args.get('archive',''))
+            print(f"cardwatcher | archive listing: {listing_idx}")
+            page.archive_listing(listing_idx)
+            return redirect(f'/?name={page_name}')
+
+        if request.args.get('unarchive',''):
+            listing_idx = int(request.args.get('unarchive',''))
+            print(f"cardwatcher | unarchive listing: {listing_idx}")
+            page.unarchive_listing(listing_idx)
+            return redirect(f'/?name={page_name}')
 
         # Get collection items for this page
         canonical_name = page_name[:-5] if page_name.endswith('.json') else page_name
@@ -221,7 +238,8 @@ def add_to_collection():
         language=data.get('language', 'English'),
         first_ed=data.get('first_ed', 0),
         reverse_holo=data.get('reverse_holo', 0),
-        quantity=data.get('quantity', 1)
+        quantity=data.get('quantity', 1),
+        added_at=data.get('added_at')
     )
 
     # Calculate price for the added item
@@ -259,6 +277,31 @@ def update_collection_item():
     return jsonify({"success": success})
 
 
+@app.route('/api/collection/edit', methods=['POST'])
+def edit_collection_item():
+    """Edit an item's attributes in collection."""
+    data = request.get_json()
+    if not data or 'canonical_name' not in data:
+        return jsonify({"success": False, "message": "Missing canonical_name"})
+
+    collection = Collection().load()
+    success = collection.edit_item(
+        canonical_name=data['canonical_name'],
+        old_condition=data.get('old_condition'),
+        old_language=data.get('old_language'),
+        old_first_ed=data.get('old_first_ed'),
+        old_reverse_holo=data.get('old_reverse_holo'),
+        new_condition=data.get('new_condition'),
+        new_language=data.get('new_language'),
+        new_first_ed=data.get('new_first_ed'),
+        new_reverse_holo=data.get('new_reverse_holo'),
+        new_quantity=data.get('new_quantity', 1),
+        new_added_at=data.get('new_added_at')
+    )
+
+    return jsonify({"success": success})
+
+
 @app.route('/api/collection/remove', methods=['POST'])
 def remove_from_collection():
     """Remove item from collection."""
@@ -287,10 +330,109 @@ def get_collection_value():
     collection = Collection().load()
     total_value, item_count, _ = calculate_collection_value(collection)
 
+    # Update history with today's value
+    update_value_history(collection)
+
     return jsonify({
         "total_value": round(total_value, 2),
         "item_count": item_count,
         "card_count": len(collection.get_canonical_names())
+    })
+
+
+@app.route('/api/collection/value-history', methods=['GET'])
+def get_collection_value_history():
+    """
+    Get collection value history for graphing.
+
+    Query params:
+        period: '2w', '2m', '6m', or '1y' (default: '2m')
+        mode: 'acquisition' or 'portfolio' (default: 'acquisition')
+            - acquisition: shows value based on when items were added
+            - portfolio: treats all items as always owned (pure market performance)
+
+    Returns JSON:
+    {
+        "labels": ["2024-02-01", "2024-02-02", ...],
+        "values": [1234.56, 1240.00, ...],
+        "current_value": 1300.00,
+        "change": 65.44,
+        "change_percent": 5.3
+    }
+    """
+    period = request.args.get('period', '2m')
+    mode = request.args.get('mode', 'acquisition')
+    if mode not in ('acquisition', 'portfolio'):
+        mode = 'acquisition'
+
+    period_days = {
+        '2w': 14,
+        '2m': 60,
+        '6m': 180,
+        '1y': 365
+    }.get(period, 60)
+
+    collection = Collection().load()
+
+    # If collection is empty, return empty data
+    if not collection.items:
+        return jsonify({
+            "labels": [],
+            "values": [],
+            "current_value": 0,
+            "change": 0,
+            "change_percent": 0
+        })
+
+    # Load pages once for all calculations
+    pages_cache = load_pages_for_collection(collection)
+
+    # Ensure today's value is recorded
+    update_value_history(collection, pages_cache, mode=mode)
+
+    # Select appropriate backfill marker based on mode
+    backfilled_to = collection.history_backfilled_to if mode == 'acquisition' else collection.portfolio_backfilled_to
+
+    # Check if backfill needed
+    if not backfilled_to:
+        backfill_value_history(collection, period_days, pages_cache, mode=mode)
+    else:
+        # Check if we need to backfill further
+        from datetime import date, timedelta
+        target_start = date.today() - timedelta(days=period_days)
+        try:
+            backfilled_date = date.fromisoformat(backfilled_to)
+            if backfilled_date > target_start:
+                backfill_value_history(collection, period_days, pages_cache, mode=mode)
+        except (ValueError, TypeError):
+            backfill_value_history(collection, period_days, pages_cache, mode=mode)
+
+    # Get history data
+    history = get_value_history(collection, period_days, mode=mode)
+
+    if not history:
+        return jsonify({
+            "labels": [],
+            "values": [],
+            "current_value": 0,
+            "change": 0,
+            "change_percent": 0
+        })
+
+    labels = [h[0] for h in history]
+    values = [h[1] for h in history]
+
+    current = values[-1] if values else 0
+    earliest = values[0] if values else 0
+    change = current - earliest
+    change_percent = (change / earliest * 100) if earliest > 0 else 0
+
+    return jsonify({
+        "labels": labels,
+        "values": values,
+        "current_value": round(current, 2),
+        "change": round(change, 2),
+        "change_percent": round(change_percent, 1)
     })
 
 
@@ -322,6 +464,121 @@ def get_collection_for_page(canonical_name):
         "items": items_data,
         "in_collection": len(items) > 0
     })
+
+
+# Settings routes
+@app.route('/settings')
+def settings_page():
+    """Render settings page."""
+    from app.config import load_settings, COLLECTION_FILE
+    settings = load_settings()
+    return render_template('settings.htm', settings=settings, collection_file=COLLECTION_FILE)
+
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """Get current settings."""
+    from app.config import load_settings
+    return jsonify(load_settings())
+
+
+@app.route('/api/settings', methods=['POST'])
+def save_settings_api():
+    """Save settings."""
+    from app.config import load_settings, save_settings
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "message": "No data provided"})
+
+    # Load existing settings and update with new values
+    settings = load_settings()
+    restart_required = False
+
+    # Track which settings require restart
+    restart_keys = ['port', 'show_console', 'data_dir', 'collection_file']
+
+    for key, value in data.items():
+        if key in restart_keys and settings.get(key) != value:
+            restart_required = True
+        settings[key] = value
+
+    save_settings(settings)
+
+    return jsonify({
+        "success": True,
+        "restart_required": restart_required
+    })
+
+
+@app.route('/api/settings/browse-data-dir', methods=['POST'])
+def browse_data_dir():
+    """Open a folder browser dialog for selecting data directory."""
+    import sys
+    try:
+        if sys.platform == 'win32':
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()  # Hide the main window
+            root.wm_attributes('-topmost', 1)  # Bring dialog to front
+            folder_path = filedialog.askdirectory(
+                title="Select CardWatcher Data Directory"
+            )
+            root.destroy()
+            if folder_path:
+                return jsonify({"success": True, "path": folder_path})
+            else:
+                return jsonify({"success": False, "message": "No folder selected"})
+        else:
+            return jsonify({"success": False, "message": "Folder browser not supported on this platform. Please enter the path manually."})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error opening folder browser: {str(e)}"})
+
+
+@app.route('/api/settings/browse-collection-file', methods=['POST'])
+def browse_collection_file():
+    """Open a file browser dialog for selecting collection file."""
+    import sys
+    try:
+        if sys.platform == 'win32':
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()
+            root.wm_attributes('-topmost', 1)
+            file_path = filedialog.asksaveasfilename(
+                title="Select Collection File",
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                initialfile=".cardwatcher_collection.json"
+            )
+            root.destroy()
+            if file_path:
+                return jsonify({"success": True, "path": file_path})
+            else:
+                return jsonify({"success": False, "message": "No file selected"})
+        else:
+            return jsonify({"success": False, "message": "File browser not supported on this platform. Please enter the path manually."})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error opening file browser: {str(e)}"})
+
+
+@app.route('/api/exit', methods=['POST'])
+def exit_application():
+    """Shut down the Flask application."""
+    import os
+
+    def shutdown():
+        # Give time for response to be sent
+        import time
+        time.sleep(0.5)
+        os._exit(0)
+
+    # Start shutdown in background thread
+    shutdown_thread = threading.Thread(target=shutdown)
+    shutdown_thread.start()
+
+    return jsonify({"success": True, "message": "Shutting down..."})
 
 
 # Sync API routes

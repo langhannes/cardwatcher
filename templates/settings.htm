@@ -1,0 +1,498 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<title>Settings | CardWatcher</title>
+<link href="{{ url_for('static', filename='Blanko/master.min.css') }}" rel="stylesheet">
+
+<style type="text/css">
+.settings-section {
+	background: #fff;
+	border: 1px solid #dee2e6;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 20px;
+}
+.settings-section h3 {
+	margin-top: 0;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eee;
+	color: #333;
+}
+.setting-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 0;
+	border-bottom: 1px solid #f0f0f0;
+}
+.setting-row:last-child {
+	border-bottom: none;
+}
+.setting-info {
+	flex: 1;
+}
+.setting-label {
+	font-weight: 500;
+	color: #333;
+}
+.setting-description {
+	font-size: 0.85em;
+	color: #6c757d;
+	margin-top: 2px;
+}
+.setting-control {
+	min-width: 200px;
+	text-align: right;
+}
+.setting-control input[type="number"] {
+	width: 80px;
+	text-align: center;
+}
+.setting-control select {
+	min-width: 150px;
+}
+.form-switch {
+	display: flex;
+	justify-content: flex-end;
+}
+.form-switch .form-check-input {
+	width: 3em;
+	height: 1.5em;
+	cursor: pointer;
+}
+.save-bar {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: #fff;
+	border-top: 1px solid #dee2e6;
+	padding: 15px 20px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+	z-index: 1000;
+}
+.path-display {
+	font-family: monospace;
+	background: #f8f9fa;
+	padding: 8px 12px;
+	border-radius: 4px;
+	font-size: 0.9em;
+	word-break: break-all;
+}
+</style>
+
+</head>
+<body>
+
+<header id="header" class="fixed-top">
+	<nav class="navbar navbar-light">
+		<a href="/" class="navbar-brand">
+			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">
+			CardWatcher
+			</span>
+		</a>
+	</nav>
+</header>
+
+<main class="container" style="padding-top: 90px; padding-bottom: 100px;">
+
+<div class="page-title-container d-flex align-items-center mb-4">
+	<div class="flex-grow-1">
+		<h1>Settings</h1>
+	</div>
+	<a href="/" class="btn btn-outline-primary">Back to Home</a>
+</div>
+
+<form id="settingsForm">
+
+<!-- Data & Storage -->
+<div class="settings-section">
+	<h3>Data & Storage</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Data Directory</div>
+			<div class="setting-description">Location where card data, images, and downloads are stored (requires restart)</div>
+		</div>
+		<div class="setting-control">
+			<div class="d-flex gap-2 align-items-center">
+				<input type="text" class="form-control form-control-sm" name="data_dir" value="{{ settings.data_dir or '' }}" style="min-width: 300px; font-family: monospace; font-size: 0.85em;" placeholder="Enter path...">
+				<button type="button" class="btn btn-sm btn-outline-primary" onclick="browseDataDir()" title="Browse for folder">Browse</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Collection File</div>
+			<div class="setting-description">Path to your personal collection file (requires restart)</div>
+		</div>
+		<div class="setting-control">
+			<div class="d-flex gap-2 align-items-center">
+				<input type="text" class="form-control form-control-sm" name="collection_file" value="{{ collection_file }}" style="min-width: 300px; font-family: monospace; font-size: 0.85em;" placeholder="Enter path...">
+				<button type="button" class="btn btn-sm btn-outline-primary" onclick="browseCollectionFile()" title="Browse for file">Browse</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Server Settings -->
+<div class="settings-section">
+	<h3>Server Settings</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Port</div>
+			<div class="setting-description">Port number for the web server (requires restart)</div>
+		</div>
+		<div class="setting-control">
+			<input type="number" class="form-control form-control-sm" name="port" value="{{ settings.port }}" min="1024" max="65535">
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Auto-open Browser</div>
+			<div class="setting-description">Automatically open browser when starting the application</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="auto_open_browser" {% if settings.auto_open_browser %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Show Console</div>
+			<div class="setting-description">Show the console/terminal window (useful for debugging)</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="show_console" {% if settings.show_console %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Download Settings -->
+<div class="settings-section">
+	<h3>Download Settings</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Wait Time Between Downloads</div>
+			<div class="setting-description">Random delay between page downloads to avoid Cloudflare detection (minutes)</div>
+		</div>
+		<div class="setting-control d-flex align-items-center gap-2">
+			<input type="number" class="form-control form-control-sm" name="download_wait_min" value="{{ settings.download_wait_min }}" min="1" max="30" style="width: 70px;">
+			<span>to</span>
+			<input type="number" class="form-control form-control-sm" name="download_wait_max" value="{{ settings.download_wait_max }}" min="1" max="60" style="width: 70px;">
+			<span>min</span>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Page Load Timeout</div>
+			<div class="setting-description">Maximum time to wait for Cloudflare challenge and page load (seconds)</div>
+		</div>
+		<div class="setting-control d-flex align-items-center gap-2">
+			<input type="number" class="form-control form-control-sm" name="page_load_timeout" value="{{ settings.page_load_timeout }}" min="10" max="120" style="width: 70px;">
+			<span>sec</span>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">"Show More" Click Limit</div>
+			<div class="setting-description">Maximum number of times to click "Show More" button per page</div>
+		</div>
+		<div class="setting-control">
+			<input type="number" class="form-control form-control-sm" name="show_more_limit" value="{{ settings.show_more_limit }}" min="1" max="100">
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Headless Browser</div>
+			<div class="setting-description">Run Chrome without visible window (faster but harder to debug)</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="browser_headless" {% if settings.browser_headless %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Start Browser Minimized</div>
+			<div class="setting-description">Minimize browser window when starting downloads</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="browser_minimized" {% if settings.browser_minimized %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Display Defaults -->
+<div class="settings-section">
+	<h3>Display Defaults</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Default Sort By</div>
+			<div class="setting-description">Default sorting field for card list</div>
+		</div>
+		<div class="setting-control">
+			<select class="form-select form-select-sm" name="default_sort_by">
+				<option value="name" {% if settings.default_sort_by == 'name' %}selected{% endif %}>Name</option>
+				<option value="price" {% if settings.default_sort_by == 'price' %}selected{% endif %}>Price</option>
+				<option value="priceChange" {% if settings.default_sort_by == 'priceChange' %}selected{% endif %}>Price Change</option>
+				<option value="percentChange" {% if settings.default_sort_by == 'percentChange' %}selected{% endif %}>Percent Change</option>
+				<option value="lowestPrice" {% if settings.default_sort_by == 'lowestPrice' %}selected{% endif %}>Lowest Price</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Default Sort Order</div>
+			<div class="setting-description">Default sorting direction</div>
+		</div>
+		<div class="setting-control">
+			<select class="form-select form-select-sm" name="default_sort_order">
+				<option value="asc" {% if settings.default_sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+				<option value="desc" {% if settings.default_sort_order == 'desc' %}selected{% endif %}>Descending</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Default Price Period</div>
+			<div class="setting-description">Default time period for price comparisons</div>
+		</div>
+		<div class="setting-control">
+			<select class="form-select form-select-sm" name="default_price_period">
+				<option value="last" {% if settings.default_price_period == 'last' %}selected{% endif %}>Last Download</option>
+				<option value="1w" {% if settings.default_price_period == '1w' %}selected{% endif %}>1 Week</option>
+				<option value="1m" {% if settings.default_price_period == '1m' %}selected{% endif %}>1 Month</option>
+				<option value="2m" {% if settings.default_price_period == '2m' %}selected{% endif %}>2 Months</option>
+				<option value="6m" {% if settings.default_price_period == '6m' %}selected{% endif %}>6 Months</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Default Price Type</div>
+			<div class="setting-description">Show available listings or sold prices by default</div>
+		</div>
+		<div class="setting-control">
+			<select class="form-select form-select-sm" name="default_price_type">
+				<option value="available" {% if settings.default_price_type == 'available' %}selected{% endif %}>Available</option>
+				<option value="sold" {% if settings.default_price_type == 'sold' %}selected{% endif %}>Sold</option>
+			</select>
+		</div>
+	</div>
+</div>
+
+<!-- Collection Defaults -->
+<div class="settings-section">
+	<h3>Collection Defaults</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Default Condition</div>
+			<div class="setting-description">Default card condition when adding to collection</div>
+		</div>
+		<div class="setting-control">
+			<select class="form-select form-select-sm" name="default_condition">
+				<option value="MT" {% if settings.default_condition == 'MT' %}selected{% endif %}>Mint (MT)</option>
+				<option value="NM" {% if settings.default_condition == 'NM' %}selected{% endif %}>Near Mint (NM)</option>
+				<option value="EX" {% if settings.default_condition == 'EX' %}selected{% endif %}>Excellent (EX)</option>
+				<option value="GD" {% if settings.default_condition == 'GD' %}selected{% endif %}>Good (GD)</option>
+				<option value="LP" {% if settings.default_condition == 'LP' %}selected{% endif %}>Light Played (LP)</option>
+				<option value="PL" {% if settings.default_condition == 'PL' %}selected{% endif %}>Played (PL)</option>
+				<option value="PO" {% if settings.default_condition == 'PO' %}selected{% endif %}>Poor (PO)</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Default History Period</div>
+			<div class="setting-description">Default time period for collection value chart</div>
+		</div>
+		<div class="setting-control">
+			<select class="form-select form-select-sm" name="default_history_period">
+				<option value="2w" {% if settings.default_history_period == '2w' %}selected{% endif %}>2 Weeks</option>
+				<option value="2m" {% if settings.default_history_period == '2m' %}selected{% endif %}>2 Months</option>
+				<option value="6m" {% if settings.default_history_period == '6m' %}selected{% endif %}>6 Months</option>
+				<option value="1y" {% if settings.default_history_period == '1y' %}selected{% endif %}>1 Year</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Default History Mode</div>
+			<div class="setting-description">Default mode for collection value chart</div>
+		</div>
+		<div class="setting-control">
+			<select class="form-select form-select-sm" name="default_history_mode">
+				<option value="acquisition" {% if settings.default_history_mode == 'acquisition' %}selected{% endif %}>Acquisition (by add date)</option>
+				<option value="portfolio" {% if settings.default_history_mode == 'portfolio' %}selected{% endif %}>Portfolio (all items)</option>
+			</select>
+		</div>
+	</div>
+</div>
+
+</form>
+
+<!-- Application Control -->
+<div class="settings-section" style="border-color: #dc3545;">
+	<h3 style="color: #dc3545;">Application</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Exit CardWatcher</div>
+			<div class="setting-description">Shut down the application server and close the browser</div>
+		</div>
+		<div class="setting-control">
+			<button type="button" class="btn btn-outline-danger" onclick="exitApplication()">
+				Exit Application
+			</button>
+		</div>
+	</div>
+</div>
+
+<!-- Fixed Save Bar -->
+<div class="save-bar">
+	<span id="saveStatus" style="color: #6c757d; align-self: center; margin-right: auto;"></span>
+	<button type="button" class="btn btn-outline-secondary" onclick="location.reload()">Reset</button>
+	<button type="button" class="btn btn-primary" id="saveBtn" onclick="saveSettings()">Save Settings</button>
+</div>
+
+</main>
+
+<script>
+function browseDataDir() {
+	fetch('/api/settings/browse-data-dir', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			if (data.success && data.path) {
+				document.querySelector('[name="data_dir"]').value = data.path;
+			} else if (data.message) {
+				alert(data.message);
+			}
+		})
+		.catch(err => alert('Error: ' + err));
+}
+
+function browseCollectionFile() {
+	fetch('/api/settings/browse-collection-file', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			if (data.success && data.path) {
+				document.querySelector('[name="collection_file"]').value = data.path;
+			} else if (data.message) {
+				alert(data.message);
+			}
+		})
+		.catch(err => alert('Error: ' + err));
+}
+
+function exitApplication() {
+	if (!confirm('Are you sure you want to exit CardWatcher?')) return;
+	fetch('/api/exit', { method: 'POST' })
+		.then(() => {
+			document.body.innerHTML = '<div style="text-align: center; padding: 100px; font-family: sans-serif;"><h1>CardWatcher has been shut down.</h1><p>You can close this browser tab.</p></div>';
+		})
+		.catch(() => {
+			document.body.innerHTML = '<div style="text-align: center; padding: 100px; font-family: sans-serif;"><h1>CardWatcher has been shut down.</h1><p>You can close this browser tab.</p></div>';
+		});
+}
+
+function saveSettings() {
+	var form = document.getElementById('settingsForm');
+	var btn = document.getElementById('saveBtn');
+	var status = document.getElementById('saveStatus');
+
+	btn.disabled = true;
+	btn.textContent = 'Saving...';
+	status.textContent = '';
+
+	// Gather all settings
+	var settings = {
+		data_dir: form.querySelector('[name="data_dir"]').value,
+		collection_file: form.querySelector('[name="collection_file"]').value,
+		port: parseInt(form.querySelector('[name="port"]').value) || 5000,
+		auto_open_browser: form.querySelector('[name="auto_open_browser"]').checked,
+		show_console: form.querySelector('[name="show_console"]').checked,
+		download_wait_min: parseInt(form.querySelector('[name="download_wait_min"]').value) || 5,
+		download_wait_max: parseInt(form.querySelector('[name="download_wait_max"]').value) || 10,
+		page_load_timeout: parseInt(form.querySelector('[name="page_load_timeout"]').value) || 30,
+		show_more_limit: parseInt(form.querySelector('[name="show_more_limit"]').value) || 20,
+		browser_headless: form.querySelector('[name="browser_headless"]').checked,
+		browser_minimized: form.querySelector('[name="browser_minimized"]').checked,
+		default_sort_by: form.querySelector('[name="default_sort_by"]').value,
+		default_sort_order: form.querySelector('[name="default_sort_order"]').value,
+		default_price_period: form.querySelector('[name="default_price_period"]').value,
+		default_price_type: form.querySelector('[name="default_price_type"]').value,
+		default_condition: form.querySelector('[name="default_condition"]').value,
+		default_history_period: form.querySelector('[name="default_history_period"]').value,
+		default_history_mode: form.querySelector('[name="default_history_mode"]').value
+	};
+
+	// Validate wait times
+	if (settings.download_wait_min > settings.download_wait_max) {
+		var temp = settings.download_wait_min;
+		settings.download_wait_min = settings.download_wait_max;
+		settings.download_wait_max = temp;
+	}
+
+	fetch('/api/settings', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(settings)
+	})
+	.then(r => r.json())
+	.then(data => {
+		btn.disabled = false;
+		btn.textContent = 'Save Settings';
+		if (data.success) {
+			status.style.color = '#28a745';
+			status.textContent = 'Settings saved successfully!';
+			if (data.restart_required) {
+				status.textContent += ' (Restart required for some changes)';
+			}
+			setTimeout(function() { status.textContent = ''; }, 3000);
+		} else {
+			status.style.color = '#dc3545';
+			status.textContent = 'Error: ' + (data.message || 'Failed to save');
+		}
+	})
+	.catch(err => {
+		btn.disabled = false;
+		btn.textContent = 'Save Settings';
+		status.style.color = '#dc3545';
+		status.textContent = 'Error: ' + err;
+	});
+}
+</script>
+
+</body>
+</html>

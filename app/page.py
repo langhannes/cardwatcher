@@ -236,7 +236,13 @@ class Page:
                         new_listing.previous_prices.append((listing.price,listing.date))
 
                     # check if the quantity has changed
+                    new_listing.previous_quantities = listing.previous_quantities[:]
                     new_listing.quantity_change = page.listings[0].quantity - listing.quantity
+                    if new_listing.quantity_change != 0:
+                        new_listing.previous_quantities.append((listing.quantity, listing.date))
+
+                    # preserve archived status
+                    new_listing.archived = listing.archived
 
                     # check if the listing had ended before
                     if listing.ended:
@@ -264,6 +270,7 @@ class Page:
             new_listing.language = self.listings[0].language
             new_listing.condition = self.listings[0].condition
             new_listing.previous_prices = self.listings[0].previous_prices
+            new_listing.previous_quantities = self.listings[0].previous_quantities[:]
             new_listing.quantity = self.listings[0].quantity
             new_listing.first_date = self.listings[0].first_date
             new_listing.comment = self.listings[0].comment
@@ -271,6 +278,8 @@ class Page:
             new_listing.first_ed = self.listings[0].first_ed
             new_listing.reverse_holo = self.listings[0].reverse_holo
             new_listing.canonical_name = self.canonical_name
+            # preserve archived status
+            new_listing.archived = self.listings[0].archived
             # if the new page only has listings from germany, we don't want to show listings from other countries as ended
             if (page.only_germany
                 and location_to_english[new_listing.seller.country] !=  "Item location: Germany"):
@@ -286,6 +295,8 @@ class Page:
                 new_listing.new = not self.listings[0].ended
                 if new_listing.new:
                     self.sold += 1
+                if not self.listings[0].ended and self.listings[0].quantity > 0:
+                    new_listing.previous_quantities.append((self.listings[0].quantity, self.listings[0].date))
                 new_listing.quantity = 0
             new_listing.date = self.listings[0].date
             # the last seen date is the date of the previous listing
@@ -319,6 +330,24 @@ class Page:
                 new_listings.append(self.listings[i])
         self.listings = new_listings
         self.save()
+
+    def archive_listing(self, index):
+        """Archive a listing (exclude from calculations but keep visible)."""
+        if 0 <= index < len(self.listings):
+            self.listings[index].archived = True
+            print(f"archive_listing | archived listing {index}")
+            self.save()
+            return True
+        return False
+
+    def unarchive_listing(self, index):
+        """Unarchive a listing (include in calculations again)."""
+        if 0 <= index < len(self.listings):
+            self.listings[index].archived = False
+            print(f"unarchive_listing | unarchived listing {index}")
+            self.save()
+            return True
+        return False
 
     def build_table(self):
         table = ""

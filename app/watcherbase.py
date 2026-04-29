@@ -161,6 +161,10 @@ class watcherbase():
 
         historical_prices = []
         for listing in page.listings:
+            # Skip archived listings
+            if listing.archived:
+                continue
+
             try:
                 first_date = float(listing.first_date) if listing.first_date else 0
             except (ValueError, TypeError):
@@ -208,6 +212,10 @@ class watcherbase():
 
         historical_ended_pairs = []
         for listing in page.listings:
+            # Skip archived listings
+            if listing.archived:
+                continue
+
             # Only consider currently ended listings
             if not listing.ended:
                 continue
@@ -248,6 +256,10 @@ class watcherbase():
         count = 0
 
         for listing in page.listings:
+            # Skip archived listings
+            if listing.archived:
+                continue
+
             try:
                 first_date = float(listing.first_date) if listing.first_date else 0
             except (ValueError, TypeError):
@@ -292,6 +304,10 @@ class watcherbase():
         removed = 0
 
         for listing in page.listings:
+            # Skip archived listings
+            if listing.archived:
+                continue
+
             try:
                 first_date = float(listing.first_date) if listing.first_date else 0
             except (ValueError, TypeError):
@@ -343,19 +359,19 @@ class watcherbase():
             '6m': 180
         }
 
-        # Calculate current average (all active listings)
-        current_prices = [l.price for l in page.listings if not l.ended]
+        # Calculate current average (all active listings, excluding archived)
+        current_prices = [l.price for l in page.listings if not l.ended and not l.archived]
         current_avg = Page.calculate_price_average_robust(current_prices) if current_prices else 0
         current_min = min(current_prices) if current_prices else 0
 
-        # Count current available listings
+        # Count current available listings (excluding archived)
         current_available = len(current_prices)
 
         # Calculate current ended average using time-weighted approach
-        # Recent sales have more influence than older sales
+        # Recent sales have more influence than older sales (excluding archived)
         ended_price_date_pairs = []
         for l in page.listings:
-            if l.ended:
+            if l.ended and not l.archived:
                 ended_price_date_pairs.append((l.price, l.date))
         current_ended_avg = watcherbase.calculate_price_average_time_weighted(ended_price_date_pairs) if ended_price_date_pairs else 0
 
@@ -437,7 +453,7 @@ class watcherbase():
             return None
     
     def save_image(path,new_path):
-        try: 
+        try:
             if os.path.exists(new_path):
                 return
             shutil.copy2(path, new_path)
@@ -552,8 +568,8 @@ class watcherbase():
             old_page.canonical_name = page.canonical_name
             old_page.import_page(old_page.canonical_name+".json")
 
-            # Calculate ended avg BEFORE update
-            old_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended]
+            # Calculate ended avg BEFORE update (excluding archived)
+            old_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
             old_ended_avg = watcherbase.calculate_price_average_time_weighted(old_ended_prices) if old_ended_prices else 0
 
             old_page.update_page(page)
@@ -561,8 +577,8 @@ class watcherbase():
             print("import_all_pages | page saved under " + os.path.join(PAGES_DIR,(old_page.canonical_name+".json")))
             watcherbase.delete_download(file_name)
 
-            # Calculate ended avg AFTER update (includes newly sold listings)
-            new_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended]
+            # Calculate ended avg AFTER update (includes newly sold listings, excluding archived)
+            new_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
             new_ended_avg = watcherbase.calculate_price_average_time_weighted(new_ended_prices) if new_ended_prices else 0
             ended_avg_change = new_ended_avg - old_ended_avg
 

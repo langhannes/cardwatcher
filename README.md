@@ -9,10 +9,14 @@ A Windows application for tracking CardMarket trading card listings over time. M
 - **Price Tracking**: Track average prices and price changes over time (1 week, 1 month, 2 months, 6 months)
 - **Sold Price Tracking**: Monitor ended/sold listing prices separately from available listings
 - **Lowest Price Display**: See the minimum price for each card at a glance
+- **Price History Chart**: Quantity-weighted average price curve with IQR-based outlier filtering
+- **Availability Chart**: Bar chart showing available stock (split into existing vs. newly listed) and sold quantities per day/week/month, with a drainage % overlay line
+- **Market Metrics**: Net Supply Change (% of stock that is net new vs. sold) shown per card in the gallery, color-coded green (growing) / red (shrinking); sort by Net Supply Change, Drainage, or Inflation
+- **Quantity History**: Full quantity-per-listing history tracked over time for accurate availability graphs, especially for bulk listings
 - **Personal Collection**: Track cards you own with quantity, condition, and language - see your collection's total value
 - **Data Sync**: Pull updates from shared data repository, optionally push your contributions back
 - **Listing History**: See when listings were added, sold, or relisted
-- **Search & Sort**: Search by card name, sort by price, price change, or lowest price
+- **Search & Sort**: Search by card name, sort by price, price change, lowest price, or market metrics
 - **Archive Support**: Archive cards you no longer want to actively track
 
 ## Quick Start (Windows)
@@ -63,10 +67,12 @@ python cardwatcher.py --no-browser  # Don't auto-open browser
 
 - Browse all tracked cards as a gallery
 - Use the search box to filter by card name
-- Sort by: Name, Price, Price Change (€), Percentage Change (%), Lowest Price
+- Sort by: Name, Price, Price Change (€), Percentage Change (%), Lowest Price, Net Supply Change, Drainage, Inflation
 - Select time period: Last Download, 1 Week, 1 Month, 2 Months, 6 Months
 - Toggle between Available and Sold price types
-- Green badges show newly added listings, red badges show removed/sold
+- Each card badge (top-right) shows current stock count, listing changes (+added / −sold), and Net Supply Change %
+  - Green % = supply growing (more new listings than sold)
+  - Red % = supply shrinking (more sold than new listings)
 
 ### My Collection
 
@@ -82,10 +88,12 @@ Click the **My Collection** button to view only cards you own:
 Click any card to see:
 - All individual listings with seller info, prices, and conditions
 - Price history per listing
-- Color-coded rows: green = new, red = ended/sold, yellow = price changed
+- Color-coded rows: green = new, red = ended/sold, orange = quantity decreased, yellow-green = quantity increased
 - Filter by country or language
 - **Download button** to update this specific card
 - **Archive** button to stop tracking
+- **Price history chart**: quantity-weighted average with outlier filtering, shown for 1M / 3M / 6M / All periods
+- **Availability chart**: stacked bar chart (blue = existing stock, green = newly listed, red = sold below zero) with a drainage % line; aggregates to weeks for ranges >1 month and to months for ranges >6 months
 
 ### Adding Cards to Your Collection
 

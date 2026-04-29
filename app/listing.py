@@ -37,6 +37,8 @@ class Listing:
         self.new = True
         # a list of tuples of the form (price,date)
         self.previous_prices = []
+        # a list of tuples of the form (quantity,date)
+        self.previous_quantities = []
         # the first date this card was listed by this seller
         self.first_date = ""
         # the last date this card was seen
@@ -49,6 +51,8 @@ class Listing:
         self.first_ed = 2
         # whether the card is a reverse holo (0 = no, 1 = yes, 2 = unknown)
         self.reverse_holo = 2
+        # whether this listing is archived (excluded from calculations but still visible)
+        self.archived = False
     
     def __str__(self):
         output = ("{" + \
@@ -122,6 +126,7 @@ class Listing:
         last_date_float = float(self.last_date) if self.last_date else 0.0
         # Convert previous_prices tuples to lists with float values
         prev_prices_normalized = [[float(p[0]), float(p[1])] for p in self.previous_prices if len(p) >= 2]
+        prev_qtys_normalized = [[int(q[0]), float(q[1])] for q in self.previous_quantities if len(q) >= 2]
         return {
             'card': self.card,
             'canonical_name': self.canonical_name,
@@ -138,12 +143,14 @@ class Listing:
             'ended': self.ended,
             'new': self.new,
             'previous_prices': prev_prices_normalized,
+            'previous_quantities': prev_qtys_normalized,
             'first_date': first_date_float,
             'last_date': last_date_float,
             'price_is_new': self.price_is_new,
             'quantity_change': self.quantity_change,
             'first_ed': self.first_ed,
-            'reverse_holo': self.reverse_holo
+            'reverse_holo': self.reverse_holo,
+            'archived': self.archived
         }
 
     def from_json(self, data):
@@ -174,6 +181,13 @@ class Listing:
                 price = float(entry[0]) if entry[0] else 0.0
                 date = float(entry[1]) if entry[1] else 0.0
                 self.previous_prices.append((price, date))
+        raw_qtys = data.get('previous_quantities', [])
+        self.previous_quantities = []
+        for entry in raw_qtys:
+            if len(entry) >= 2:
+                qty = int(entry[0]) if entry[0] is not None else 0
+                date = float(entry[1]) if entry[1] else 0.0
+                self.previous_quantities.append((qty, date))
         # Normalize first_date and last_date to float
         first_date_val = data.get('first_date', '')
         self.first_date = float(first_date_val) if first_date_val else 0.0
@@ -183,6 +197,7 @@ class Listing:
         self.quantity_change = data.get('quantity_change', 0)
         self.first_ed = data.get('first_ed', 2)
         self.reverse_holo = data.get('reverse_holo', 2)
+        self.archived = data.get('archived', False)
 
     def parse_from_row(self,row):
         self.seller.name = row.find('span',attrs={'class':'seller-name'}).find('a').text
@@ -211,8 +226,40 @@ class Listing:
 
     def build_row(self):
         date = self.date if self.ended else self.first_date
+        first_date_str = datetime.fromtimestamp(float(self.first_date)).strftime('%d.%m.%Y') if self.first_date else ""
+        display_quantity = (-self.quantity_change) if (self.ended and self.quantity_change < 0) else self.quantity
+        qty_history = []
+        for qty, ts in self.previous_quantities:
+            try:
+                qty_history.append([int(qty), datetime.fromtimestamp(float(ts)).strftime('%d.%m.%Y')])
+            except (ValueError, TypeError, OSError):
+                pass
+        if not self.ended:
+            try:
+                qty_history.append([self.quantity, datetime.fromtimestamp(float(self.date)).strftime('%d.%m.%Y')])
+            except (ValueError, TypeError, OSError):
+                pass
+        qty_history_json = json.dumps(qty_history)
+
+        price_history_arr = []
+        for p, ts in self.previous_prices:
+            try:
+                price_history_arr.append([float(p), datetime.fromtimestamp(float(ts)).strftime('%d.%m.%Y')])
+            except (ValueError, TypeError, OSError):
+                pass
+        try:
+            price_history_arr.append([self.price, datetime.fromtimestamp(float(self.date)).strftime('%d.%m.%Y')])
+        except (ValueError, TypeError, OSError):
+            pass
+        price_history_json = json.dumps(price_history_arr)
         status = ""
-        if self.ended:
+        row_extra_style = ""
+
+        # Archived listings get a distinct muted style
+        if self.archived:
+            status = " style=\"background:repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e8e8e8 10px, #e8e8e8 20px); opacity: 0.7;\""
+            row_extra_style = " archived-listing"
+        elif self.ended:
             status = " style=\"background:gray;\""
             gray = [128,128,128]
             red = [220,20,60]
@@ -247,9 +294,14 @@ class Listing:
                 list_of_previous_prices += f"{prev_price_date} {prev_price[0]}€\n"
             price_string+= "€"
             price_string = f"<span title=\"{list_of_previous_prices}\">{price_string}</span>"
-        else: 
+        else:
             price_string += "€"
-        
+
+        # Add strikethrough for archived listings
+        if self.archived:
+            price_string = f"<s style=\"opacity: 0.6;\">{price_string}</s>"
+            price_style = " style=\"color: #999 !important;\" "
+
         first_edition_marker = ""
         first_edition_hider = "none"
         if self.first_ed == 1:
@@ -262,6 +314,7 @@ class Listing:
             reverse_holo_hider = "is"
             reverse_holo_marker = """
             <span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position: -416px -16px;" data-original-title="Reverse Holo" data-bs-html="true" data-bs-placement="bottom" class="icon st_SpecialIcon mr-1" aria-label="Reverse Holo" data-bs-original-title="Reverse Holo"></span>"""
+
         table_element = ("<div id=\"articleRow1575860637\" " + \
                             "class=\"show-" + self.seller.country[15:] +\
                             " language-" + self.language +\
@@ -269,7 +322,15 @@ class Listing:
                             " condition-" + self.condition.lower() + "-val" +\
                             " firsted-" + first_edition_hider +\
                             " reverseholo-" + reverse_holo_hider +\
-                            " row g-0 article-row\">" + \
+                            row_extra_style +\
+                            " row g-0 article-row\"" + \
+                    " data-first-date=\"" + first_date_str + "\"" + \
+                    " data-is-ended=\"" + str(self.ended).lower() + "\"" + \
+                    " data-quantity=\"" + str(display_quantity) + "\"" + \
+                    " data-price=\"" + str(self.price) + "\"" + \
+                    " data-qty-history='" + qty_history_json + "'" + \
+                    " data-price-history='" + price_history_json + "'" + \
+                    ">" + \
                             "<div class=\"d-none col\">" + \
                             "</div>" + \
                             "<div class=\"col-sellerProductInfo col\">" + \
@@ -293,7 +354,7 @@ class Listing:
                                     "</div>" + \
                                     "<div class=\"col-product col-12 col-lg\">" + \
                                         "<div class=\"row g-0\">" + \
-                                            "<div class=\"product-attributes col\">" + \
+                                            "<div class=\"product-attributes\" style=\"flex: 0 0 6.5rem;\">" + \
                                                 "<a data-bs-placement=\"bottom\" class=\"article-condition condition-" + \
                                                 self.condition.lower() + \
                                                 " me-1\" data-bs-original-title=\"" + \
@@ -312,8 +373,10 @@ class Listing:
                                                 reverse_holo_marker + \
                                             "</div>" + \
                                             "<div class=\"product-comments me-1 col\">" + \
-                                                "<div class=\"d-none d-lg-block w-100\">" + \
-                                                    "<span class=\"d-block text-truncate text-muted fst-italic small\">" + \
+                                                "<div class=\"w-100\">" + \
+                                                    "<span class=\"d-block text-truncate text-muted fst-italic small\" title=\"" + \
+                                                        self.comment.replace('"', '&quot;') + \
+                                                    "\">" + \
                                                         self.comment + \
                                                     "</span>" + \
                                                 "</div>" + \
@@ -323,7 +386,7 @@ class Listing:
                                 "</div>" + \
                             "</div>" + \
                             "<div class=\"col-offer col-auto\""+status+">" + \
-                                "<div style=\"width:10rem\" class=\"price-container d-none d-md-flex justify-content-end\">" + \
+                                "<div style=\"width:10rem\" class=\"price-container d-flex justify-content-end\">" + \
                                     "<div class=\"d-flex flex-column\">" + \
                                         "<div class=\"d-flex align-items-center justify-content-end\">" + \
                                             "<span class=\"color-primary small text-end text-nowrap fw-bold\" " + price_style + ">" + \
@@ -332,7 +395,7 @@ class Listing:
                                         "</div>" + \
                                     "</div>" + \
                                 "</div>" + \
-                                "<div class=\"amount-container d-none d-md-flex justify-content-end me-3\">" + \
+                                "<div class=\"amount-container d-flex justify-content-end me-3\">" + \
                                     "<span class=\"item-count small text-end\">" + \
                                         quantity_string + \
                                     "</span>" + \
@@ -343,9 +406,16 @@ class Listing:
                                     "</span>" + \
                                 "</div>" + \
                             "</div>" + \
-                                "<div class=\"col-auto\">" +\
-                                    "<a href=\"?name="+self.canonical_name+".json&delete="+str(self.row_number)+"\"><img src=\"static/Blanko/trash.png\" width=\"30rem\" height=\"30rem\"></a>" +\
-                                "</div>" +\
+                            "<div class=\"col-auto d-flex align-items-center\">" +\
+                                    ("<a href=\"?name="+self.canonical_name+".json&unarchive="+str(self.row_number)+"\" title=\"Unarchive\">" +\
+                                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#28a745\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z\"/><line x1=\"12\" y1=\"11\" x2=\"12\" y2=\"17\"/><polyline points=\"9 14 12 11 15 14\"/></svg>" +\
+                                    "</a>"
+                                    if self.archived else
+                                        "<a href=\"?name="+self.canonical_name+".json&archive="+str(self.row_number)+"\" title=\"Archive\">" +\
+                                        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#666\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"11\"/><polyline points=\"9 14 12 17 15 14\"/></svg>" +\
+                                    "</a>") +\
+                                    "<a href=\"?name="+self.canonical_name+".json&delete="+str(self.row_number)+"\" class=\"ms-1\"><img src=\"static/Blanko/trash.png\" width=\"30rem\" height=\"30rem\"></a>" +\
+                            "</div>"
                         "</div>")
         return table_element
 
