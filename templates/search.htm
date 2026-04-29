@@ -169,6 +169,9 @@
 					<option value="priceChange" {% if request.args.get('sortBy', 'name') == 'priceChange' %}selected{% endif %}>Price Change (€)</option>
 					<option value="percentChange" {% if request.args.get('sortBy', 'name') == 'percentChange' %}selected{% endif %}>Percentage Change (%)</option>
 					<option value="lowestPrice" {% if request.args.get('sortBy', 'name') == 'lowestPrice' %}selected{% endif %}>Lowest Price</option>
+					<option value="netSupply" {% if request.args.get('sortBy', 'name') == 'netSupply' %}selected{% endif %}>Net Supply Change</option>
+					<option value="drainage" {% if request.args.get('sortBy', 'name') == 'drainage' %}selected{% endif %}>Drainage</option>
+					<option value="inflation" {% if request.args.get('sortBy', 'name') == 'inflation' %}selected{% endif %}>Inflation</option>
 					{% endif %}
 				</select>
 			</div>

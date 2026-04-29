@@ -236,7 +236,10 @@ class Page:
                         new_listing.previous_prices.append((listing.price,listing.date))
 
                     # check if the quantity has changed
+                    new_listing.previous_quantities = listing.previous_quantities[:]
                     new_listing.quantity_change = page.listings[0].quantity - listing.quantity
+                    if new_listing.quantity_change != 0:
+                        new_listing.previous_quantities.append((listing.quantity, listing.date))
 
                     # preserve archived status
                     new_listing.archived = listing.archived
@@ -267,6 +270,7 @@ class Page:
             new_listing.language = self.listings[0].language
             new_listing.condition = self.listings[0].condition
             new_listing.previous_prices = self.listings[0].previous_prices
+            new_listing.previous_quantities = self.listings[0].previous_quantities[:]
             new_listing.quantity = self.listings[0].quantity
             new_listing.first_date = self.listings[0].first_date
             new_listing.comment = self.listings[0].comment
@@ -291,6 +295,8 @@ class Page:
                 new_listing.new = not self.listings[0].ended
                 if new_listing.new:
                     self.sold += 1
+                if not self.listings[0].ended and self.listings[0].quantity > 0:
+                    new_listing.previous_quantities.append((self.listings[0].quantity, self.listings[0].date))
                 new_listing.quantity = 0
             new_listing.date = self.listings[0].date
             # the last seen date is the date of the previous listing

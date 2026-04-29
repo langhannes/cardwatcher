@@ -127,6 +127,23 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                 if collection_qty > 0:
                     collection_unit_price = collection_price / collection_qty
 
+        # Compute market metrics (drainage, inflation, net supply)
+        current_available = price_history.get(canonical_name, {}).get('current_available', 0) or 0
+        ins = sld = 0
+        if canonical_name in price_history:
+            if price_period == 'last':
+                last_dl = price_history[canonical_name].get('last_download', {})
+                ins = last_dl.get('inserted', 0) or 0
+                sld = last_dl.get('sold', 0) or 0
+            else:
+                pd = price_history[canonical_name].get(price_period, {})
+                ins = pd.get('listings_added', 0) or 0
+                sld = pd.get('listings_removed', 0) or 0
+        base = current_available - ins + sld
+        drainage_pct  = round(sld / base * 100, 1) if base > 0 else None
+        inflation_pct = round(ins / base * 100, 1) if base > 0 else None
+        net_supply_pct = round((ins - sld) / base * 100, 1) if base > 0 else None
+
         file_data_list.append({
             'file_name': file_name,
             'canonical_name': canonical_name,
@@ -141,7 +158,11 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             'collection_price': collection_price,
             'collection_qty': collection_qty,
             'collection_unit_price': collection_unit_price,
-            'in_collection': canonical_name in all_collection_names
+            'in_collection': canonical_name in all_collection_names,
+            'current_available': current_available,
+            'drainage_pct': drainage_pct,
+            'inflation_pct': inflation_pct,
+            'net_supply_pct': net_supply_pct,
         })
 
     # Apply sorting based on parameters and price type
@@ -163,6 +184,12 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             file_data_list.sort(key=lambda x: x['percent_chg'], reverse=(sort_order == "desc"))
     elif sort_by == "lowestPrice":
         file_data_list.sort(key=lambda x: x['price_min'], reverse=(sort_order == "desc"))
+    elif sort_by == "drainage":
+        file_data_list.sort(key=lambda x: x['drainage_pct'] if x['drainage_pct'] is not None else -1, reverse=(sort_order == "desc"))
+    elif sort_by == "inflation":
+        file_data_list.sort(key=lambda x: x['inflation_pct'] if x['inflation_pct'] is not None else -1, reverse=(sort_order == "desc"))
+    elif sort_by == "netSupply":
+        file_data_list.sort(key=lambda x: x['net_supply_pct'] if x['net_supply_pct'] is not None else 0, reverse=(sort_order == "desc"))
     elif sort_by == "collectionPrice":
         # Sort by total collection value for this card
         file_data_list.sort(key=lambda x: x['collection_price'], reverse=(sort_order == "desc"))
@@ -209,11 +236,19 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                 if listings_removed > 0:
                     badge_parts.append(f'<span style="color: rgb(220, 20, 60); font-weight: bold;">-{listings_removed}</span>')
 
-        # Build badge with count + changes
-        if current_available > 0 or badge_parts:
+        # Build badge with count + changes + net supply
+        ns_pct = data['net_supply_pct']
+        ns_badge_html = ""
+        if ns_pct is not None:
+            ns_color = "rgb(34,139,34)" if ns_pct > 0 else ("rgb(220,53,69)" if ns_pct < 0 else "#888")
+            ns_sign = "+" if ns_pct > 0 else ""
+            ns_badge_html = f'<div style="text-align:right;color:{ns_color};font-weight:bold;font-size:0.9em;">{ns_sign}{ns_pct}%</div>'
+        if current_available > 0 or badge_parts or ns_badge_html:
             count_part = f'<span style="font-weight: bold;">{current_available}</span>' if current_available > 0 else ''
             separator = ' ' if count_part and badge_parts else ''
-            availability_badges = '<div style="position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; display: flex; gap: 6px;">' + count_part + separator + ' '.join(badge_parts) + '</div>'
+            changes_row = count_part + separator + ' '.join(badge_parts)
+            inner_html = (f'<div style="display:flex;gap:6px;">{changes_row}</div>' if changes_row else '') + ns_badge_html
+            availability_badges = '<div style="position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">' + inner_html + '</div>'
         price_string = "--€ (0€)"
         price_arrow = ""
         price_style = "font-size: 0.85em; font-weight: bold; background: rgba(255,255,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
@@ -342,6 +377,14 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         if lowest_price > 0:
             lowest_price_html = f'<div style="font-size: 0.85em; font-weight: bold; background: rgba(240,240,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;">From: {round(lowest_price,2)}€</div>'
 
+        # Build market metrics HTML
+        market_metrics_html = ""
+        dr = data['drainage_pct']
+        inf = data['inflation_pct']
+        if sort_by in ('drainage', 'inflation', 'netSupply') and dr is not None:
+            market_metrics_html += f'<div style="font-size:0.78em;color:rgb(220,53,69);">Drainage: {dr}%</div>'
+            market_metrics_html += f'<div style="font-size:0.78em;color:rgb(34,139,34);">Inflation: {inf}%</div>'
+
         # Build collection price HTML (only when in collection view)
         collection_price_html = ""
         if collection and data['collection_price'] > 0:
@@ -392,6 +435,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                                 "</div>" + \
                                 ended_price_html + \
                                 lowest_price_html + \
+                                market_metrics_html + \
                             "</div>" + \
                         "</a>" + \
                       "</div>"

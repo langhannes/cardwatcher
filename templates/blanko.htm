@@ -34,6 +34,46 @@ CardWatcher
 .hidden-reverse {
 	display:none !important;
 }
+
+/* Mobile table width fix */
+@media (max-width: 991.98px) {
+	#table {
+		max-width: 100%;
+		overflow-x: hidden;
+	}
+	#table .article-row .price-container {
+		width: auto !important;
+		flex: 1;
+		justify-content: flex-end !important;
+	}
+	#table .article-row .price-container span {
+		text-align: right !important;
+	}
+	#table .article-row .col-offer {
+		flex: 1 0 0% !important;
+	}
+	#table .article-row .product-comments {
+		flex-basis: 100%;
+		max-width: 100%;
+	}
+	#table .article-row .product-comments .text-truncate {
+		white-space: normal !important;
+		word-break: break-word;
+	}
+	#table .article-row .product-attributes {
+		flex: 0 0 auto !important;
+	}
+	#table .article-row .actions-container {
+		padding-right: 0.25rem !important;
+	}
+	#table .article-row .col-auto.d-flex.align-items-center {
+		padding-right: 0.25rem;
+	}
+	#table .article-row .col-auto.d-flex.align-items-center img {
+		width: 22px !important;
+		height: 22px !important;
+	}
+}
 </style>
 
 </head>
@@ -169,7 +209,14 @@ CardWatcher
 						<button type="button" class="btn btn-outline-primary btn-sm chart-period-btn" data-period="6m" style="font-size:0.7em; padding: 1px 6px;">6M</button>
 						<button type="button" class="btn btn-outline-primary btn-sm chart-period-btn active" data-period="all" style="font-size:0.7em; padding: 1px 6px;">All</button>
 					</div>
-					<canvas id="chart" width="400" height="120"></canvas>
+					<div class="d-flex gap-2 w-100">
+						<div style="flex:1;min-width:0;">
+							<canvas id="chart" width="400" height="240"></canvas>
+						</div>
+						<div style="flex:1;min-width:0;">
+							<canvas id="availabilityChart" width="400" height="240"></canvas>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div class="col-lg-0 d-none d-lg-block">
@@ -495,16 +542,16 @@ CardWatcher
 			<div class="col-sellerProductInfo col">
 				<div class="row g-0 h-100">
 					<div class="col-seller col-12 col-lg-auto">
-						<div>Verkäufer
+						<div>Seller
 						</div>
 					</div>
 					<div class="col-product col-12 col-lg">
-						<div>Produktinfo
+						<div>Product Information
 						</div>
 					</div>
 				</div>
 			</div>
-			<div class="col-offer col-auto" style="width:24rem;">Angebot
+			<div class="col-offer col-auto" style="width:22.1rem;">Offer
 			</div>
 		</div>
 	</div>
@@ -863,78 +910,368 @@ CardWatcher
 	// chart data
 	var currentChartPeriod = 'all';
 
-	function getDataFromTable(periodDays){
+	function parseDMY(str) {
+		var d = new Date(str.trim().split('.').reverse().join('-'));
+		d.setHours(0, 0, 0, 0);
+		return d;
+	}
+
+	function histAtDate(history, day, fallback, key) {
+		if (!history || history.length === 0) return fallback;
+		var result = history[0][key];
+		for (var i = 0; i < history.length; i++) {
+			if (history[i].date <= day) result = history[i][key];
+			else break;
+		}
+		return result;
+	}
+
+	function getDataFromTable(periodDays) {
 		var currentDate = new Date();
+		currentDate.setHours(0, 0, 0, 0);
 		var cutoffDate = null;
 		if (periodDays) {
 			cutoffDate = new Date();
 			cutoffDate.setDate(cutoffDate.getDate() - periodDays);
-			cutoffDate.setHours(0,0,0,0);
+			cutoffDate.setHours(0, 0, 0, 0);
 		}
 
-		var data = [];
-		var rows = document.querySelectorAll('.article-row');
-		rows.forEach(function(row) {
+		var listings = [];
+		document.querySelectorAll('.article-row').forEach(function(row) {
 			var isHidden = false;
-			row.classList.forEach(function(className) {
-				if (className.startsWith('hidden') || className === 'archived-listing') {
-					isHidden = true;
-				}
+			row.classList.forEach(function(cls) {
+				if (cls.startsWith('hidden') || cls === 'archived-listing') isHidden = true;
 			});
-			if (!isHidden){
-				var dateStr = row.querySelectorAll('.actions-container')[0].innerText;
-				var price = parseFloat(row.querySelectorAll('.price-container')[0].innerText.replace(' ','').replace('€',''));
-				var rowDate = new Date(dateStr.split('.').reverse().join('-'));
-				// Filter by period if set
-				if (cutoffDate && rowDate < cutoffDate) return;
-				data.push([dateStr, price]);
+			if (isHidden) return;
+
+			var isEnded      = row.getAttribute('data-is-ended') === 'true';
+			var firstDateStr = row.getAttribute('data-first-date');
+			var shownDateStr = row.querySelectorAll('.actions-container')[0].innerText.trim();
+			var fallbackPrice = parseFloat(row.getAttribute('data-price')) || 0;
+			var fallbackQty   = parseInt(row.getAttribute('data-quantity')) || 1;
+
+			function parseHistory(attr, key) {
+				var raw = row.getAttribute(attr);
+				var arr = [];
+				try { arr = raw ? JSON.parse(raw) : []; } catch(e) {}
+				return arr.map(function(e) {
+					var obj = { date: parseDMY(e[1]) };
+					obj[key] = e[0];
+					return obj;
+				});
 			}
-		});
-		if (data.length === 0) return { labels: [], prices: [] };
 
-		data.sort(function(a,b) {
-			var dateA = new Date(a[0].split('.').reverse().join('-'));
-			var dateB = new Date(b[0].split('.').reverse().join('-'));
-			return dateA - dateB;
+			var priceHistory = parseHistory('data-price-history', 'price');
+			var qtyHistory   = parseHistory('data-qty-history',   'qty');
+
+			var firstDate = firstDateStr ? parseDMY(firstDateStr) : null;
+			var endDate   = (isEnded && shownDateStr) ? parseDMY(shownDateStr) : null;
+
+			if (firstDate) listings.push({ isEnded, firstDate, endDate, fallbackPrice, fallbackQty, priceHistory, qtyHistory });
 		});
 
-		var labels = [];
-		var prices = [];
-		var startDate = cutoffDate || new Date(data[0][0].split('.').reverse().join('-'));
-		var firstDate = new Date(startDate);
-		var current_index = 0;
-		var date_at_index = new Date(data[0][0].split('.').reverse().join('-'));
-		date_at_index.setHours(1);
-		for (var i = firstDate; i <= currentDate; i.setDate(i.getDate()+1)){
-			i.setHours(1);
-			var sum = 0;
-			var num = 0;
-			while (current_index < data.length && date_at_index.getTime() === i.getTime()){
-				sum += data[current_index][1];
-				num++;
-				current_index++;
-				if(current_index < data.length){
-					date_at_index = new Date(data[current_index][0].split('.').reverse().join('-'));
-					date_at_index.setHours(1);
+		if (listings.length === 0) return { labels: [], prices: [] };
+
+		var minDate = null;
+		listings.forEach(function(l) {
+			if (!minDate || l.firstDate < minDate) minDate = new Date(l.firstDate);
+		});
+
+		var startDate = cutoffDate || minDate;
+		var labels = [], prices = [];
+
+		for (var d = new Date(startDate); d <= currentDate; d.setDate(d.getDate() + 1)) {
+			var day = new Date(d);
+			day.setHours(0, 0, 0, 0);
+
+			var dayListings = [];
+			listings.forEach(function(l) {
+				if (l.firstDate > day) return;
+				if (l.isEnded && l.endDate && l.endDate < day) return;
+				var price = histAtDate(l.priceHistory, day, l.fallbackPrice, 'price');
+				var qty   = histAtDate(l.qtyHistory,   day, l.fallbackQty,   'qty');
+				if (price > 0 && qty > 0) dayListings.push({ price: price, qty: qty });
+			});
+
+			// IQR outlier filter — mirrors calculate_price_average_robust in page.py
+			var filtered = dayListings;
+			if (dayListings.length >= 4) {
+				var sorted = dayListings.slice().sort(function(a, b) { return a.price - b.price; });
+				var n = sorted.length;
+				var q1 = sorted[Math.floor(n / 4)].price;
+				var q3 = sorted[Math.floor(3 * n / 4)].price;
+				var iqr = q3 - q1;
+				if (iqr > 0) {
+					var lo = q1 - 1.5 * iqr;
+					var hi = q3 + 1.5 * iqr;
+					var f = dayListings.filter(function(e) { return e.price >= lo && e.price <= hi; });
+					if (f.length > 0) filtered = f;
 				}
 			}
-			var day = i.getDate();
-			var month = i.getMonth() + 1;
-			var year = i.getFullYear();
-			var formattedDate = ('0' + day).slice(-2) + '.' + ('0' + month).slice(-2) + '.' + year;
-			labels.push(formattedDate);
-			if (num){
-				prices.push(sum/num);
-			}
-			else{
-				prices.push(null);
-			}
+
+			var weightedSum = 0, totalQty = 0;
+			filtered.forEach(function(e) { weightedSum += e.price * e.qty; totalQty += e.qty; });
+
+			var dayStr = ('0' + day.getDate()).slice(-2) + '.' + ('0' + (day.getMonth()+1)).slice(-2) + '.' + day.getFullYear();
+			labels.push(dayStr);
+			prices.push(totalQty > 0 ? weightedSum / totalQty : null);
 		}
 
 		return { labels: labels, prices: prices };
 	}
 
 	var mychart;
+	var availabilityChart;
+
+	function getAvailabilityDataFromTable(periodDays) {
+		var currentDate = new Date();
+		currentDate.setHours(0, 0, 0, 0);
+		var cutoffDate = null;
+		if (periodDays) {
+			cutoffDate = new Date();
+			cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+			cutoffDate.setHours(0, 0, 0, 0);
+		}
+
+		var listings = [];
+		document.querySelectorAll('.article-row').forEach(function(row) {
+			var isHidden = false;
+			row.classList.forEach(function(cls) {
+				if (cls.startsWith('hidden') || cls === 'archived-listing') isHidden = true;
+			});
+			if (isHidden) return;
+
+			var isEnded = row.getAttribute('data-is-ended') === 'true';
+			var firstDateStr = row.getAttribute('data-first-date');
+			var shownDateStr = row.querySelectorAll('.actions-container')[0].innerText.trim();
+			var fallbackQty = parseInt(row.getAttribute('data-quantity')) || 1;
+			var qtyHistoryRaw = row.getAttribute('data-qty-history');
+			var qtyHistory = [];
+			try { qtyHistory = qtyHistoryRaw ? JSON.parse(qtyHistoryRaw) : []; } catch(e) {}
+			qtyHistory = qtyHistory.map(function(e) {
+				return { qty: e[0], date: new Date(e[1].split('.').reverse().join('-')) };
+			});
+			qtyHistory.forEach(function(e) { e.date.setHours(0,0,0,0); });
+
+			var firstDate = firstDateStr ? new Date(firstDateStr.split('.').reverse().join('-')) : null;
+			if (firstDate) firstDate.setHours(0, 0, 0, 0);
+
+			var endDate = (isEnded && shownDateStr) ? new Date(shownDateStr.split('.').reverse().join('-')) : null;
+			if (endDate) endDate.setHours(0, 0, 0, 0);
+
+			if (firstDate) listings.push({ isEnded: isEnded, firstDate: firstDate, endDate: endDate, fallbackQty: fallbackQty, qtyHistory: qtyHistory });
+		});
+
+		if (listings.length === 0) return { labels: [], available: [], sold: [] };
+
+		function qtyAtDate(qtyHistory, day, fallback) {
+			if (qtyHistory.length === 0) return fallback;
+			var result = qtyHistory[0].qty;
+			for (var i = 0; i < qtyHistory.length; i++) {
+				if (qtyHistory[i].date <= day) result = qtyHistory[i].qty;
+				else break;
+			}
+			return result;
+		}
+
+		function lastNonZeroQty(qtyHistory, fallback) {
+			for (var i = qtyHistory.length - 1; i >= 0; i--) {
+				if (qtyHistory[i].qty > 0) return qtyHistory[i].qty;
+			}
+			return fallback;
+		}
+
+		var minDate = null;
+		listings.forEach(function(l) {
+			if (!minDate || l.firstDate < minDate) minDate = new Date(l.firstDate);
+		});
+
+		var startDate = cutoffDate || minDate;
+		var labels = [], availableData = [], newAvailableData = [], soldData = [];
+
+		for (var d = new Date(startDate); d <= currentDate; d.setDate(d.getDate() + 1)) {
+			var day = new Date(d);
+			day.setHours(0, 0, 0, 0);
+			var dayTime = day.getTime();
+			var availCount = 0, newAvailCount = 0, soldCount = 0;
+
+			listings.forEach(function(l) {
+				if (!l.firstDate || l.firstDate > day) return;
+				var qty = qtyAtDate(l.qtyHistory, day, l.fallbackQty);
+				var isNew = l.firstDate.getTime() === dayTime;
+				if (!l.isEnded) {
+					availCount += qty;
+					if (isNew) newAvailCount += qty;
+				} else {
+					if (l.endDate && l.endDate > day) {
+						availCount += qty;
+						if (isNew) newAvailCount += qty;
+					}
+					if (l.endDate && l.endDate.getTime() === dayTime) soldCount += lastNonZeroQty(l.qtyHistory, l.fallbackQty);
+				}
+			});
+
+			var dayStr = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth()+1)).slice(-2) + '.' + d.getFullYear();
+			labels.push(dayStr);
+			availableData.push(availCount);
+			newAvailableData.push(newAvailCount);
+			soldData.push(-soldCount);
+		}
+		return { labels: labels, available: availableData, newAvailable: newAvailableData, sold: soldData };
+	}
+
+	function aggregateToWeeks(dailyData) {
+		var weekLabels = [], weekAvailable = [], weekNewAvailable = [], weekSold = [];
+		var i = dailyData.labels.length;
+		while (i > 0) {
+			var start = Math.max(0, i - 7);
+			var availSum = 0, newAvailSum = 0, soldSum = 0, count = i - start;
+			for (var j = start; j < i; j++) {
+				availSum += dailyData.available[j];
+				newAvailSum += dailyData.newAvailable[j];
+				soldSum += dailyData.sold[j];
+			}
+			weekLabels.unshift(dailyData.labels[start]);
+			weekAvailable.unshift(Math.round(availSum / count));
+			weekNewAvailable.unshift(Math.round(newAvailSum / count));
+			weekSold.unshift(soldSum);
+			i = start;
+		}
+		return { labels: weekLabels, available: weekAvailable, newAvailable: weekNewAvailable, sold: weekSold };
+	}
+
+	function aggregateToMonths(dailyData) {
+		var monthMap = {}, monthOrder = [];
+		for (var i = 0; i < dailyData.labels.length; i++) {
+			var parts = dailyData.labels[i].split('.');
+			var key = parts[2] + '-' + parts[1];
+			if (!monthMap[key]) {
+				monthMap[key] = { label: parts[1] + '.' + parts[2], availSum: 0, newAvailSum: 0, soldSum: 0, count: 0 };
+				monthOrder.push(key);
+			}
+			monthMap[key].availSum += dailyData.available[i];
+			monthMap[key].newAvailSum += dailyData.newAvailable[i];
+			monthMap[key].soldSum += dailyData.sold[i];
+			monthMap[key].count++;
+		}
+		var labels = [], available = [], newAvailable = [], sold = [];
+		monthOrder.forEach(function(key) {
+			var m = monthMap[key];
+			labels.push(m.label);
+			available.push(Math.round(m.availSum / m.count));
+			newAvailable.push(Math.round(m.newAvailSum / m.count));
+			sold.push(m.soldSum);
+		});
+		return { labels: labels, available: available, newAvailable: newAvailable, sold: sold };
+	}
+
+	function generate_availability_graph(period) {
+		period = period || currentChartPeriod;
+		var periodDays = { '1m': 30, '3m': 90, '6m': 180, 'all': null }[period];
+		var data = getAvailabilityDataFromTable(periodDays);
+		if (data.labels.length === 0) return;
+
+		if (period === 'all' && data.labels.length > 180) data = aggregateToMonths(data);
+		else if (data.labels.length > 31) data = aggregateToWeeks(data);
+
+		if (availabilityChart) availabilityChart.destroy();
+
+		var existingData = data.available.map(function(avail, i) {
+			return avail - data.newAvailable[i];
+		});
+
+		var drainageData = data.available.map(function(avail, i) {
+			var s = Math.abs(data.sold[i]);
+			return (avail > 0 && s > 0) ? parseFloat((s / avail * 100).toFixed(1)) : null;
+		});
+
+		var ctx = document.getElementById('availabilityChart').getContext('2d');
+		availabilityChart = new Chart(ctx, {
+			type: 'bar',
+			data: {
+				labels: data.labels,
+				datasets: [
+					{
+						label: 'Existing',
+						data: existingData,
+						backgroundColor: 'rgba(54, 162, 235, 0.45)',
+						borderColor: 'rgba(54, 162, 235, 0.7)',
+						borderWidth: 0,
+						yAxisID: 'left'
+					},
+					{
+						label: 'New',
+						data: data.newAvailable,
+						backgroundColor: 'rgba(75, 192, 100, 0.5)',
+						borderColor: 'rgba(75, 192, 100, 0.8)',
+						borderWidth: 0,
+						yAxisID: 'left'
+					},
+					{
+						label: 'Sold',
+						data: data.sold,
+						backgroundColor: 'rgba(220, 53, 69, 0.45)',
+						borderColor: 'rgba(220, 53, 69, 0.7)',
+						borderWidth: 0,
+						yAxisID: 'left'
+					},
+					{
+						label: 'Drainage %',
+						data: drainageData,
+						type: 'line',
+						yAxisID: 'right',
+						borderColor: 'rgba(255, 159, 64, 0.9)',
+						backgroundColor: 'rgba(255, 159, 64, 0.1)',
+						borderWidth: 2,
+						pointRadius: 2,
+						pointHoverRadius: 4,
+						fill: false,
+						spanGaps: false,
+						lineTension: 0.3
+					}
+				]
+			},
+			options: {
+				scales: {
+					xAxes: [{
+						stacked: true,
+						ticks: { autoSkip: true, maxTicksLimit: 8, fontSize: 10 }
+					}],
+					yAxes: [
+						{
+							id: 'left',
+							position: 'left',
+							ticks: { callback: function(v) { return Math.abs(v); } }
+						},
+						{
+							id: 'right',
+							position: 'right',
+							ticks: {
+								callback: function(v) { return v + '%'; },
+								min: 0
+							},
+							gridLines: { drawOnChartArea: false }
+						}
+					]
+				},
+				legend: {
+					display: true,
+					position: 'top',
+					labels: { boxWidth: 10, fontSize: 10, padding: 8 }
+				},
+				tooltips: {
+					callbacks: {
+						title: function(items) { return items[0].xLabel; },
+						label: function(item, chartData) {
+							var label = chartData.datasets[item.datasetIndex].label;
+							if (label === 'Drainage %') return label + ': ' + item.yLabel + '%';
+							return label + ': ' + Math.abs(Math.round(item.yLabel));
+						}
+					}
+				}
+			}
+		});
+	}
 
 	function smoothPrices(prices, window_size) {
 		// Centered moving average that skips nulls
@@ -1031,6 +1368,7 @@ CardWatcher
 				}
 			}
 		});
+		generate_availability_graph(currentChartPeriod);
 	}
 
 	// Period button handlers

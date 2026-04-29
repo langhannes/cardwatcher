@@ -37,6 +37,8 @@ class Listing:
         self.new = True
         # a list of tuples of the form (price,date)
         self.previous_prices = []
+        # a list of tuples of the form (quantity,date)
+        self.previous_quantities = []
         # the first date this card was listed by this seller
         self.first_date = ""
         # the last date this card was seen
@@ -124,6 +126,7 @@ class Listing:
         last_date_float = float(self.last_date) if self.last_date else 0.0
         # Convert previous_prices tuples to lists with float values
         prev_prices_normalized = [[float(p[0]), float(p[1])] for p in self.previous_prices if len(p) >= 2]
+        prev_qtys_normalized = [[int(q[0]), float(q[1])] for q in self.previous_quantities if len(q) >= 2]
         return {
             'card': self.card,
             'canonical_name': self.canonical_name,
@@ -140,6 +143,7 @@ class Listing:
             'ended': self.ended,
             'new': self.new,
             'previous_prices': prev_prices_normalized,
+            'previous_quantities': prev_qtys_normalized,
             'first_date': first_date_float,
             'last_date': last_date_float,
             'price_is_new': self.price_is_new,
@@ -177,6 +181,13 @@ class Listing:
                 price = float(entry[0]) if entry[0] else 0.0
                 date = float(entry[1]) if entry[1] else 0.0
                 self.previous_prices.append((price, date))
+        raw_qtys = data.get('previous_quantities', [])
+        self.previous_quantities = []
+        for entry in raw_qtys:
+            if len(entry) >= 2:
+                qty = int(entry[0]) if entry[0] is not None else 0
+                date = float(entry[1]) if entry[1] else 0.0
+                self.previous_quantities.append((qty, date))
         # Normalize first_date and last_date to float
         first_date_val = data.get('first_date', '')
         self.first_date = float(first_date_val) if first_date_val else 0.0
@@ -215,6 +226,32 @@ class Listing:
 
     def build_row(self):
         date = self.date if self.ended else self.first_date
+        first_date_str = datetime.fromtimestamp(float(self.first_date)).strftime('%d.%m.%Y') if self.first_date else ""
+        display_quantity = (-self.quantity_change) if (self.ended and self.quantity_change < 0) else self.quantity
+        qty_history = []
+        for qty, ts in self.previous_quantities:
+            try:
+                qty_history.append([int(qty), datetime.fromtimestamp(float(ts)).strftime('%d.%m.%Y')])
+            except (ValueError, TypeError, OSError):
+                pass
+        if not self.ended:
+            try:
+                qty_history.append([self.quantity, datetime.fromtimestamp(float(self.date)).strftime('%d.%m.%Y')])
+            except (ValueError, TypeError, OSError):
+                pass
+        qty_history_json = json.dumps(qty_history)
+
+        price_history_arr = []
+        for p, ts in self.previous_prices:
+            try:
+                price_history_arr.append([float(p), datetime.fromtimestamp(float(ts)).strftime('%d.%m.%Y')])
+            except (ValueError, TypeError, OSError):
+                pass
+        try:
+            price_history_arr.append([self.price, datetime.fromtimestamp(float(self.date)).strftime('%d.%m.%Y')])
+        except (ValueError, TypeError, OSError):
+            pass
+        price_history_json = json.dumps(price_history_arr)
         status = ""
         row_extra_style = ""
 
@@ -286,7 +323,14 @@ class Listing:
                             " firsted-" + first_edition_hider +\
                             " reverseholo-" + reverse_holo_hider +\
                             row_extra_style +\
-                            " row g-0 article-row\">" + \
+                            " row g-0 article-row\"" + \
+                    " data-first-date=\"" + first_date_str + "\"" + \
+                    " data-is-ended=\"" + str(self.ended).lower() + "\"" + \
+                    " data-quantity=\"" + str(display_quantity) + "\"" + \
+                    " data-price=\"" + str(self.price) + "\"" + \
+                    " data-qty-history='" + qty_history_json + "'" + \
+                    " data-price-history='" + price_history_json + "'" + \
+                    ">" + \
                             "<div class=\"d-none col\">" + \
                             "</div>" + \
                             "<div class=\"col-sellerProductInfo col\">" + \
@@ -310,7 +354,7 @@ class Listing:
                                     "</div>" + \
                                     "<div class=\"col-product col-12 col-lg\">" + \
                                         "<div class=\"row g-0\">" + \
-                                            "<div class=\"product-attributes col\">" + \
+                                            "<div class=\"product-attributes\" style=\"flex: 0 0 6.5rem;\">" + \
                                                 "<a data-bs-placement=\"bottom\" class=\"article-condition condition-" + \
                                                 self.condition.lower() + \
                                                 " me-1\" data-bs-original-title=\"" + \
@@ -362,9 +406,16 @@ class Listing:
                                     "</span>" + \
                                 "</div>" + \
                             "</div>" + \
-                                "<div class=\"col-auto\">" +\
-                                    "<a href=\"?name="+self.canonical_name+".json&delete="+str(self.row_number)+"\"><img src=\"static/Blanko/trash.png\" width=\"30rem\" height=\"30rem\"></a>" +\
-                                "</div>" +\
+                            "<div class=\"col-auto d-flex align-items-center\">" +\
+                                    ("<a href=\"?name="+self.canonical_name+".json&unarchive="+str(self.row_number)+"\" title=\"Unarchive\">" +\
+                                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#28a745\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z\"/><line x1=\"12\" y1=\"11\" x2=\"12\" y2=\"17\"/><polyline points=\"9 14 12 11 15 14\"/></svg>" +\
+                                    "</a>"
+                                    if self.archived else
+                                        "<a href=\"?name="+self.canonical_name+".json&archive="+str(self.row_number)+"\" title=\"Archive\">" +\
+                                        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#666\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"11\"/><polyline points=\"9 14 12 17 15 14\"/></svg>" +\
+                                    "</a>") +\
+                                    "<a href=\"?name="+self.canonical_name+".json&delete="+str(self.row_number)+"\" class=\"ms-1\"><img src=\"static/Blanko/trash.png\" width=\"30rem\" height=\"30rem\"></a>" +\
+                            "</div>"
                         "</div>")
         return table_element
 
