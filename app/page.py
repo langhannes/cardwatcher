@@ -308,7 +308,11 @@ class Page:
 
         # save the new listings in sorted order
         self.listings = sorted(new_listings, key = lambda x: x.price)
-        
+
+        # Recompute available as true quantity sum, excluding archived and ended
+        # (can't do this earlier because archived status isn't known until after matching)
+        self.available = sum(l.quantity for l in self.listings if not l.ended and not l.archived)
+
         for language in page.languages:
             if language not in self.languages:
                 self.languages.append(language)
