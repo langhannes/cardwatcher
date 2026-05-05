@@ -40,7 +40,7 @@ If you want to run from source or contribute to development:
 
 1. **Clone both repositories:**
    ```bash
-   git clone <this-repository-url>
+   git clone https://github.com/hanfffff/cardwatcher.git
    git clone https://github.com/hanfffff/cardwatcher-data.git
    ```
 
