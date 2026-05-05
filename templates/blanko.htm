@@ -1087,7 +1087,7 @@ CardWatcher
 		});
 
 		var startDate = cutoffDate || minDate;
-		var labels = [], availableData = [], newAvailableData = [], soldData = [];
+		var labels = [], existingAvailableData = [], newAvailableData = [], soldData = [];
 
 		for (var d = new Date(startDate); d <= currentDate; d.setDate(d.getDate() + 1)) {
 			var day = new Date(d);
@@ -1113,31 +1113,31 @@ CardWatcher
 
 			var dayStr = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth()+1)).slice(-2) + '.' + d.getFullYear();
 			labels.push(dayStr);
-			availableData.push(availCount);
+			existingAvailableData.push(availCount - newAvailCount);
 			newAvailableData.push(newAvailCount);
 			soldData.push(-soldCount);
 		}
-		return { labels: labels, available: availableData, newAvailable: newAvailableData, sold: soldData };
+		return { labels: labels, existingAvailable: existingAvailableData, newAvailable: newAvailableData, sold: soldData };
 	}
 
 	function aggregateToWeeks(dailyData) {
-		var weekLabels = [], weekAvailable = [], weekNewAvailable = [], weekSold = [];
+		var weekLabels = [], weekExisting = [], weekNew = [], weekSold = [];
 		var i = dailyData.labels.length;
 		while (i > 0) {
 			var start = Math.max(0, i - 7);
-			var availSum = 0, newAvailSum = 0, soldSum = 0, count = i - start;
+			var existingSum = 0, newSum = 0, soldSum = 0, count = i - start;
 			for (var j = start; j < i; j++) {
-				availSum += dailyData.available[j];
-				newAvailSum += dailyData.newAvailable[j];
-				soldSum += dailyData.sold[j];
+				existingSum += dailyData.existingAvailable[j];
+				newSum      += dailyData.newAvailable[j];
+				soldSum     += dailyData.sold[j];
 			}
 			weekLabels.unshift(dailyData.labels[start]);
-			weekAvailable.unshift(Math.round(availSum / count));
-			weekNewAvailable.unshift(Math.round(newAvailSum / count));
+			weekExisting.unshift(Math.round(existingSum / count));
+			weekNew.unshift(newSum);          // summed like sold — represents items that entered this week
 			weekSold.unshift(soldSum);
 			i = start;
 		}
-		return { labels: weekLabels, available: weekAvailable, newAvailable: weekNewAvailable, sold: weekSold };
+		return { labels: weekLabels, existingAvailable: weekExisting, newAvailable: weekNew, sold: weekSold };
 	}
 
 	function aggregateToMonths(dailyData) {
@@ -1146,23 +1146,23 @@ CardWatcher
 			var parts = dailyData.labels[i].split('.');
 			var key = parts[2] + '-' + parts[1];
 			if (!monthMap[key]) {
-				monthMap[key] = { label: parts[1] + '.' + parts[2], availSum: 0, newAvailSum: 0, soldSum: 0, count: 0 };
+				monthMap[key] = { label: parts[1] + '.' + parts[2], existingSum: 0, newSum: 0, soldSum: 0, count: 0 };
 				monthOrder.push(key);
 			}
-			monthMap[key].availSum += dailyData.available[i];
-			monthMap[key].newAvailSum += dailyData.newAvailable[i];
-			monthMap[key].soldSum += dailyData.sold[i];
+			monthMap[key].existingSum += dailyData.existingAvailable[i];
+			monthMap[key].newSum      += dailyData.newAvailable[i];
+			monthMap[key].soldSum     += dailyData.sold[i];
 			monthMap[key].count++;
 		}
-		var labels = [], available = [], newAvailable = [], sold = [];
+		var labels = [], existingAvailable = [], newAvailable = [], sold = [];
 		monthOrder.forEach(function(key) {
 			var m = monthMap[key];
 			labels.push(m.label);
-			available.push(Math.round(m.availSum / m.count));
-			newAvailable.push(Math.round(m.newAvailSum / m.count));
+			existingAvailable.push(Math.round(m.existingSum / m.count));
+			newAvailable.push(m.newSum);      // summed — represents items that entered this month
 			sold.push(m.soldSum);
 		});
-		return { labels: labels, available: available, newAvailable: newAvailable, sold: sold };
+		return { labels: labels, existingAvailable: existingAvailable, newAvailable: newAvailable, sold: sold };
 	}
 
 	function generate_availability_graph(period) {
@@ -1176,13 +1176,10 @@ CardWatcher
 
 		if (availabilityChart) availabilityChart.destroy();
 
-		var existingData = data.available.map(function(avail, i) {
-			return avail - data.newAvailable[i];
-		});
-
-		var drainageData = data.available.map(function(avail, i) {
+		var drainageData = data.existingAvailable.map(function(existing, i) {
+			var total = existing + data.newAvailable[i];
 			var s = Math.abs(data.sold[i]);
-			return (avail > 0 && s > 0) ? parseFloat((s / avail * 100).toFixed(1)) : null;
+			return (total > 0 && s > 0) ? parseFloat((s / total * 100).toFixed(1)) : null;
 		});
 
 		var ctx = document.getElementById('availabilityChart').getContext('2d');
@@ -1193,7 +1190,7 @@ CardWatcher
 				datasets: [
 					{
 						label: 'Existing',
-						data: existingData,
+						data: data.existingAvailable,
 						backgroundColor: 'rgba(54, 162, 235, 0.45)',
 						borderColor: 'rgba(54, 162, 235, 0.7)',
 						borderWidth: 0,
