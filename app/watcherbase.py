@@ -364,8 +364,8 @@ class watcherbase():
         current_avg = Page.calculate_price_average_robust(current_prices) if current_prices else 0
         current_min = min(current_prices) if current_prices else 0
 
-        # Count current available listings (excluding archived)
-        current_available = len(current_prices)
+        # Sum quantities of current available listings (excluding archived)
+        current_available = sum(l.quantity for l in page.listings if not l.ended and not l.archived)
 
         # Calculate current ended average using time-weighted approach
         # Recent sales have more influence than older sales (excluding archived)

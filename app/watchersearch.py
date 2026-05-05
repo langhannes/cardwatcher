@@ -63,6 +63,15 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
 
         timestamp = os.path.getmtime(os.path.join(PAGES_DIR, file_name))
 
+        # Read available quantity directly from page JSON — always current, never stale
+        page_available = 0
+        try:
+            with open(os.path.join(PAGES_DIR, file_name), 'r', encoding='utf-8') as pf:
+                pdata = json.load(pf)
+            page_available = pdata.get('available', 0) or 0
+        except (IOError, json.JSONDecodeError):
+            pass
+
         # Extract price data for sorting based on selected period
         price_avg = 0.0
         price_chg = 0.0
@@ -128,7 +137,7 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                     collection_unit_price = collection_price / collection_qty
 
         # Compute market metrics (drainage, inflation, net supply)
-        current_available = price_history.get(canonical_name, {}).get('current_available', 0) or 0
+        current_available = page_available
         ins = sld = 0
         if canonical_name in price_history:
             if price_period == 'last':
@@ -209,10 +218,8 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         availability_badges = ""
         badge_parts = []
 
-        # Get current available count from price_history
-        current_available = 0
-        if canonical_name in price_history:
-            current_available = price_history[canonical_name].get('current_available', 0) or 0
+        # Get current available count directly from page JSON (always current)
+        current_available = data['current_available']
 
         if price_period == "last":
             # Use last download comparison from price_history
