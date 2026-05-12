@@ -134,9 +134,15 @@ For a single card, click the **Download** button on its detail page.
 
 To start tracking a card that isn't in the data repository:
 
-1. Find the card on CardMarket
+**Option A – Paste URL (easiest):**
+1. Copy the CardMarket listing URL for the card (e.g. `https://www.cardmarket.com/en/Pokemon/Products/Singles/.../CardName`)
+2. Paste it into the **"Paste CardMarket URL to add..."** input in the download control bar
+3. Press Enter or click **+ Add** — the card is downloaded and imported automatically, and the search reloads to show it
+
+**Option B – Manual save:**
+1. Open the CardMarket listing page in your browser
 2. Click all "Show More" buttons to load all listings
-3. Save the page (Ctrl+S) into the `downloads/` folder inside your data directory
+3. Save the page (Ctrl+S) as "Webpage, Complete" into the `downloads/` folder inside your data directory
 4. Open CardWatcher - the card will be imported automatically
 
 ## Data Storage
