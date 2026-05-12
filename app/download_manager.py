@@ -115,6 +115,27 @@ class DownloadManager:
         self._wait_remaining = 0
         self._last_error = ""
 
+    def download_from_url(self, url):
+        """Parse a CardMarket URL and download that page."""
+        from urllib.parse import urlparse
+        parsed = urlparse(url.strip())
+
+        if 'cardmarket.com' not in parsed.netloc:
+            return {"success": False, "message": "URL must be from cardmarket.com"}
+
+        parts = parsed.path.strip('/').split('/')
+        try:
+            en_idx = parts.index('en')
+        except ValueError:
+            return {"success": False, "message": "Invalid CardMarket URL (missing /en/ segment)"}
+
+        segments = parts[en_idx + 1:]
+        if not segments:
+            return {"success": False, "message": "Could not extract card name from URL"}
+
+        canonical_name = '_'.join(segments)
+        return self.download_single_page(canonical_name)
+
     def download_single_page(self, page_name):
         """Download a single page synchronously. Returns result dict."""
         with self._lock:

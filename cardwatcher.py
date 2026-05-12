@@ -197,6 +197,17 @@ def download_single():
     return jsonify(result)
 
 
+@app.route('/api/download/url', methods=['POST'])
+def download_from_url():
+    """Download a page from a CardMarket URL."""
+    data = request.get_json()
+    if not data or 'url' not in data:
+        return jsonify({"success": False, "message": "Missing url parameter"})
+
+    result = download_manager.download_from_url(data['url'])
+    return jsonify(result)
+
+
 @app.route('/data/images/<path:filename>')
 def serve_image(filename):
     return send_from_directory(IMAGES_DIR, filename)

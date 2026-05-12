@@ -72,6 +72,13 @@
 		<span id="downloadStatus" style="color: #6c757d;">Ready</span>
 		<span id="waitTimer" style="color: #6c757d; display: none;"></span>
 
+		<!-- Add by URL -->
+		<div style="border-left: 1px solid #dee2e6; padding-left: 12px; display: flex; align-items: center; gap: 6px;">
+			<input type="text" id="addUrlInput" placeholder="Paste CardMarket URL to add..." class="form-control form-control-sm" style="width: 280px;" onkeydown="if(event.key==='Enter') addByUrl()">
+			<button onclick="addByUrl()" class="btn btn-sm btn-outline-success" style="white-space: nowrap;">+ Add</button>
+			<span id="addUrlStatus" style="color: #6c757d; font-size: 12px; min-width: 80px;"></span>
+		</div>
+
 		<!-- Sync Buttons -->
 		<div style="border-left: 1px solid #dee2e6; padding-left: 12px; margin-left: auto; display: flex; align-items: center; gap: 8px;">
 			<button id="syncPullBtn" onclick="syncPull()" class="btn btn-sm btn-outline-primary" title="Pull latest data from GitHub">
@@ -246,6 +253,42 @@ function stopDownload() {
 			}
 		})
 		.catch(err => alert('Error: ' + err));
+}
+
+function addByUrl() {
+	const input = document.getElementById('addUrlInput');
+	const statusEl = document.getElementById('addUrlStatus');
+	const url = input.value.trim();
+	if (!url) return;
+
+	statusEl.textContent = 'Adding...';
+	statusEl.style.color = '#007bff';
+
+	fetch('/api/download/url', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ url: url })
+	})
+	.then(r => r.json())
+	.then(data => {
+		if (data.success) {
+			statusEl.textContent = 'Added!';
+			statusEl.style.color = '#28a745';
+			input.value = '';
+			setTimeout(() => { statusEl.textContent = ''; }, 4000);
+			// Reload search results to show new card
+			setTimeout(() => { location.reload(); }, 1500);
+		} else {
+			statusEl.textContent = data.message || 'Failed';
+			statusEl.style.color = '#dc3545';
+			setTimeout(() => { statusEl.textContent = ''; }, 6000);
+		}
+	})
+	.catch(err => {
+		statusEl.textContent = 'Error';
+		statusEl.style.color = '#dc3545';
+		console.error('Add URL error:', err);
+	});
 }
 
 function updateUI(data) {
