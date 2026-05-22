@@ -456,9 +456,17 @@ class watcherbase():
         try:
             if os.path.exists(new_path):
                 return
-            shutil.copy2(path, new_path)
+            if path.startswith("http://") or path.startswith("https://"):
+                import requests
+                response = requests.get(path, timeout=15)
+                response.raise_for_status()
+                with open(new_path, "wb") as f:
+                    f.write(response.content)
+            else:
+                shutil.copy2(path, new_path)
         except Exception as e:
             print("save_image: ERROR: " + str(e))
+            return
         print("watcherbase.save_image | new image saved under " + new_path)
 
     def import_all_pages():

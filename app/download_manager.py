@@ -124,12 +124,11 @@ class DownloadManager:
             return {"success": False, "message": "URL must be from cardmarket.com"}
 
         parts = parsed.path.strip('/').split('/')
-        try:
-            en_idx = parts.index('en')
-        except ValueError:
-            return {"success": False, "message": "Invalid CardMarket URL (missing /en/ segment)"}
-
-        segments = parts[en_idx + 1:]
+        # Skip leading 2-letter language code (en, de, fr, etc.)
+        if parts and len(parts[0]) == 2 and parts[0].isalpha():
+            segments = parts[1:]
+        else:
+            segments = parts
         if not segments:
             return {"success": False, "message": "Could not extract card name from URL"}
 
