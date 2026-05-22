@@ -24,7 +24,7 @@ import random
 import os
 from tqdm import tqdm
 from app.watcherbase import watcherbase
-from app.config import PAGES_DIR, DOWNLOADS_DIR, get_setting
+from app.config import PAGES_DIR, DOWNLOADS_DIR, IMAGES_DIR, get_setting
 
 
 def create_browser():
@@ -235,6 +235,40 @@ def download_page_with_selenium(driver, page_name, counter):
             f.write(html_content)
 
         print(f"[OK] Saved to: {filepath}")
+
+        # Download product image if not already present (use driver to bypass Cloudflare)
+        try:
+            from bs4 import BeautifulSoup
+            import base64
+            parsed = BeautifulSoup(html_content, "lxml")
+            canonical_name = watcherbase.get_name_from_address(parsed.find_all('link')[0]['href'])
+            image_dest = os.path.join(IMAGES_DIR, canonical_name + ".jpg")
+            if not os.path.exists(image_dest):
+                card_slideshow = parsed.body.find('div', attrs={'class': 'card-slideshow'})
+                if card_slideshow:
+                    image_url = card_slideshow.find_all('div', attrs={'class': 'slide'})[1].find('img')['src']
+                else:
+                    image_url = parsed.body.find('section', attrs={'id': 'image'}).find('img')['src']
+                image_b64 = driver.execute_async_script("""
+                    var url = arguments[0], done = arguments[1];
+                    fetch(url)
+                        .then(r => r.arrayBuffer())
+                        .then(buf => {
+                            var bytes = new Uint8Array(buf), s = '';
+                            for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+                            done(btoa(s));
+                        })
+                        .catch(() => done(null));
+                """, image_url)
+                if image_b64:
+                    with open(image_dest, "wb") as f:
+                        f.write(base64.b64decode(image_b64))
+                    print(f"[OK] Downloaded image to: {image_dest}")
+                else:
+                    print(f"[WARNING] Image fetch returned null for {image_url}")
+        except Exception as e:
+            print(f"[WARNING] Could not download image: {e}")
+
         return "success"
 
     except InvalidSessionIdException as e:
