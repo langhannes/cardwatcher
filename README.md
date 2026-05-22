@@ -137,7 +137,8 @@ To start tracking a card that isn't in the data repository:
 **Option A – Paste URL (easiest):**
 1. Copy the CardMarket listing URL for the card (e.g. `https://www.cardmarket.com/en/Pokemon/Products/Singles/.../CardName`)
 2. Paste it into the **"Paste CardMarket URL to add..."** input in the download control bar
-3. Press Enter or click **+ Add** — the card is downloaded and imported automatically, and the search reloads to show it
+3. Press Enter or click **+ Add** — the card is downloaded, its image saved, and it is imported automatically. The search reloads to show it.
+4. Works with any CardMarket language setting (e.g. `/de/`, `/en/`, `/fr/`)
 
 **Option B – Manual save:**
 1. Open the CardMarket listing page in your browser

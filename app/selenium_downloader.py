@@ -236,38 +236,44 @@ def download_page_with_selenium(driver, page_name, counter):
 
         print(f"[OK] Saved to: {filepath}")
 
-        # Download product image if not already present (use driver to bypass Cloudflare)
+        # Save product image if not already present
+        # Open image URL in a new tab (Cloudflare session carries over) and pull via CDP
         try:
             from bs4 import BeautifulSoup
-            import base64
             parsed = BeautifulSoup(html_content, "lxml")
-            canonical_name = watcherbase.get_name_from_address(parsed.find_all('link')[0]['href'])
-            image_dest = os.path.join(IMAGES_DIR, canonical_name + ".jpg")
-            if not os.path.exists(image_dest):
-                card_slideshow = parsed.body.find('div', attrs={'class': 'card-slideshow'})
-                if card_slideshow:
-                    image_url = card_slideshow.find_all('div', attrs={'class': 'slide'})[1].find('img')['src']
-                else:
-                    image_url = parsed.body.find('section', attrs={'id': 'image'}).find('img')['src']
-                image_b64 = driver.execute_async_script("""
-                    var url = arguments[0], done = arguments[1];
-                    fetch(url)
-                        .then(r => r.arrayBuffer())
-                        .then(buf => {
-                            var bytes = new Uint8Array(buf), s = '';
-                            for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-                            done(btoa(s));
-                        })
-                        .catch(() => done(null));
-                """, image_url)
-                if image_b64:
-                    with open(image_dest, "wb") as f:
-                        f.write(base64.b64decode(image_b64))
-                    print(f"[OK] Downloaded image to: {image_dest}")
-                else:
-                    print(f"[WARNING] Image fetch returned null for {image_url}")
+            links = parsed.find_all('link')
+            if links:
+                canonical_name = watcherbase.get_name_from_address(links[0]['href'])
+                image_dest = os.path.join(IMAGES_DIR, canonical_name + ".jpg")
+                if not os.path.exists(image_dest):
+                    card_slideshow = parsed.body.find('div', attrs={'class': 'card-slideshow'})
+                    if card_slideshow:
+                        image_url = card_slideshow.find_all('div', attrs={'class': 'slide'})[1].find('img')['src']
+                    else:
+                        image_url = parsed.body.find('section', attrs={'id': 'image'}).find('img')['src']
+
+                    # Normalise to absolute URL
+                    if image_url.startswith('//'):
+                        image_url = 'https:' + image_url
+                    elif image_url.startswith('/'):
+                        image_url = 'https://www.cardmarket.com' + image_url
+
+                    import requests
+                    session = requests.Session()
+                    # Pass all browser cookies (includes CloudFront signed cookies)
+                    for cookie in driver.execute_cdp_cmd('Network.getAllCookies', {})['cookies']:
+                        session.cookies.set(cookie['name'], cookie['value'])
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Referer': 'https://www.cardmarket.com/'
+                    }
+                    response = session.get(image_url, headers=headers, timeout=30)
+                    response.raise_for_status()
+                    with open(image_dest, 'wb') as f:
+                        f.write(response.content)
+                    print(f"[OK] Saved image to: {image_dest}")
         except Exception as e:
-            print(f"[WARNING] Could not download image: {e}")
+            print(f"[WARNING] Could not save image: {e}")
 
         return "success"
 

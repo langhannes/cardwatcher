@@ -457,9 +457,9 @@ class watcherbase():
             if os.path.exists(new_path):
                 return
             shutil.copy2(path, new_path)
+            print("watcherbase.save_image | new image saved under " + new_path)
         except Exception as e:
             print("save_image: ERROR: " + str(e))
-        print("watcherbase.save_image | new image saved under " + new_path)
 
     def import_all_pages():
         price_history = {}
@@ -531,7 +531,12 @@ class watcherbase():
                 image_path = parsed_html.body.find('section',attrs={'id':'image'}).find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
             page.image = "data/images/" + (page.canonical_name) + ".jpg"
             image_dest = os.path.join(IMAGES_DIR, page.canonical_name + ".jpg")
-            watcherbase.save_image(os.path.join(DOWNLOADS_DIR, image_path), image_dest)
+            if image_path.startswith("http://") or image_path.startswith("https://") or image_path.startswith("//"):
+                # Selenium download: image was downloaded by the downloader, not a local file
+                if not os.path.exists(image_dest):
+                    print(f"import_all_pages | WARNING: image not found at {image_dest}")
+            else:
+                watcherbase.save_image(os.path.join(DOWNLOADS_DIR, image_path), image_dest)
             
             # get the set the product is from    
             page.set = parsed_html.body.find('div',attrs={'class':'page-title-container'}).find('h1').find('span').text.replace('Ã©','e')
