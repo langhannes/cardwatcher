@@ -573,7 +573,9 @@ class watcherbase():
             old_page.canonical_name = page.canonical_name
             old_page.import_page(old_page.canonical_name+".json")
 
-            # Calculate ended avg BEFORE update (excluding archived)
+            # Calculate averages BEFORE update (excluding archived and ended)
+            old_available_prices = [l.price for l in old_page.listings if not l.ended and not l.archived]
+            old_available_avg = Page.calculate_price_average_robust(old_available_prices) if old_available_prices else 0
             old_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
             old_ended_avg = watcherbase.calculate_price_average_time_weighted(old_ended_prices) if old_ended_prices else 0
 
@@ -582,7 +584,10 @@ class watcherbase():
             print("import_all_pages | page saved under " + os.path.join(PAGES_DIR,(old_page.canonical_name+".json")))
             watcherbase.delete_download(file_name)
 
-            # Calculate ended avg AFTER update (includes newly sold listings, excluding archived)
+            # Calculate averages AFTER update (excluding archived and ended)
+            new_available_prices = [l.price for l in old_page.listings if not l.ended and not l.archived]
+            new_available_avg = Page.calculate_price_average_robust(new_available_prices) if new_available_prices else 0
+            available_avg_change = new_available_avg - old_available_avg
             new_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
             new_ended_avg = watcherbase.calculate_price_average_time_weighted(new_ended_prices) if new_ended_prices else 0
             ended_avg_change = new_ended_avg - old_ended_avg
@@ -592,8 +597,8 @@ class watcherbase():
 
             # Add last_download section with all metrics
             price_history[page.canonical_name]['last_download'] = {
-                'avg': round(old_page.price_average, 2),
-                'avg_change': round(old_page.price_change, 2),
+                'avg': round(new_available_avg, 2),
+                'avg_change': round(available_avg_change, 2),
                 'ended_avg': round(new_ended_avg, 2),
                 'ended_avg_change': round(ended_avg_change, 2),
                 'inserted': old_page.inserted,
