@@ -11,6 +11,9 @@ deprecatedtools.py
 */flask_session
 /backups
 /build
+/.venv-build
+/.venv
+/venv
 /.claude
 CLAUDE.md
 nul

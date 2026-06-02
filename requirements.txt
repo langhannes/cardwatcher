@@ -4,6 +4,10 @@ Flask-Session==0.8.0
 
 # HTML parsing
 beautifulsoup4==4.12.3
+lxml==5.3.0
+
+# HTTP (image downloads; also a transitive dep of undetected-chromedriver)
+requests==2.32.3
 
 # Browser automation (Selenium)
 undetected-chromedriver==3.5.5

@@ -33,6 +33,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
+    # NOTE: This build uses a whitelist approach — see BUILD.md. The exe must be
+    # built inside a clean virtualenv (.venv-build) that contains ONLY the packages
+    # in requirements.txt. PyInstaller can then only bundle real dependencies, so no
+    # excludes are needed. Building from a global Python that has extra packages
+    # (torch, scipy, etc.) installed will bloat the exe with unrelated libraries.
     excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
