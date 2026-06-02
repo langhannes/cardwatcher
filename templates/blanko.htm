@@ -1257,12 +1257,24 @@ CardWatcher
 					labels: { boxWidth: 10, fontSize: 10, padding: 8 }
 				},
 				tooltips: {
+					mode: 'index',
 					callbacks: {
 						title: function(items) { return items[0].xLabel; },
 						label: function(item, chartData) {
 							var label = chartData.datasets[item.datasetIndex].label;
 							if (label === 'Drainage %') return label + ': ' + item.yLabel + '%';
 							return label + ': ' + Math.abs(Math.round(item.yLabel));
+						},
+						afterBody: function(items, chartData) {
+							var existing = 0, newAvail = 0;
+							items.forEach(function(item) {
+								var label = chartData.datasets[item.datasetIndex].label;
+								if (label === 'Existing') existing = Math.round(item.yLabel);
+								else if (label === 'New') newAvail = Math.round(item.yLabel);
+							});
+							var total = existing + newAvail;
+							if (total > 0) return ['Total available: ' + total];
+							return [];
 						}
 					}
 				}
