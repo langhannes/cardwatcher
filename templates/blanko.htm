@@ -1065,10 +1065,17 @@ CardWatcher
 		if (listings.length === 0) return { labels: [], available: [], sold: [] };
 
 		function qtyAtDate(qtyHistory, day, fallback) {
-			if (qtyHistory.length === 0) return fallback;
-			var result = qtyHistory[0].qty;
-			for (var i = 0; i < qtyHistory.length; i++) {
-				if (qtyHistory[i].date <= day) result = qtyHistory[i].qty;
+			// Ignore zero-quantity entries. A 0 in a listing's quantity history marks
+			// a relist gap (the listing ended, then came back) and is stamped with the
+			// end date. Availability gaps are already handled by the firstDate/endDate
+			// window, so for the stock level we only consider the non-zero steps.
+			// Without this, a trailing (0, endDate) artifact makes a currently-active
+			// listing read as 0 on every past day, collapsing the historical bars.
+			var hist = qtyHistory.filter(function(e) { return e.qty > 0; });
+			if (hist.length === 0) return fallback;
+			var result = hist[0].qty;
+			for (var i = 0; i < hist.length; i++) {
+				if (hist[i].date <= day) result = hist[i].qty;
 				else break;
 			}
 			return result;
