@@ -4,6 +4,24 @@ import math
 import time
 import json
 
+
+def tooltip_label(tag):
+    """Return the tooltip text of a CardMarket icon tag.
+
+    CardMarket renders the location/language label in the `title` attribute
+    server-side; Bootstrap's tooltip JS later moves it into `aria-label` (and
+    `data-bs-original-title`). Pages captured before that JS runs only have
+    `title`, so we try all the variants. Returns None if the tag is missing.
+    """
+    if tag is None:
+        return None
+    for attr in ('aria-label', 'title', 'data-bs-original-title', 'data-original-title'):
+        val = tag.get(attr)
+        if val:
+            return val
+    return None
+
+
 class Seller:
 
     def __init__(self):
@@ -202,14 +220,16 @@ class Listing:
     def parse_from_row(self,row):
         self.seller.name = row.find('span',attrs={'class':'seller-name'}).find('a').text
         seller_name_icon = row.find('span',attrs={'class':'seller-name'}).find('span',attrs={'class':'icon d-flex has-content-centered me-1'})
-        self.seller.country = location_to_english[seller_name_icon['aria-label']]
+        location_label = tooltip_label(seller_name_icon)
+        self.seller.country = location_to_english.get(location_label, location_label) if location_label else ""
         condition = row.find('a',attrs={'class':'article-condition'})
         if condition:
             self.condition = condition.find('span',attrs={'class':'badge'}).text
         else:
             self.condition = "NM"
         card_language_icon =row.find('div',attrs={'class':'product-attributes'}).find('span',attrs={'class':'icon me-2'})
-        self.language = language_to_english[card_language_icon['aria-label']]
+        language_label = tooltip_label(card_language_icon)
+        self.language = language_to_english.get(language_label, language_label) if language_label else ""
         comment_section = row.find('div',attrs={'class':'product-comments'})
         if comment_section:
             self.comment = comment_section.find('span',attrs={'class':'text-truncate'}).text.replace(",",".")
