@@ -19,6 +19,17 @@
 <meta name="msapplication-TileImage" content="//static.cardmarket.com/img/526dbb9ae52c5e62404fe903e9769807/static/misc/mstile-144x144.png">
 <link href="{{ url_for('static', filename='Search/master.min.css') }}" rel="stylesheet">
 <link href="{{ url_for('static', filename='Search/product_search.min.css') }}" rel="stylesheet">
+<style>
+/* The download/sync bar is tall and, inside its fixed-height navbar row, was
+   centered and overflowing upward — covering the bottom of the search field so
+   only its top was tappable. Let each header row grow to its content instead,
+   and give the page enough top clearance on small screens. */
+#header .navbar { height: auto !important; min-height: 45px; }
+#header .navbar > * { align-self: center; }
+@media (max-width: 768px) {
+	main.container { padding-top: 210px !important; }
+}
+</style>
 </head>
 
 <body>
@@ -113,7 +124,7 @@
 	</h1>
 	<div class="d-flex align-items-center gap-3">
 		{% if request.args.get('collection') == 'true' %}
-			<a href="/?searchString={{ request.args.get('searchString', '') }}&sortBy={{ request.args.get('sortBy', 'name') }}&order={{ request.args.get('order', 'asc') }}&pricePeriod={{ request.args.get('pricePeriod', 'last') }}&priceType={{ request.args.get('priceType', 'available') }}" class="btn btn-sm btn-outline-primary">
+			<a href="/?view=search&searchString={{ request.args.get('searchString', '') }}&sortBy={{ request.args.get('sortBy', 'name') }}&order={{ request.args.get('order', 'asc') }}&pricePeriod={{ request.args.get('pricePeriod', 'last') }}&priceType={{ request.args.get('priceType', 'available') }}" class="btn btn-sm btn-outline-primary">
 				Show All Cards
 			</a>
 		{% else %}
@@ -160,6 +171,7 @@
 	<div class="col-12">
 		<form method="GET" action="/" class="row g-2 align-items-center">
 			<input type="hidden" name="searchString" id="searchStringHidden" value="{{ request.args.get('searchString', '') }}">
+				<input type="hidden" name="view" value="search">
 			{% if request.args.get('collection') == 'true' %}
 			<input type="hidden" name="collection" value="true">
 			{% endif %}

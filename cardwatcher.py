@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import json
 import webbrowser
 import threading
 
@@ -30,6 +31,7 @@ from flask_session import Session
 from app.language_libraries import *
 from app.watcherbase import watcherbase
 import app.watchersearch as watchersearch
+import app.dashboard as dashboard
 from app.download_manager import download_manager
 from app.collection import (
     Collection, calculate_collection_price, calculate_collection_value,
@@ -91,18 +93,21 @@ def cardwatcher():
         if request.args.get('delete',''):
             print("cardwatcher | delete: " +request.args.get('delete',''))
             page.delete_listings([int(request.args.get('delete',''))])
+            watcherbase.update_price_history_for_page(page)
 
         # Archive/unarchive individual listings
         if request.args.get('archive','') and request.args.get('archive','') != 'toggle':
             listing_idx = int(request.args.get('archive',''))
             print(f"cardwatcher | archive listing: {listing_idx}")
             page.archive_listing(listing_idx)
+            watcherbase.update_price_history_for_page(page)
             return redirect(f'/?name={page_name}')
 
         if request.args.get('unarchive',''):
             listing_idx = int(request.args.get('unarchive',''))
             print(f"cardwatcher | unarchive listing: {listing_idx}")
             page.unarchive_listing(listing_idx)
+            watcherbase.update_price_history_for_page(page)
             return redirect(f'/?name={page_name}')
 
         # Get collection items for this page
@@ -119,7 +124,6 @@ def cardwatcher():
         price_history_path = os.path.join(CHANGES_DIR, "price_history.json")
         if os.path.exists(price_history_path):
             try:
-                import json
                 with open(price_history_path, "r", encoding="utf-8") as f:
                     price_history = json.load(f)
                 if canonical_name in price_history:
@@ -133,9 +137,13 @@ def cardwatcher():
             except (json.JSONDecodeError, IOError):
                 pass
 
+        # Daily history of the three market-price methods for the price graph
+        market_series = watcherbase.calculate_market_price_series(page)
+
         return render_template(
             'blanko.htm',
             table_content=page.build_table(),
+            market_series=json.dumps(market_series),
             main_image = page.image,
             card_name=page.card,
             set_name = page.set,
@@ -150,8 +158,9 @@ def cardwatcher():
             collection_items=collection_items,
             in_collection=len(collection_items) > 0,
             price_info=price_info)
-    # otherwise the user has not specified a page and there was no new download, so we go back to the search
-    else:
+    # No specific page requested. Show the full search grid only when explicitly
+    # asked (Browse all / collection view); otherwise the landing is the dashboard.
+    elif request.args.get('view') == 'search' or request.args.get('collection', '') == 'true':
         sort_by = request.args.get('sortBy', 'name')
         # Smart default: descending for price fields, ascending for name
         default_order = 'asc' if sort_by == 'name' else 'desc'
@@ -162,6 +171,8 @@ def cardwatcher():
         collection = Collection().load() if collection_filter else None
         search = watchersearch.build_search("", sort_by, sort_order, price_period, price_type, collection)
         return render_template('search.htm',search_elements=search, sort_order=sort_order)
+    else:
+        return render_template('dashboard.htm', **dashboard.build_dashboard())
 
 @app.route('/api/download/start', methods=['POST'])
 def start_download():

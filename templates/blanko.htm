@@ -1022,6 +1022,16 @@ CardWatcher
 
 	var mychart;
 	var availabilityChart;
+	// Server-computed daily history of the three market-price methods
+	var marketSeries = {{ market_series | safe }};
+
+	// Map a market-price series onto the chart's label axis (null where missing)
+	function alignMarketSeries(values, labels) {
+		if (!marketSeries || !marketSeries.labels) return null;
+		var map = {};
+		for (var i = 0; i < marketSeries.labels.length; i++) map[marketSeries.labels[i]] = values[i];
+		return labels.map(function(lbl) { var v = map[lbl]; return (v === undefined ? null : v); });
+	}
 
 	function getAvailabilityDataFromTable(periodDays) {
 		var currentDate = new Date();
@@ -1357,6 +1367,24 @@ CardWatcher
 				spanGaps: false
 			}]
 		}
+		// Overlay the three market-price methods (server-computed)
+		if (marketSeries && marketSeries.labels && marketSeries.labels.length) {
+			lineData.datasets.push({
+				label: 'Blend', data: alignMarketSeries(marketSeries.blend, data.labels),
+				fill: false, borderColor: 'rgba(40, 167, 69, 0.95)', borderWidth: 2,
+				lineTension: 0.3, spanGaps: true, pointRadius: 0, pointHitRadius: 5, pointHoverRadius: 4
+			});
+			lineData.datasets.push({
+				label: 'Sold', data: alignMarketSeries(marketSeries.transaction, data.labels),
+				fill: false, borderColor: 'rgba(220, 53, 69, 0.85)', borderWidth: 1.5, borderDash: [5, 3],
+				lineTension: 0.3, spanGaps: true, pointRadius: 0, pointHitRadius: 5, pointHoverRadius: 4
+			});
+			lineData.datasets.push({
+				label: 'Floor', data: alignMarketSeries(marketSeries.floor, data.labels),
+				fill: false, borderColor: 'rgba(255, 159, 64, 0.9)', borderWidth: 1.5, borderDash: [2, 2],
+				lineTension: 0.3, spanGaps: true, pointRadius: 0, pointHitRadius: 5, pointHoverRadius: 4
+			});
+		}
 		if(mychart){
 			mychart.destroy();
 		}
@@ -1373,12 +1401,21 @@ CardWatcher
 					}]
 				},
 				legend: {
-					display: false
+					display: true,
+					position: 'top',
+					labels: {
+						boxWidth: 10, fontSize: 10, padding: 8,
+						filter: function(item) { return item.text !== 'Raw'; }
+					}
 				},
 				tooltips: {
+					mode: 'index',
+					intersect: false,
 					callbacks: {
-						label: function(tooltipItem) {
-							return tooltipItem.yLabel.toFixed(2) + ' €';
+						label: function(tooltipItem, chartData) {
+							var label = chartData.datasets[tooltipItem.datasetIndex].label;
+							if (label === 'Raw') return null;
+							return label + ': ' + tooltipItem.yLabel.toFixed(2) + ' €';
 						}
 					}
 				}

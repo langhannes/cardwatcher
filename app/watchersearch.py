@@ -153,6 +153,28 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         inflation_pct = round(ins / base * 100, 1) if base > 0 else None
         net_supply_pct = round((ins - sld) / base * 100, 1) if base > 0 else None
 
+        # Buy-now floor (market price, dominant language + average condition) and
+        # the period-aware change in both "From" (raw lowest) and "Floor".
+        market_floor = 0.0
+        from_change = None
+        floor_change = None
+        if canonical_name in price_history:
+            ph = price_history[canonical_name]
+            market_floor = (ph.get('market') or {}).get('floor', 0) or 0
+            cur_min = ph.get('current_min', 0) or 0
+            if price_period == 'last':
+                ld = ph.get('last_download', {})
+                from_change = ld.get('min_change')
+                floor_change = ld.get('floor_change')
+            else:
+                pdp = ph.get(price_period, {})
+                hist_min = pdp.get('historical_min')
+                if hist_min:
+                    from_change = round(cur_min - hist_min, 2)
+                hist_floor = (pdp.get('market') or {}).get('floor')
+                if hist_floor:
+                    floor_change = round(market_floor - hist_floor, 2)
+
         file_data_list.append({
             'file_name': file_name,
             'canonical_name': canonical_name,
@@ -172,6 +194,9 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             'drainage_pct': drainage_pct,
             'inflation_pct': inflation_pct,
             'net_supply_pct': net_supply_pct,
+            'market_floor': market_floor,
+            'from_change': from_change,
+            'floor_change': floor_change,
         })
 
     # Apply sorting based on parameters and price type
@@ -378,11 +403,30 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         if ended_price_string:
             ended_price_html = "<div style=\"" + ended_price_style + "\">" + ended_price_string + "</div>"
 
-        # Build lowest price HTML
-        lowest_price_html = ""
-        lowest_price = data['price_min']
-        if lowest_price > 0:
-            lowest_price_html = f'<div style="font-size: 0.85em; font-weight: bold; background: rgba(240,240,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;">From: {round(lowest_price,2)}€</div>'
+        # Build "From" (raw lowest) and "Floor" (filtered buy-now) as their own
+        # rows with change + arrow, mirroring the Avail/Sold rows. Decimals are
+        # dropped on larger values to keep each row on a single line.
+        def _compact(v):
+            if abs(v) >= 100:
+                return str(int(round(v)))
+            r = round(v, 2)
+            return str(int(r)) if r == int(r) else str(r)
+        def price_row(label, value, change):
+            if value <= 0:
+                return ""
+            base = "font-size: 0.78em; font-weight: bold; background: rgba(240,240,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;"
+            if change is None:
+                return f'<div style="{base}">{label}: {_compact(value)}€</div>'
+            sign = '+' if change >= 0 else ''
+            arrow = ' ↑' if change > 0 else (' ↓' if change < 0 else ' →')
+            color = 'rgb(34,139,34)' if change > 0 else ('rgb(220,20,60)' if change < 0 else '#555')
+            colored = base if change == 0 else f"font-size: 0.78em; font-weight: bold; color: {color}; background: rgba(240,240,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;"
+            return f'<div style="{colored}">{label}: {_compact(value)}€ ({sign}{_compact(change)}€){arrow}</div>'
+
+        lowest_price_html = (
+            price_row("From", data['price_min'], data['from_change'])
+            + price_row("Floor", data['market_floor'], data['floor_change'])
+        )
 
         # Build market metrics HTML
         market_metrics_html = ""

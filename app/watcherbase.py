@@ -4,13 +4,31 @@ import os
 import shutil
 import json
 import time
+import math
 from app.page import Page
 from app.listing import Listing
 from app.language_libraries import *
 from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
 
 class watcherbase():
-    
+
+    # --- Market price ("magic number") configuration ----------------------
+    # A representative price for a card in average condition and the usual
+    # language. Tunable on purpose — adjust after comparing the three methods.
+    #
+    # Conditions treated as "average condition". Damaged grades (LP/PL/PO) are
+    # excluded; the set is broadened automatically when too few samples remain.
+    GOOD_CONDITIONS = ('MT', 'NM', 'EX', 'GD')
+    # Tiebreak order when two languages have equal supply (most-traded wins).
+    LANGUAGE_PRIORITY = ('English', 'Japanese', 'S-Chinese', 'T-Chinese', 'Korean')
+    # Blend weights: transaction (realized sales) vs floor (buy-now low band).
+    BLEND_W_TRANSACTION = 0.6
+    BLEND_W_FLOOR = 0.4
+    # Percentile of the (outlier-filtered) asks used as the buy-now floor.
+    FLOOR_PERCENTILE = 10
+    # Minimum samples before we trust the condition-filtered set; else broaden.
+    MIN_CONDITION_SAMPLES = 3
+
     def get_name_from_address(address):
         return address[30:].replace('/','_')
 
@@ -195,6 +213,35 @@ class watcherbase():
             return Page.calculate_price_average_robust(historical_prices)
         return None
 
+    def calculate_historical_min(page, days_ago):
+        """The lowest available price ("From") as it was X days ago.
+
+        Uses the same availability test as calculate_historical_average, but
+        returns the minimum reconstructed price instead of the average.
+        """
+        cutoff = time.time() - (days_ago * 24 * 60 * 60)
+
+        historical_prices = []
+        for listing in page.listings:
+            if listing.archived:
+                continue
+            try:
+                first_date = float(listing.first_date) if listing.first_date else 0
+            except (ValueError, TypeError):
+                first_date = 0
+            if first_date <= 0 or first_date > cutoff:
+                continue
+            if listing.ended:
+                try:
+                    last_seen = float(listing.date) if listing.date else 0
+                except (ValueError, TypeError):
+                    last_seen = 0
+                if last_seen < cutoff:
+                    continue
+            historical_prices.append(watcherbase.get_price_at_time(listing, cutoff))
+
+        return min(historical_prices) if historical_prices else None
+
     def calculate_historical_ended_average(page, days_ago):
         """
         Calculate what the time-weighted average price of ended listings would have been X days ago.
@@ -331,6 +378,201 @@ class watcherbase():
 
         return (added, removed)
 
+    # ------------------------------------------------------------------
+    # Market price ("magic number")
+    # ------------------------------------------------------------------
+    def _iqr_bounds(values):
+        """Return (lower, upper) outlier bounds for a list of numbers, or None.
+
+        Mirrors the IQR filter in Page.calculate_price_average_robust.
+        """
+        vals = sorted(values)
+        n = len(vals)
+        if n < 4:
+            return None
+        q1 = vals[n // 4]
+        q3 = vals[3 * n // 4]
+        iqr = q3 - q1
+        if iqr <= 0:
+            return None
+        return (q1 - 1.5 * iqr, q3 + 1.5 * iqr)
+
+    def _percentile(sorted_vals, pct):
+        """Linear-interpolated percentile of an already-sorted list."""
+        if not sorted_vals:
+            return 0.0
+        if len(sorted_vals) == 1:
+            return sorted_vals[0]
+        k = (len(sorted_vals) - 1) * (pct / 100.0)
+        lo = math.floor(k)
+        hi = math.ceil(k)
+        if lo == hi:
+            return sorted_vals[int(k)]
+        return sorted_vals[lo] * (hi - k) + sorted_vals[hi] * (k - lo)
+
+    def _listings_at_time(page, at_time):
+        """Split non-archived listings into (active, sold) at a point in time.
+
+        Each entry is (listing, price). When at_time is None the current snapshot
+        is used (price = listing.price). Otherwise prices/availability are
+        reconstructed for that historical moment, reusing the same availability
+        tests as calculate_historical_average / calculate_historical_ended_average.
+        """
+        active, sold = [], []
+        for l in page.listings:
+            if l.archived:
+                continue
+
+            if at_time is None:
+                if l.ended:
+                    sold.append((l, l.price))
+                else:
+                    active.append((l, l.price))
+                continue
+
+            try:
+                first_date = float(l.first_date) if l.first_date else 0
+            except (ValueError, TypeError):
+                first_date = 0
+            try:
+                last_seen = float(l.date) if l.date else 0
+            except (ValueError, TypeError):
+                last_seen = 0
+
+            # Sold by the cutoff: ended and last seen at/before the cutoff.
+            if l.ended and last_seen > 0 and last_seen <= at_time:
+                sold.append((l, l.price))
+                continue
+
+            # Active at the cutoff: existed by then and not yet ended back then.
+            if first_date <= 0 or first_date > at_time:
+                continue
+            if l.ended and last_seen < at_time:
+                continue
+            active.append((l, watcherbase.get_price_at_time(l, at_time)))
+
+        return active, sold
+
+    def dominant_language(active_listings):
+        """The most-supplied language among listings (qty-weighted, priority tiebreak)."""
+        totals = {}
+        for l in active_listings:
+            totals[l.language] = totals.get(l.language, 0) + max(1, l.quantity or 1)
+        if not totals:
+            return None
+        best = max(totals.values())
+        leaders = [lang for lang, t in totals.items() if t == best]
+        if len(leaders) == 1:
+            return leaders[0]
+        for lang in watcherbase.LANGUAGE_PRIORITY:
+            if lang in leaders:
+                return lang
+        return sorted(leaders)[0]
+
+    def calculate_market_prices(page, at_time=None):
+        """Representative market price computed three ways.
+
+        Returns {'blend', 'transaction', 'floor', 'language', 'n_sold', 'n_ask'}.
+        - transaction: time-weighted, IQR-filtered average of realized sales.
+        - floor: low band (FLOOR_PERCENTILE) of outlier-filtered current asks.
+        - blend: weighted mix of transaction and floor (the all-round number).
+        All filtered to the dominant language and "average condition" grades.
+        """
+        active, sold = watcherbase._listings_at_time(page, at_time)
+        lang = (watcherbase.dominant_language([l for l, _ in active])
+                or watcherbase.dominant_language([l for l, _ in sold]))
+
+        def filtered(pairs):
+            same_lang = [(l, p) for (l, p) in pairs if lang is None or l.language == lang]
+            good = [(l, p) for (l, p) in same_lang if l.condition in watcherbase.GOOD_CONDITIONS]
+            if len(good) >= watcherbase.MIN_CONDITION_SAMPLES:
+                return good
+            # Too few in good condition — broaden to all conditions (same language).
+            return same_lang if same_lang else pairs
+
+        active_f = filtered(active)
+        sold_f = filtered(sold)
+
+        # Transaction: realized sales, IQR-filtered then time-weighted.
+        transaction = 0.0
+        if sold_f:
+            sold_pairs = [(p, l.date) for (l, p) in sold_f]
+            bounds = watcherbase._iqr_bounds([p for p, _ in sold_pairs])
+            if bounds:
+                kept = [(p, d) for (p, d) in sold_pairs if bounds[0] <= p <= bounds[1]]
+                if kept:
+                    sold_pairs = kept
+            transaction = watcherbase.calculate_price_average_time_weighted(
+                sold_pairs, reference_time=at_time)
+
+        # Floor: low band of outlier-filtered current asks.
+        floor = 0.0
+        if active_f:
+            asks = sorted(p for _, p in active_f)
+            bounds = watcherbase._iqr_bounds(asks)
+            if bounds:
+                kept = [p for p in asks if bounds[0] <= p <= bounds[1]]
+                if kept:
+                    asks = kept
+            floor = watcherbase._percentile(asks, watcherbase.FLOOR_PERCENTILE)
+
+        # Blend: weighted mix, falling back to whichever component exists.
+        if transaction > 0 and floor > 0:
+            wt = watcherbase.BLEND_W_TRANSACTION
+            wf = watcherbase.BLEND_W_FLOOR
+            blend = (wt * transaction + wf * floor) / (wt + wf)
+        elif transaction > 0:
+            blend = transaction
+        else:
+            blend = floor
+
+        return {
+            'blend': round(blend, 2),
+            'transaction': round(transaction, 2),
+            'floor': round(floor, 2),
+            'language': lang,
+            'n_sold': len(sold_f),
+            'n_ask': len(active_f),
+        }
+
+    def calculate_market_price_series(page, max_days=365):
+        """Daily history of the three market prices for the page's price graph.
+
+        Returns {'labels', 'blend', 'transaction', 'floor'} where labels are
+        dd.mm.yyyy strings (matching the graph) and each series uses None for days
+        with no usable data.
+        """
+        from datetime import datetime, timedelta
+
+        firsts = []
+        for l in page.listings:
+            try:
+                fd = float(l.first_date) if l.first_date else 0
+            except (ValueError, TypeError):
+                fd = 0
+            if fd > 0:
+                firsts.append(fd)
+        if not firsts:
+            return {'labels': [], 'blend': [], 'transaction': [], 'floor': []}
+
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        start = datetime.fromtimestamp(min(firsts)).replace(hour=0, minute=0, second=0, microsecond=0)
+        earliest = today - timedelta(days=max_days)
+        if start < earliest:
+            start = earliest
+
+        labels, blend, transaction, floor = [], [], [], []
+        day = start
+        while day <= today:
+            mp = watcherbase.calculate_market_prices(page, at_time=day.timestamp())
+            labels.append(day.strftime('%d.%m.%Y'))
+            blend.append(mp['blend'] if mp['blend'] > 0 else None)
+            transaction.append(mp['transaction'] if mp['transaction'] > 0 else None)
+            floor.append(mp['floor'] if mp['floor'] > 0 else None)
+            day += timedelta(days=1)
+
+        return {'labels': labels, 'blend': blend, 'transaction': transaction, 'floor': floor}
+
     def calculate_all_period_averages(page):
         """
         Calculate historical averages for all time periods, for both
@@ -379,11 +621,16 @@ class watcherbase():
             'current_avg': round(current_avg, 2),
             'current_ended_avg': round(current_ended_avg, 2),
             'current_available': current_available,
-            'current_min': round(current_min, 2)
+            'current_min': round(current_min, 2),
+            'market': watcherbase.calculate_market_prices(page),
         }
 
         for period_name, days in periods.items():
             period_data = {}
+
+            # Market price as it was at the start of the period (for movers).
+            period_cutoff = time.time() - (days * 24 * 60 * 60)
+            period_data['market'] = watcherbase.calculate_market_prices(page, at_time=period_cutoff)
 
             # Available listings - price average
             historical_avg = watcherbase.calculate_historical_average(page, days)
@@ -393,6 +640,10 @@ class watcherbase():
             else:
                 period_data['historical_avg'] = None
                 period_data['change'] = None
+
+            # Lowest available ("From") price as it was at the start of the period
+            historical_min = watcherbase.calculate_historical_min(page, days)
+            period_data['historical_min'] = round(historical_min, 2) if historical_min is not None else None
 
             # Available listings - count and detailed changes
             historical_available = watcherbase.calculate_historical_available_count(page, days)
@@ -414,6 +665,41 @@ class watcherbase():
             result[period_name] = period_data
 
         return result
+
+    def update_price_history_for_page(page):
+        """Recompute and persist one page's metrics in price_history.json.
+
+        Used after an in-app edit (archive / unarchive / delete a listing) so the
+        search view's stored prices, floor, and available count reflect the change
+        without waiting for the next download/import.
+        """
+        ph_path = os.path.join(CHANGES_DIR, "price_history.json")
+        history = {}
+        if os.path.exists(ph_path):
+            try:
+                with open(ph_path, "r", encoding="utf-8") as f:
+                    history = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                history = {}
+
+        metrics = watcherbase.calculate_all_period_averages(page)
+
+        # Preserve the last-download diff (inserted/sold and the change deltas),
+        # but refresh its headline prices so the default "last" view also matches
+        # the now-current values after the edit.
+        prev = history.get(page.canonical_name, {})
+        last_download = prev.get('last_download')
+        if last_download:
+            last_download = dict(last_download)
+            last_download['avg'] = metrics['current_avg']
+            last_download['ended_avg'] = metrics['current_ended_avg']
+            last_download['min'] = metrics['current_min']
+            last_download['floor'] = (metrics.get('market') or {}).get('floor', 0) or 0
+            metrics['last_download'] = last_download
+
+        history[page.canonical_name] = metrics
+        with open(ph_path, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2)
 
     def get_page(page_name):
         active_page = Page()
@@ -578,6 +864,8 @@ class watcherbase():
             old_available_avg = Page.calculate_price_average_robust(old_available_prices) if old_available_prices else 0
             old_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
             old_ended_avg = watcherbase.calculate_price_average_time_weighted(old_ended_prices) if old_ended_prices else 0
+            old_min = min(old_available_prices) if old_available_prices else 0
+            old_floor = watcherbase.calculate_market_prices(old_page)['floor']
 
             old_page.update_page(page)
             old_page.save()
@@ -593,7 +881,11 @@ class watcherbase():
             ended_avg_change = new_ended_avg - old_ended_avg
 
             # Calculate period-based price averages
-            price_history[page.canonical_name] = watcherbase.calculate_all_period_averages(old_page)
+            metrics = watcherbase.calculate_all_period_averages(old_page)
+            price_history[page.canonical_name] = metrics
+
+            new_min = metrics.get('current_min', 0) or 0
+            new_floor = (metrics.get('market') or {}).get('floor', 0) or 0
 
             # Add last_download section with all metrics
             price_history[page.canonical_name]['last_download'] = {
@@ -601,6 +893,10 @@ class watcherbase():
                 'avg_change': round(available_avg_change, 2),
                 'ended_avg': round(new_ended_avg, 2),
                 'ended_avg_change': round(ended_avg_change, 2),
+                'min': round(new_min, 2),
+                'min_change': round(new_min - old_min, 2),
+                'floor': round(new_floor, 2),
+                'floor_change': round(new_floor - old_floor, 2),
                 'inserted': old_page.inserted,
                 'sold': old_page.sold
             }

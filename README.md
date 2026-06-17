@@ -6,9 +6,11 @@ A Windows application for tracking CardMarket trading card listings over time. M
 
 ## Features
 
+- **Dashboard (home page)**: An at-a-glance overview with three signal panels — biggest price movers (week), biggest net supply loss (cards being bought up), and pressure/divergence (where price and supply moves disagree)
+- **Market Price ("magic number")**: A representative price per card in average condition and the usual language, computed three ways — **Floor** (buy-now low band of asks), **Sold** (time-weighted realized sales), and **Blend** (a mix of the two). All three are overlaid on the card's price chart; the Floor is shown next to the raw "From" price in search
 - **Price Tracking**: Track average prices and price changes over time (1 week, 1 month, 2 months, 6 months)
 - **Sold Price Tracking**: Monitor ended/sold listing prices separately from available listings
-- **Lowest Price Display**: See the minimum price for each card at a glance
+- **Lowest Price Display**: See the "From" (lowest) and "Floor" (filtered buy-now) price for each card, each with its change over the selected period
 - **Price History Chart**: Quantity-weighted average price curve with IQR-based outlier filtering
 - **Availability Chart**: Bar chart showing available stock (split into existing vs. newly listed) and sold quantities per day/week/month, with a drainage % overlay line. The "new" segment is summed per period (not averaged) so low-volume listings remain visible
 - **Market Metrics**: Net Supply Change (% of stock that is net new vs. sold) shown per card in the gallery, color-coded green (growing) / red (shrinking); sort by Net Supply Change, Drainage, or Inflation
@@ -63,13 +65,24 @@ python cardwatcher.py --no-browser  # Don't auto-open browser
 
 ## Using CardWatcher
 
-### Search View (Home Page)
+### Dashboard (Home Page)
+
+The home page is a dashboard summarising the most notable movements across all tracked cards:
+
+- **Biggest price movers**: top gainers and fallers by 1-week change in the blended market price (cards with ≥10 available)
+- **Net supply loss**: cards whose available supply shrank the most this week — i.e. being bought up (cards that started the week with ≥10 available)
+- **Pressure / divergence**: where price and supply changes disagree — *Coiling* (supply drained but price flat, possible upward pressure), *Overbought* (price up without supply shrinking), and *Cooling* (price up while sellers pile in)
+
+Use the search box or **Browse all cards** to reach the full gallery.
+
+### Search View (Browse all cards)
 
 - Browse all tracked cards as a gallery
 - Use the search box to filter by card name
 - Sort by: Name, Price, Price Change (€), Percentage Change (%), Lowest Price, Net Supply Change, Drainage, Inflation
 - Select time period: Last Download, 1 Week, 1 Month, 2 Months, 6 Months
 - Toggle between Available and Sold price types
+- Each card shows **Avail**, **Sold**, **From** (raw lowest), and **Floor** (filtered buy-now) prices, each with its change over the selected period
 - Each card badge (top-right) shows current stock **quantity** (sum of all listing quantities, not listing count), listing changes (+added / −sold), and Net Supply Change %
   - Green % = supply growing (more new listings than sold)
   - Red % = supply shrinking (more sold than new listings)
@@ -92,7 +105,7 @@ Click any card to see:
 - Filter by country or language
 - **Download button** to update this specific card
 - **Archive** button to stop tracking
-- **Price history chart**: quantity-weighted average with outlier filtering, shown for 1M / 3M / 6M / All periods
+- **Price history chart**: quantity-weighted average (Trend) with outlier filtering, plus the three market-price methods overlaid — **Blend**, **Sold**, and **Floor** — shown for 1M / 3M / 6M / All periods
 - **Availability chart**: stacked bar chart (blue = existing stock, green = newly listed, red = sold below zero) with a drainage % line; aggregates to weeks for ranges >1 month and to months for ranges >6 months
 
 ### Adding Cards to Your Collection
@@ -159,14 +172,17 @@ To start tracking a card that isn't in the data repository:
 
 ## Building the Executable
 
-To build the Windows executable yourself:
+Build inside a clean virtualenv that contains only CardWatcher's dependencies, so
+PyInstaller can't bundle unrelated packages and bloat the binary (see
+[BUILD.md](BUILD.md) for details):
 
 ```bash
-pip install pyinstaller
-pyinstaller cardwatcher.spec
+py -3.12 -m venv .venv-build
+.\.venv-build\Scripts\python.exe -m pip install -r requirements.txt pyinstaller
+.\.venv-build\Scripts\pyinstaller.exe cardwatcher.spec
 ```
 
-The executable will be created in the `dist/` folder.
+The executable (~30 MB) will be created in the `dist/` folder.
 
 ## Supported Games
 

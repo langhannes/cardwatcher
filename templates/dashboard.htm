@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<title>Dashboard | Cardwatcher</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noIndex,follow">
+<link href="{{ url_for('static', filename='Search/master.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='Search/product_search.min.css') }}" rel="stylesheet">
+<style>
+.dash-section { margin-bottom: 2.75rem; }
+.dash-section > h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; letter-spacing: -0.01em; }
+.dash-section > h2::before { content: ''; width: 6px; height: 1.1em; border-radius: 3px; background: linear-gradient(180deg, #012169, #3b6fd4); }
+.dash-section > .dash-hint { font-size: 0.82rem; color: #8a8a8a; margin-bottom: 16px; }
+.dash-cols { display: flex; gap: 28px; flex-wrap: wrap; }
+.dash-col { flex: 1; min-width: 300px; }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.dash-subhead { font-size: 1.05rem; font-weight: 800; margin: 0 0 12px; color: #333; }
+.dash-card { display: flex; align-items: center; gap: 16px; padding: 12px 14px; border: 1px solid #ececec; border-left: 5px solid var(--accent, #ccc); border-radius: 14px; margin-bottom: 12px; text-decoration: none; color: inherit; background: linear-gradient(135deg, #ffffff 55%, var(--tint, transparent)); box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform .15s ease, box-shadow .15s ease; }
+.dash-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,0,0,0.16); }
+.dash-thumb { width: 76px; height: 106px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; background: #f3f3f3; box-shadow: 0 2px 6px rgba(0,0,0,0.22); transition: transform .15s ease; }
+.dash-card:hover .dash-thumb { transform: scale(1.05); }
+.dash-info { min-width: 0; flex: 1; }
+.dash-primary { display: inline-block; font-size: 1.2rem; font-weight: 800; color: var(--accent, #333); background: var(--tint, rgba(0,0,0,0.05)); padding: 2px 12px; border-radius: 999px; line-height: 1.35; }
+.dash-name { font-size: 0.92rem; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px; }
+.dash-secondary { font-size: 0.8rem; color: #888; margin-top: 3px; }
+.dash-empty { color: #999; font-size: 0.85em; padding: 8px 0; }
+/* The download/sync bar is tall and, inside its fixed-height navbar row, was
+   centered and overflowing upward — covering the bottom of the search field so
+   only its top was tappable. Let each header row grow to its content instead,
+   and give the page enough top clearance on small screens. */
+#header .navbar { height: auto !important; min-height: 45px; }
+#header .navbar > * { align-self: center; }
+@media (max-width: 768px) {
+	main.container { padding-top: 230px !important; }
+}
+</style>
+</head>
+<body>
+<header id="header" class="fixed-top">
+	<nav class="navbar navbar-light">
+		<a href="/" class="navbar-brand">
+			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">CardWatcher</span>
+		</a>
+		<a href="/?view=search" class="btn btn-sm btn-outline-primary">Browse all cards</a>
+	</nav>
+	<nav class="navbar navbar-light">
+		<form method="GET" id="searchForm" action="/" class="justify-content-center">
+			<div id="Search" class="form-group mb-0">
+				<div id="autoCompWrapper" class="input-group input-group-sm autocomplete-wrapper show container">
+				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Search CardWatcher..." aria-label="Search" class="form-control autocomplete-input">
+				<button type="submit" id="search-btn" title="Suche" class="btn btn-light"><span class="mx-2 mx-lg-4 fw-bold">Suche</span></button>
+				</div>
+			</div>
+		</form>
+	</nav>
+	<!-- Download & Sync Control Bar -->
+	<nav class="navbar navbar-light" style="padding: 4px 16px; border-top: 1px solid #dee2e6;">
+		<div id="downloadBar" style="display: flex; align-items: center; gap: 12px; font-size: 14px; width: 100%;">
+			<button id="downloadStartBtn" onclick="startDownload()" class="btn btn-sm btn-success" style="min-width: 80px;">Start Download</button>
+			<button id="downloadStopBtn" onclick="stopDownload()" class="btn btn-sm btn-danger" style="min-width: 80px; display: none;">Stop</button>
+			<div id="downloadProgress" style="flex: 1; display: none; align-items: center; gap: 12px;">
+				<div style="flex: 1; background: #e9ecef; border-radius: 4px; height: 20px; overflow: hidden;">
+					<div id="progressBar" style="height: 100%; background: #28a745; transition: width 0.3s; width: 0%;"></div>
+				</div>
+				<span id="progressText" style="min-width: 120px; text-align: right;">0 / 0</span>
+			</div>
+			<span id="downloadStatus" style="color: #6c757d;">Ready</span>
+			<span id="waitTimer" style="color: #6c757d; display: none;"></span>
+			<div style="border-left: 1px solid #dee2e6; padding-left: 12px; display: flex; align-items: center; gap: 6px;">
+				<input type="text" id="addUrlInput" placeholder="Paste CardMarket URL to add..." class="form-control form-control-sm" style="width: 280px;" onkeydown="if(event.key==='Enter') addByUrl()">
+				<button onclick="addByUrl()" class="btn btn-sm btn-outline-success" style="white-space: nowrap;">+ Add</button>
+				<span id="addUrlStatus" style="color: #6c757d; font-size: 12px; min-width: 80px;"></span>
+			</div>
+			<div style="border-left: 1px solid #dee2e6; padding-left: 12px; margin-left: auto; display: flex; align-items: center; gap: 8px;">
+				<button id="syncPullBtn" onclick="syncPull()" class="btn btn-sm btn-outline-primary" title="Pull latest data from GitHub">&#8595; Pull</button>
+				<button id="syncFullBtn" onclick="syncFull()" class="btn btn-sm btn-outline-primary" title="Pull and push changes">&#8597; Full Sync</button>
+				<span id="syncStatus" style="color: #6c757d; font-size: 12px;">Last sync: checking...</span>
+			</div>
+			<div style="border-left: 1px solid #dee2e6; padding-left: 12px;">
+				<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings">&#9881; Settings</a>
+			</div>
+		</div>
+	</nav>
+</header>
+
+<main class="container" style="padding-top: 150px; padding-bottom: 5rem;">
+	<h1 class="page-header">Dashboard</h1>
+
+	<section class="dash-section">
+		<h2>Biggest price movers</h2>
+		<div class="dash-hint">Largest 1-week change in blended market price (cards with &ge;10 available).</div>
+		<div class="dash-cols">{{ movers_html | safe }}</div>
+	</section>
+
+	<section class="dash-section">
+		<h2>Net supply loss</h2>
+		<div class="dash-hint">Cards being bought up this week — supply shrinking fastest (started week with &ge;10 available).</div>
+		<div class="dash-grid">{{ supply_html | safe }}</div>
+	</section>
+
+	<section class="dash-section">
+		<h2>Pressure / divergence</h2>
+		<div class="dash-hint">Where price and supply moves disagree. <b>Coiling</b>: supply drained but price flat (possible upward pressure). <b>Overbought</b>: price up without supply shrinking. <b>Cooling</b>: price up but sellers piling in.</div>
+		<div class="dash-cols">{{ pressure_html | safe }}</div>
+	</section>
+</main>
+
+<script src="{{ url_for('static', filename='Blanko/Chart_2_7_2.min.js') }}"></script>
+<script>
+let pollInterval = null;
+
+function startDownload() {
+	fetch('/api/download/start', { method: 'POST' }).then(r => r.json()).then(data => {
+		if (data.success) { startPolling(); } else { alert(data.message); }
+	}).catch(err => alert('Error: ' + err));
+}
+function stopDownload() {
+	fetch('/api/download/stop', { method: 'POST' }).then(r => r.json()).then(data => {
+		if (!data.success) { alert(data.message); }
+	}).catch(err => alert('Error: ' + err));
+}
+function addByUrl() {
+	const input = document.getElementById('addUrlInput');
+	const statusEl = document.getElementById('addUrlStatus');
+	const url = input.value.trim();
+	if (!url) return;
+	statusEl.textContent = 'Adding...'; statusEl.style.color = '#007bff';
+	fetch('/api/download/url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url }) })
+	.then(r => r.json()).then(data => {
+		if (data.success) {
+			statusEl.textContent = 'Added!'; statusEl.style.color = '#28a745'; input.value = '';
+			setTimeout(() => { statusEl.textContent = ''; }, 4000);
+			setTimeout(() => { location.reload(); }, 1500);
+		} else {
+			statusEl.textContent = data.message || 'Failed'; statusEl.style.color = '#dc3545';
+			setTimeout(() => { statusEl.textContent = ''; }, 6000);
+		}
+	}).catch(err => { statusEl.textContent = 'Error'; statusEl.style.color = '#dc3545'; console.error('Add URL error:', err); });
+}
+function updateUI(data) {
+	const startBtn = document.getElementById('downloadStartBtn');
+	const stopBtn = document.getElementById('downloadStopBtn');
+	const progress = document.getElementById('downloadProgress');
+	const progressBar = document.getElementById('progressBar');
+	const progressText = document.getElementById('progressText');
+	const statusText = document.getElementById('downloadStatus');
+	const waitTimer = document.getElementById('waitTimer');
+	const isRunning = data.status === 'running' || data.status === 'waiting' || data.status === 'stopping' || data.status === 'importing';
+	startBtn.style.display = isRunning ? 'none' : 'inline-block';
+	stopBtn.style.display = isRunning ? 'inline-block' : 'none';
+	stopBtn.disabled = data.status === 'stopping';
+	stopBtn.textContent = data.status === 'stopping' ? 'Stopping...' : 'Stop';
+	if (isRunning || data.completed > 0 || data.failed > 0) {
+		progress.style.display = 'flex';
+		progressBar.style.width = data.progress_percent + '%';
+		progressText.textContent = (data.completed + data.failed) + ' / ' + data.total;
+		if (data.skipped > 0) { progressText.textContent += ' (' + data.skipped + ' skipped)'; }
+	} else { progress.style.display = 'none'; }
+	if (data.status === 'idle') {
+		if (data.completed > 0 || data.failed > 0) {
+			statusText.textContent = 'Done: ' + data.completed + ' ok, ' + data.failed + ' failed';
+			statusText.style.color = data.failed > 0 ? '#dc3545' : '#28a745';
+		} else { statusText.textContent = 'Ready'; statusText.style.color = '#6c757d'; }
+		waitTimer.style.display = 'none';
+	} else if (data.status === 'waiting') {
+		statusText.textContent = 'Waiting...'; statusText.style.color = '#ffc107';
+		if (data.wait_remaining > 0) {
+			const mins = Math.floor(data.wait_remaining / 60); const secs = data.wait_remaining % 60;
+			waitTimer.textContent = mins + 'm ' + secs + 's'; waitTimer.style.display = 'inline';
+		}
+	} else if (data.status === 'running') {
+		const pageName = data.current_page || '';
+		statusText.textContent = pageName.length > 40 ? '...' + pageName.slice(-37) : pageName;
+		statusText.style.color = '#007bff'; waitTimer.style.display = 'none';
+	} else if (data.status === 'stopping') {
+		statusText.textContent = 'Stopping...'; statusText.style.color = '#dc3545'; waitTimer.style.display = 'none';
+	} else if (data.status === 'importing') {
+		statusText.textContent = 'Importing...'; statusText.style.color = '#17a2b8'; waitTimer.style.display = 'none';
+	}
+}
+function pollStatus() {
+	fetch('/api/download/status').then(r => r.json()).then(data => {
+		updateUI(data);
+		if (data.status === 'idle' && pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+	}).catch(err => console.error('Poll error:', err));
+}
+function startPolling() { if (pollInterval) return; pollStatus(); pollInterval = setInterval(pollStatus, 1000); }
+function updateSyncStatus() {
+	fetch('/api/sync/status').then(r => r.json()).then(data => {
+		var statusEl = document.getElementById('syncStatus');
+		var pullBtn = document.getElementById('syncPullBtn');
+		var fullBtn = document.getElementById('syncFullBtn');
+		if (!data.available) {
+			statusEl.textContent = data.message || 'Sync unavailable'; statusEl.style.color = '#dc3545';
+			pullBtn.disabled = true; fullBtn.disabled = true;
+		} else {
+			statusEl.textContent = 'Last sync: ' + data.time_ago; statusEl.style.color = '#6c757d';
+			pullBtn.disabled = false; fullBtn.disabled = false;
+		}
+	}).catch(err => { document.getElementById('syncStatus').textContent = 'Error'; console.error('Sync status error:', err); });
+}
+function syncPull() {
+	var btn = document.getElementById('syncPullBtn'); var statusEl = document.getElementById('syncStatus');
+	btn.disabled = true; btn.innerHTML = '&#8595; Pulling...'; statusEl.textContent = 'Pulling from remote...'; statusEl.style.color = '#007bff';
+	fetch('/api/sync/pull', { method: 'POST' }).then(r => r.json()).then(data => {
+		btn.disabled = false; btn.innerHTML = '&#8595; Pull';
+		if (data.success) {
+			statusEl.textContent = data.message; statusEl.style.color = '#28a745';
+			if (data.message !== 'Already up to date') { setTimeout(() => window.location.reload(), 1500); }
+		} else { statusEl.textContent = 'Error: ' + data.message; statusEl.style.color = '#dc3545'; }
+	}).catch(err => { btn.disabled = false; btn.innerHTML = '&#8595; Pull'; statusEl.textContent = 'Error: ' + err; statusEl.style.color = '#dc3545'; });
+}
+function syncFull() {
+	var btn = document.getElementById('syncFullBtn'); var statusEl = document.getElementById('syncStatus');
+	btn.disabled = true; btn.innerHTML = '&#8597; Syncing...'; statusEl.textContent = 'Full sync in progress...'; statusEl.style.color = '#007bff';
+	fetch('/api/sync/full', { method: 'POST' }).then(r => r.json()).then(data => {
+		btn.disabled = false; btn.innerHTML = '&#8597; Full Sync';
+		if (data.success) {
+			statusEl.textContent = data.message; statusEl.style.color = '#28a745';
+			setTimeout(() => window.location.reload(), 1500);
+		} else { statusEl.textContent = 'Error: ' + data.message; statusEl.style.color = '#dc3545'; }
+	}).catch(err => { btn.disabled = false; btn.innerHTML = '&#8597; Full Sync'; statusEl.textContent = 'Error: ' + err; statusEl.style.color = '#dc3545'; });
+}
+document.addEventListener('DOMContentLoaded', function() {
+	fetch('/api/download/status').then(r => r.json()).then(data => {
+		updateUI(data);
+		if (data.status !== 'idle') { startPolling(); }
+	});
+	updateSyncStatus();
+});
+</script>
+</body>
+</html>

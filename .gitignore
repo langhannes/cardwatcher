@@ -9,6 +9,7 @@ deprecatedtools.py
 /flask_session
 /changes/*
 */flask_session
+/binder-inserts
 /backups
 /build
 /.venv-build
