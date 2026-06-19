@@ -76,6 +76,8 @@ CardWatcher
 }
 </style>
 
+<link href="{{ url_for('static', filename='dark.css') }}" rel="stylesheet">
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 <body>
 
@@ -86,7 +88,8 @@ CardWatcher
 			CardWatcher
 			</span>
 		</a>
-		<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings" style="margin-left: auto;">
+		<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()" style="margin-left: auto;">&#9790;</button>
+		<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings" style="margin-left: 8px;">
 			&#9881; Settings
 		</a>
 	</nav>
@@ -178,7 +181,7 @@ CardWatcher
 							<div style="font-size: 0.9em; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block;
 								{% if price_info.available_change > 0 %}color: rgb(34,139,34); background: rgba(34,139,34,0.1);
 								{% elif price_info.available_change < 0 %}color: rgb(220,20,60); background: rgba(220,20,60,0.1);
-								{% else %}color: #333; background: rgba(0,0,0,0.05);{% endif %}">
+								{% else %}color: var(--cw-neutral-text); background: var(--cw-faint);{% endif %}">
 								Avail: {{ price_info.available_avg }}€
 								({% if price_info.available_change >= 0 %}+{% endif %}{{ price_info.available_change }}€)
 								{% if price_info.available_change > 0 %}↑{% elif price_info.available_change < 0 %}↓{% else %}→{% endif %}
@@ -188,14 +191,14 @@ CardWatcher
 							<div style="font-size: 0.9em; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block;
 								{% if price_info.sold_change > 0 %}color: rgb(34,139,34); background: rgba(34,139,34,0.1);
 								{% elif price_info.sold_change < 0 %}color: rgb(220,20,60); background: rgba(220,20,60,0.1);
-								{% else %}color: #333; background: rgba(0,0,0,0.05);{% endif %}">
+								{% else %}color: var(--cw-neutral-text); background: var(--cw-faint);{% endif %}">
 								Sold: {{ price_info.sold_avg }}€
 								({% if price_info.sold_change >= 0 %}+{% endif %}{{ price_info.sold_change }}€)
 								{% if price_info.sold_change > 0 %}↑{% elif price_info.sold_change < 0 %}↓{% else %}→{% endif %}
 							</div>
 							{% endif %}
 							{% if price_info.lowest_price > 0 %}
-							<div style="font-size: 0.9em; font-weight: bold; background: rgba(240,240,255,0.85); padding: 4px 8px; border-radius: 4px; display: inline-block;">
+							<div style="font-size: 0.9em; font-weight: bold; background: var(--cw-pill-blue); padding: 4px 8px; border-radius: 4px; display: inline-block;">
 								From: {{ price_info.lowest_price }}€
 							</div>
 							{% endif %}
@@ -1329,6 +1332,14 @@ CardWatcher
 		period = period || currentChartPeriod;
 		currentChartPeriod = period;
 
+		// Theme-aware chart colors (re-applied each render so toggling works)
+		if (window.cwChartColors) {
+			var cwc = cwChartColors();
+			Chart.defaults.global.defaultFontColor = cwc.tick;
+			Chart.defaults.scale.gridLines.color = cwc.grid;
+			Chart.defaults.scale.gridLines.zeroLineColor = cwc.grid;
+		}
+
 		var periodDays = { '1m': 30, '3m': 90, '6m': 180, 'all': null }[period];
 		var data = getDataFromTable(periodDays);
 		if (data.labels.length === 0) return;
@@ -1434,6 +1445,11 @@ CardWatcher
 	});
 
 	generate_Graph();
+
+	// Re-render charts when the theme is toggled so colors update
+	window.cwOnThemeChange = function () {
+		if (typeof generate_Graph === 'function') generate_Graph(currentChartPeriod);
+	};
 
 	// Tab switching
 	document.querySelectorAll('.nav-link[data-bs-toggle="tab"]').forEach(function(tab) {

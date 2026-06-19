@@ -30,6 +30,8 @@
 	main.container { padding-top: 210px !important; }
 }
 </style>
+<link href="{{ url_for('static', filename='dark.css') }}" rel="stylesheet">
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 
 <body>
@@ -50,6 +52,7 @@
 		<!-- 
 		<a class="btn btn-primary" style="background-color:rgba(34,139,34,1);border-color:rgba(34,139,34,1);" href="/?update=true">Update All</a>
 		-->
+		<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()">&#9790;</button>
 		</nav>
 	<nav class="navbar navbar-light">
 		<form method="GET" id="searchForm" action="/" class="justify-content-center">

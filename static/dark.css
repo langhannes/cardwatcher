@@ -1,0 +1,158 @@
+/* CardWatcher dark mode.
+ *
+ * Light is the default (CardMarket's own CSS). Adding the `dark` class to <html>
+ * activates everything below. The :root variables are the light defaults so the
+ * inline var(--cw-*) references in generated HTML render normally in light mode;
+ * html.dark just swaps the variable values (plus surface overrides for the
+ * CardMarket base CSS we can't edit). Toggle is manual and remembered in
+ * localStorage (see the theme script in each template). */
+
+:root {
+	--cw-pill:        rgba(255,255,255,0.85);
+	--cw-pill-strong: rgba(255,255,255,0.90);
+	--cw-pill-gray:   rgba(200,200,200,0.85);
+	--cw-pill-blue:   rgba(240,240,255,0.85);
+	--cw-faint:       rgba(0,0,0,0.05);
+	--cw-neutral-text: #333;
+}
+
+html.dark {
+	--cw-pill:        rgba(255,255,255,0.10);
+	--cw-pill-strong: rgba(255,255,255,0.14);
+	--cw-pill-gray:   rgba(255,255,255,0.06);
+	--cw-pill-blue:   rgba(120,140,210,0.20);
+	--cw-faint:       rgba(255,255,255,0.06);
+	--cw-neutral-text: #c2c9d1;
+
+	--cw-bg:      #16191d;
+	--cw-surface: #1f242a;
+	--cw-input:   #262c33;
+	--cw-border:  #333a42;
+	--cw-text:    #e3e6ea;
+	--cw-muted:   #9aa3ad;
+	--cw-link:    #6ea8fe;
+}
+
+/* ---- Base surfaces (override CardMarket's light master.min.css) ---- */
+html.dark, html.dark body {
+	background: var(--cw-bg) !important;
+	color: var(--cw-text);
+}
+html.dark #header,
+html.dark .navbar,
+html.dark .navbar-light { background: var(--cw-surface) !important; color: var(--cw-text); }
+html.dark .navbar-brand span { color: var(--cw-text) !important; }
+html.dark a { color: var(--cw-link); }
+html.dark a.card, html.dark a.galleryBox { color: var(--cw-text); }
+
+html.dark h1, html.dark h2, html.dark h3, html.dark h4,
+html.dark .page-header, html.dark .H1_PageTitle { color: var(--cw-text) !important; }
+html.dark .text-muted, html.dark small, html.dark .fst-italic { color: var(--cw-muted) !important; }
+html.dark hr, html.dark .page-header { border-color: var(--cw-border) !important; }
+
+/* Cards / gallery tiles */
+html.dark .card,
+html.dark .galleryBox,
+html.dark .modal-content { background: var(--cw-surface) !important; border-color: var(--cw-border) !important; color: var(--cw-text); }
+html.dark .card-body, html.dark .card-title { color: var(--cw-text); }
+
+/* Form controls & buttons */
+html.dark .form-control,
+html.dark .form-select,
+html.dark input, html.dark select, html.dark textarea {
+	background: var(--cw-input) !important;
+	color: var(--cw-text) !important;
+	border-color: var(--cw-border) !important;
+}
+html.dark .form-control::placeholder { color: var(--cw-muted); }
+html.dark .btn-light { background: #2a3138 !important; color: var(--cw-text) !important; border-color: var(--cw-border) !important; }
+
+/* Tabs (card detail Info / Collection) */
+html.dark .nav-tabs { border-color: var(--cw-border) !important; }
+html.dark .nav-tabs .nav-link { color: var(--cw-muted) !important; }
+html.dark .nav-tabs .nav-link.active {
+	background: var(--cw-surface) !important;
+	color: var(--cw-text) !important;
+	border-color: var(--cw-border) var(--cw-border) var(--cw-surface) !important;
+}
+
+/* Buttons / links: lighten CardMarket's dark "primary" blue for a dark bg */
+html.dark .btn-outline-primary,
+html.dark .btn-outline-secondary {
+	color: var(--cw-link) !important;
+	border-color: #3d5a99 !important;
+}
+html.dark .btn-outline-primary:hover,
+html.dark .btn-outline-secondary:hover { background: #2a3a5c !important; color: #fff !important; }
+html.dark .color-primary, html.dark .text-primary,
+html.dark .navbar-brand, html.dark .navbar-brand span { color: var(--cw-text) !important; }
+
+/* Tone down the bright #dee2e6 divider lines in the header */
+html.dark #header [style*="#dee2e6"] { border-color: var(--cw-border) !important; }
+
+/* Card-detail tab panel (also the background behind the two charts) */
+html.dark .tab-content,
+html.dark .tab-pane { background: var(--cw-surface) !important; color: var(--cw-text); }
+html.dark #image { background: var(--cw-surface) !important; border-color: var(--cw-border) !important; }   /* panel behind the card art */
+html.dark .nav-tabs .nav-link { background: transparent !important; }
+
+/* Listing table on the card detail page */
+html.dark .table, html.dark .table-body,
+html.dark th, html.dark td { color: var(--cw-text); border-color: var(--cw-border) !important; }
+html.dark .table-body { background: var(--cw-surface) !important; }
+html.dark .article-row { background-color: var(--cw-surface) !important; color: var(--cw-text); border-color: var(--cw-border) !important; }
+/* The seller / product / action columns carry CardMarket's light row background
+   on top of the row — clear them so the dark row shows. col-offer is left alone
+   so its per-row status highlight (sold/relisted/quantity change) survives. */
+html.dark .article-row > div:not(.col-offer) { background-color: transparent !important; }
+html.dark .article-table { --bs-table-bg: transparent; --bs-table-striped-bg: rgba(255,255,255,0.03); --bs-table-striped-color: var(--cw-text); }
+html.dark .col-product, html.dark .col-seller { border-color: var(--cw-border) !important; }
+html.dark .archived-listing .col-offer { background: repeating-linear-gradient(45deg, #23282e, #23282e 10px, #2b3138 10px, #2b3138 20px) !important; }
+/* Offer-column readout (date + quantity) sits on the light-mode status colors
+   (gray/orange/green) — black text is hard to read there in a dark UI, so use
+   light text with a shadow that stays legible on every status background. */
+html.dark .col-offer .actions-container,
+html.dark .col-offer .item-count { color: #fff !important; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
+html.dark .form-check-input { background-color: var(--cw-input); border-color: var(--cw-border); }
+
+/* Card-detail filter sidebar (Bootstrap accordion) */
+html.dark .article-filter-form,
+html.dark .accordion, html.dark .accordion-item,
+html.dark .accordion-collapse, html.dark .accordion-body,
+html.dark .filter-box, html.dark .filter-headline,
+html.dark .accordion-button { background: var(--cw-surface) !important; color: var(--cw-text) !important; }
+html.dark .accordion-button:not(.collapsed) { box-shadow: none; }
+html.dark .filterName, html.dark .filter-box label { color: var(--cw-text) !important; }
+
+/* Tone down Bootstrap's light border utilities (#dee2e6) used by the filter
+   panel, listing table dividers, and the info box outline */
+html.dark .border, html.dark .border-top, html.dark .border-bottom,
+html.dark .border-start, html.dark .border-end, html.dark .border-top-0,
+html.dark .accordion-item, html.dark .accordion-button,
+html.dark .nav-tabs, html.dark .tab-content { border-color: var(--cw-border) !important; }
+
+/* Search: sort/order/period labels (CardMarket renders these dark blue) */
+html.dark .col-form-label, html.dark label { color: var(--cw-text) !important; }
+
+/* ---- Dashboard components ---- */
+html.dark .dash-card {
+	background: linear-gradient(135deg, var(--cw-surface) 55%, var(--tint, transparent)) !important;
+	border-color: var(--cw-border) !important;
+}
+html.dark .dash-thumb { background: #2a2f36; }
+html.dark .dash-name { color: var(--cw-text) !important; }
+html.dark .dash-section > h2, html.dark .dash-subhead { color: var(--cw-text); }
+html.dark .dash-hint, html.dark .dash-secondary, html.dark .dash-empty { color: var(--cw-muted); }
+
+/* ---- Theme toggle button ---- */
+.cw-theme-btn {
+	background: transparent;
+	border: 1px solid #ced4da;
+	border-radius: 6px;
+	padding: 2px 9px;
+	font-size: 15px;
+	line-height: 1.6;
+	cursor: pointer;
+	color: inherit;
+}
+html.dark .cw-theme-btn { border-color: var(--cw-border); }

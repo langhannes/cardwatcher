@@ -17,6 +17,7 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 - **Collection**: track owned cards (quantity, condition, language) and see total value.
 - **Data sync**: pull shared data, optionally push your downloads back.
 - **Search, sort & archive**: filter by name, sort by price/change/metric, archive cards you no longer track.
+- **Dark mode**: a ☾ / ☀ toggle in the header switches the whole app between light and dark; your choice is remembered.
 
 ## Quick Start (Windows)
 

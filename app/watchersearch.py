@@ -280,10 +280,10 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             separator = ' ' if count_part and badge_parts else ''
             changes_row = count_part + separator + ' '.join(badge_parts)
             inner_html = (f'<div style="display:flex;gap:6px;">{changes_row}</div>' if changes_row else '') + ns_badge_html
-            availability_badges = '<div style="position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">' + inner_html + '</div>'
+            availability_badges = '<div style="position: absolute; top: 4px; right: 4px; background: var(--cw-pill-strong); padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">' + inner_html + '</div>'
         price_string = "--€ (0€)"
         price_arrow = ""
-        price_style = "font-size: 0.85em; font-weight: bold; background: rgba(255,255,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
+        price_style = "font-size: 0.85em; font-weight: bold; background: var(--cw-pill); padding: 2px 4px; border-radius: 4px; display: inline-block;"
 
         # Determine price_average and price_change based on selected period
         price_average = 0.0
@@ -334,17 +334,17 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
             # Add color styling: green for price increase (good), red for price decrease
             if price_change > 0:
                 # Price went up - green
-                price_style = "font-size: 0.85em; color: rgb(34,139,34); font-weight: bold; background: rgba(255,255,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
+                price_style = "font-size: 0.85em; color: rgb(34,139,34); font-weight: bold; background: var(--cw-pill); padding: 2px 4px; border-radius: 4px; display: inline-block;"
             elif price_change < 0:
                 # Price went down - red
-                price_style = "font-size: 0.85em; color: rgb(220, 20, 60); font-weight: bold; background: rgba(255,255,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
+                price_style = "font-size: 0.85em; color: rgb(220, 20, 60); font-weight: bold; background: var(--cw-pill); padding: 2px 4px; border-radius: 4px; display: inline-block;"
             else:
                 # No change - neutral with backdrop
-                price_style = "font-size: 0.85em; font-weight: bold; background: rgba(255,255,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
+                price_style = "font-size: 0.85em; font-weight: bold; background: var(--cw-pill); padding: 2px 4px; border-radius: 4px; display: inline-block;"
 
         # Determine ended (sold) price_average and price_change based on selected period
         ended_price_string = ""
-        ended_price_style = "font-size: 0.85em; font-weight: bold; background: rgba(200,200,200,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
+        ended_price_style = "font-size: 0.85em; font-weight: bold; background: var(--cw-pill-gray); padding: 2px 4px; border-radius: 4px; display: inline-block;"
         ended_price_average = 0.0
         ended_price_change = 0.0
         has_ended_price_data = False
@@ -392,9 +392,9 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
                 ended_price_string = f"Sold: --"
 
         if ended_price_change > 0:
-            ended_price_style = "font-size: 0.85em; color: rgb(34,139,34); font-weight: bold; background: rgba(200,200,200,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
+            ended_price_style = "font-size: 0.85em; color: rgb(34,139,34); font-weight: bold; background: var(--cw-pill-gray); padding: 2px 4px; border-radius: 4px; display: inline-block;"
         elif ended_price_change < 0:
-            ended_price_style = "font-size: 0.85em; color: rgb(220, 20, 60); font-weight: bold; background: rgba(200,200,200,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block;"
+            ended_price_style = "font-size: 0.85em; color: rgb(220, 20, 60); font-weight: bold; background: var(--cw-pill-gray); padding: 2px 4px; border-radius: 4px; display: inline-block;"
 
         article_name = file_name[:-5].split('_')[-1].replace('-',' ')
 
@@ -414,13 +414,13 @@ def build_search(search_term="", sort_by="name", sort_order="asc", price_period=
         def price_row(label, value, change):
             if value <= 0:
                 return ""
-            base = "font-size: 0.78em; font-weight: bold; background: rgba(240,240,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;"
+            base = "font-size: 0.78em; font-weight: bold; background: var(--cw-pill-blue); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;"
             if change is None:
                 return f'<div style="{base}">{label}: {_compact(value)}€</div>'
             sign = '+' if change >= 0 else ''
             arrow = ' ↑' if change > 0 else (' ↓' if change < 0 else ' →')
             color = 'rgb(34,139,34)' if change > 0 else ('rgb(220,20,60)' if change < 0 else '#555')
-            colored = base if change == 0 else f"font-size: 0.78em; font-weight: bold; color: {color}; background: rgba(240,240,255,0.85); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;"
+            colored = base if change == 0 else f"font-size: 0.78em; font-weight: bold; color: {color}; background: var(--cw-pill-blue); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;"
             return f'<div style="{colored}">{label}: {_compact(value)}€ ({sign}{_compact(change)}€){arrow}</div>'
 
         lowest_price_html = (

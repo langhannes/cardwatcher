@@ -89,6 +89,8 @@
 }
 </style>
 
+<link href="{{ url_for('static', filename='dark.css') }}" rel="stylesheet">
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 <body>
 
@@ -99,6 +101,7 @@
 			CardWatcher
 			</span>
 		</a>
+		<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()" style="margin-left: auto;">&#9790;</button>
 	</nav>
 </header>
 

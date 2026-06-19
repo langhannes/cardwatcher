@@ -36,6 +36,8 @@
 	main.container { padding-top: 230px !important; }
 }
 </style>
+<link href="{{ url_for('static', filename='dark.css') }}" rel="stylesheet">
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 <body>
 <header id="header" class="fixed-top">
@@ -43,7 +45,10 @@
 		<a href="/" class="navbar-brand">
 			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">CardWatcher</span>
 		</a>
-		<a href="/?view=search" class="btn btn-sm btn-outline-primary">Browse all cards</a>
+		<div class="d-flex align-items-center gap-2">
+			<a href="/?view=search" class="btn btn-sm btn-outline-primary">Browse all cards</a>
+			<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()">&#9790;</button>
+		</div>
 	</nav>
 	<nav class="navbar navbar-light">
 		<form method="GET" id="searchForm" action="/" class="justify-content-center">
