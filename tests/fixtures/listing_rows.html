@@ -1,0 +1,67 @@
+<!--
+  Two CardMarket article rows captured for parser tests.
+
+  Row 1 is "server-rendered": the location/language labels live only in the
+  `title` attribute (Bootstrap's tooltip JS hasn't run to copy them into
+  `aria-label`). This locks the title/aria-label fallback in tooltip_label()
+  (the regression behind commit 22bdf1a's aria-label KeyError).
+
+  Row 2 is "post-JS": the labels are in `aria-label`, and it carries the
+  First Edition + Reverse Holo markers.
+-->
+<div class="article-table">
+
+  <div class="row g-0 article-row" id="row-server-rendered">
+    <div class="col-sellerProductInfo col">
+      <span class="seller-info d-flex align-items-center">
+        <span class="seller-name d-flex">
+          <span class="icon d-flex has-content-centered me-1" title="Artikelstandort: Deutschland"></span>
+          <span class="d-flex has-content-centered me-1"><a href="">GermanSeller</a></span>
+        </span>
+      </span>
+      <div class="product-attributes">
+        <a class="article-condition condition-nm me-1"><span class="badge">NM</span></a>
+        <span class="icon me-2" title="Englisch"></span>
+      </div>
+      <div class="product-comments me-1 col">
+        <div class="w-100">
+          <span class="d-block text-truncate" title="near mint, ships fast">near mint, ships fast</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-offer col-auto">
+      <div class="price-container d-flex justify-content-end">
+        <span class="text-nowrap fw-bold">12,50 &euro;</span>
+      </div>
+      <div class="amount-container d-flex justify-content-end me-3">
+        <span class="item-count small text-end">3</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-0 article-row" id="row-post-js">
+    <div class="col-sellerProductInfo col">
+      <span class="seller-info d-flex align-items-center">
+        <span class="seller-name d-flex">
+          <span class="icon d-flex has-content-centered me-1" aria-label="Item location: Japan" data-bs-original-title="Item location: Japan"></span>
+          <span class="d-flex has-content-centered me-1"><a href="">JpnSeller</a></span>
+        </span>
+      </span>
+      <div class="product-attributes">
+        <a class="article-condition condition-ex me-1"><span class="badge">EX</span></a>
+        <span class="icon me-2" aria-label="Japanese" data-bs-original-title="Japanese"></span>
+        <span class="icon" aria-label="First Edition" data-bs-original-title="First Edition"></span>
+        <span class="icon" aria-label="Reverse Holo" data-bs-original-title="Reverse Holo"></span>
+      </div>
+    </div>
+    <div class="col-offer col-auto">
+      <div class="price-container d-flex justify-content-end">
+        <span class="text-nowrap fw-bold">1.499,00 &euro;</span>
+      </div>
+      <div class="amount-container d-flex justify-content-end me-3">
+        <span class="item-count small text-end">1</span>
+      </div>
+    </div>
+  </div>
+
+</div>

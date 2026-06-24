@@ -26,6 +26,10 @@ DEFAULT_SETTINGS = {
     "auto_open_browser": True,
     "show_console": True,  # Show console/terminal window
 
+    # Automation
+    "auto_import_enabled": False,  # Run a daily full refresh on a timer (WP5)
+    "last_auto_run": 0,            # Internal: timestamp of last auto refresh
+
     # Download settings
     "download_wait_min": 5,       # Minimum wait between downloads (minutes)
     "download_wait_max": 10,      # Maximum wait between downloads (minutes)
@@ -167,6 +171,9 @@ ARCHIVE_DIR = os.path.join(DATA_DIR, "archive")
 IMAGES_DIR = os.path.join(DATA_DIR, "images")
 CHANGES_DIR = os.path.join(DATA_DIR, "changes")
 DOWNLOADS_DIR = os.path.join(DATA_DIR, "downloads")
+# Quarantine for downloaded .htm files that raised during import (WP2). Kept,
+# not deleted, so a bad page can be inspected instead of silently lost.
+FAILED_DIR = os.path.join(DOWNLOADS_DIR, "failed")
 
 # Collection file location - default in user's home directory, but configurable via settings
 _DEFAULT_COLLECTION_FILE = os.path.join(os.path.expanduser("~"), ".cardwatcher_collection.json")
@@ -177,10 +184,11 @@ COLLECTION_FILE = _saved_collection if _saved_collection else _DEFAULT_COLLECTIO
 def update_paths(data_dir):
     """Update all path constants with a new data directory.
     Note: COLLECTION_FILE is NOT updated - it stays in user's home directory."""
-    global DATA_DIR, PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
+    global DATA_DIR, PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR, FAILED_DIR
     DATA_DIR = data_dir
     PAGES_DIR = os.path.join(DATA_DIR, "pages")
     ARCHIVE_DIR = os.path.join(DATA_DIR, "archive")
     IMAGES_DIR = os.path.join(DATA_DIR, "images")
     CHANGES_DIR = os.path.join(DATA_DIR, "changes")
     DOWNLOADS_DIR = os.path.join(DATA_DIR, "downloads")
+    FAILED_DIR = os.path.join(DOWNLOADS_DIR, "failed")

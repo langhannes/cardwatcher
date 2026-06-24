@@ -5,6 +5,8 @@
 /archive
 /temp
 /app/__pycache__
+/tests/__pycache__
+/.pytest_cache
 deprecatedtools.py
 /flask_session
 /changes/*

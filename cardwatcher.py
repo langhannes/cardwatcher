@@ -39,7 +39,22 @@ from app.collection import (
     load_pages_for_collection
 )
 from app.sync import sync_manager
-from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
+from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR, get_setting
+from app.scheduler import AutoRefreshScheduler
+
+# Daily auto-refresh timer (started in __main__). Enqueues a full refresh via
+# the download queue worker; gated by the auto_import_enabled setting.
+auto_scheduler = AutoRefreshScheduler(lambda: download_manager.start())
+
+
+def _import_downloads_if_manual():
+    """Import freshly-saved HTML on page load, unless automation owns importing.
+
+    When auto_import_enabled is on, the queue worker + scheduler handle imports,
+    so the request path no longer blocks on import_all_pages().
+    """
+    if not get_setting('auto_import_enabled', False):
+        watcherbase.import_all_pages()
 
 # Filter out noisy status endpoint from logs
 class StatusFilter(logging.Filter):
@@ -59,7 +74,7 @@ def cardwatcher():
     # methods for search site
     if request.args.get('searchString',''):
         print("cardwatcher | search: " +request.args.get('searchString',''))
-        page = watcherbase.import_all_pages()
+        _import_downloads_if_manual()
         sort_by = request.args.get('sortBy', 'name')
         # Smart default: descending for price fields, ascending for name
         default_order = 'asc' if sort_by == 'name' else 'desc'
@@ -78,9 +93,9 @@ def cardwatcher():
     #download_page(page_name)
     # then check if a new page was downloaded and load that page
     # if the user specified a page, return that page instead
-    
-    
-    page = watcherbase.import_all_pages()
+
+
+    _import_downloads_if_manual()
     # if we have a page in memory, load the specific site
     if page_name != "":
         # Handle archive/unarchive action
@@ -190,6 +205,16 @@ def stop_download():
 def download_status():
     status = download_manager.get_status()
     return jsonify(status)
+
+
+@app.route('/api/import/run', methods=['POST'])
+def import_downloads():
+    """Manually import any HTML saved into downloads/ (ad-hoc manual saves).
+
+    Useful when auto_import_enabled is on and the page-load import is disabled.
+    """
+    report = watcherbase.import_all_pages()
+    return jsonify({"success": True, "report": report})
 
 
 @app.route('/api/download/single', methods=['POST'])
@@ -663,6 +688,9 @@ if __name__ == '__main__':
             print(f"Could not find an available port. Please close other applications or specify a different port with -p.")
             exit(1)
         print(f"Using port {port}")
+
+    # Start the daily auto-refresh timer (no-ops unless auto_import_enabled).
+    auto_scheduler.start()
 
     # Open browser automatically after short delay
     if not args.no_browser:

@@ -15,6 +15,7 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 - **Supply metrics**: per-card Net Supply Change, Drainage, and Inflation; sort the gallery by any of them.
 - **History**: per-listing quantity and add/sell/relist history tracked over time.
 - **Collection**: track owned cards (quantity, condition, language) and see total value.
+- **Automated downloads**: a background priority queue refreshes all cards while letting an individual **Download** jump the line; an optional daily auto-refresh keeps data current on its own.
 - **Data sync**: pull shared data, optionally push your downloads back.
 - **Search, sort & archive**: filter by name, sort by price/change/metric, archive cards you no longer track.
 - **Dark mode**: a ☾ / ☀ toggle in the header switches the whole app between light and dark; your choice is remembered.
@@ -43,6 +44,15 @@ python cardwatcher.py
 ```
 
 Options: `-p 8080` (port), `--no-browser` (don't auto-open).
+
+### Running the tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+(`requirements-dev.txt` is kept separate from `requirements.txt` so test deps stay out of the packaged executable.)
 
 ## Using CardWatcher
 
@@ -90,8 +100,10 @@ Header buttons: **Pull** (fetch latest shared data) and **Full Sync** (pull + pu
 
 CardMarket uses Cloudflare protection, so pages are fetched via built-in browser automation or saved manually.
 
-- **Automated** — click **Start Download** in the control bar to refresh all tracked cards (**Stop** to cancel), or the **Download** button on a single card's page.
-- **Manual** — open the listing on CardMarket, click every "Show More", then save (Ctrl+S) as "Webpage, Complete" into the `downloads/` folder in your data directory. CardWatcher imports it on the next refresh.
+- **Automated** — click **Start Download** in the control bar to refresh all tracked cards (**Stop** to cancel), or the **Download** button on a single card's page. Downloads run through a single background queue: an individual **Download** jumps ahead of a running full refresh and starts as soon as the current page finishes, so it never blocks.
+- **Manual** — open the listing on CardMarket, click every "Show More", then save (Ctrl+S) as "Webpage, Complete" into the `downloads/` folder in your data directory. CardWatcher imports it on the next refresh, or use **Settings → Import Saved Downloads → Import now**.
+
+**Daily auto-refresh:** enable **Settings → Daily Auto-Refresh** to run a full refresh once a day automatically (it also catches up on launch if the last run was over a day ago). While enabled, opening a page no longer triggers an import — the queue worker owns it.
 
 ### Adding a new card
 

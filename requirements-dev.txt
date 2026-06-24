@@ -1,0 +1,4 @@
+# Development / test dependencies.
+# Kept OUT of requirements.txt (and the PyInstaller build whitelist) so the
+# shipped exe stays small. Install with:  python -m pip install -r requirements-dev.txt
+pytest==9.1.1

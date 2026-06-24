@@ -1,11 +1,22 @@
 """
-Download manager for running Selenium downloads in a background thread.
-Provides start/stop/status functionality for the web interface.
+Download manager: one persistent worker thread draining a priority queue.
+
+Two job kinds share a single worker:
+- FULL_REFRESH (low priority) expands into one BULK job per stale page.
+- SINGLE_PAGE (high priority) is a user-requested card that jumps ahead of the
+  bulk backlog and runs as soon as the in-flight download finishes.
+
+Rate-limiting waits between downloads apply only to BULK jobs; a high-priority
+single is never made to wait behind the full-refresh backoff. Enqueue calls are
+non-blocking and return {queued, position} immediately.
 """
 
 import threading
 import time
 import os
+import queue
+import itertools
+import random
 from enum import Enum
 
 # Import selenium downloader functions
@@ -28,10 +39,15 @@ class DownloadStatus(Enum):
 
 
 class DownloadManager:
-    """Singleton manager for background downloads with progress tracking."""
+    """Singleton manager for background downloads with a priority queue."""
 
     _instance = None
     _lock = threading.Lock()
+
+    # Job priorities (lower number = served first).
+    PRIORITY_SINGLE = 10
+    PRIORITY_FULL = 20
+    PRIORITY_BULK = 30
 
     def __new__(cls):
         if cls._instance is None:
@@ -47,76 +63,120 @@ class DownloadManager:
 
         self._initialized = True
         self._status = DownloadStatus.IDLE
-        self._thread = None
+
+        # Queue + persistent worker
+        self._queue = queue.PriorityQueue()
+        self._seq = itertools.count()
+        self._worker_thread = None
+        self._worker_lock = threading.Lock()
         self._stop_requested = False
 
-        # Progress tracking
-        self._total_pages = 0
+        # Rate limiting (bulk only)
+        self._next_bulk_time = 0.0
+        self._dl_counter = 0
+
+        # Progress tracking for the current active session
         self._completed_pages = 0
         self._skipped_pages = 0
         self._failed_pages = 0
         self._current_page = ""
-        self._wait_remaining = 0  # seconds remaining in wait period
+        self._current_job_kind = None
+        self._wait_remaining = 0
         self._last_error = ""
+        self._last_import_report = None
+        self._finished_names = []  # page names completed since last idle
+
+    # ------------------------------------------------------------------ status
 
     def get_status(self):
-        """Get current download status and progress."""
+        """Get current download status, progress, and queue depth."""
+        report = self._last_import_report or {}
+        pending = self._snapshot()
+        pending_page_jobs = sum(1 for p in pending if p[2] in ("single", "bulk"))
+        current_is_page = self._current_job_kind in ("single", "bulk")
+        total = self._completed_pages + self._failed_pages + pending_page_jobs + (
+            1 if current_is_page else 0)
         return {
             "status": self._status.value,
-            "total": self._total_pages,
+            "total": total,
             "completed": self._completed_pages,
             "skipped": self._skipped_pages,
             "failed": self._failed_pages,
             "current_page": self._current_page,
+            "current_job_kind": self._current_job_kind,
+            "queue_length": pending_page_jobs,
             "wait_remaining": self._wait_remaining,
             "last_error": self._last_error,
-            "progress_percent": self._calculate_progress()
+            "progress_percent": self._calculate_progress(total),
+            "import_failed": len(report.get("failed", [])),
+            "import_rows_skipped": report.get("rows_skipped", 0),
+            "import_report": self._last_import_report,
+            "finished": list(self._finished_names),
         }
 
-    def _calculate_progress(self):
-        """Calculate progress percentage."""
-        if self._total_pages == 0:
+    def _calculate_progress(self, total):
+        if total == 0:
             return 0
-        return int((self._completed_pages + self._failed_pages) / self._total_pages * 100)
+        return int((self._completed_pages + self._failed_pages) / total * 100)
+
+    def _snapshot(self):
+        """Thread-safe shallow copy of the pending queue entries."""
+        with self._queue.mutex:
+            return list(self._queue.queue)
+
+    # ----------------------------------------------------------- enqueue / API
+
+    def _enqueue(self, priority, kind, page_name=None):
+        self._stop_requested = False
+        self._queue.put((priority, next(self._seq), kind, page_name))
+        self._ensure_worker()
+
+    def _ensure_worker(self):
+        """Start the worker thread if it isn't already running."""
+        with self._worker_lock:
+            if self._worker_thread is None or not self._worker_thread.is_alive():
+                self._worker_thread = threading.Thread(
+                    target=self._worker_loop, daemon=True)
+                self._worker_thread.start()
+
+    def _bulk_in_progress(self):
+        """True if a full refresh / bulk job is queued or currently running."""
+        if self._current_job_kind in ("full_refresh", "bulk"):
+            return True
+        return any(p[2] in ("full_refresh", "bulk") for p in self._snapshot())
+
+    def _count_pages_ahead(self):
+        """Single jobs already queued plus the in-flight page download."""
+        singles = sum(1 for p in self._snapshot() if p[2] == "single")
+        return singles + (1 if self._current_job_kind in ("single", "bulk") else 0)
 
     def start(self):
-        """Start the download process in a background thread."""
+        """Queue a full refresh of all stale pages."""
         with self._lock:
-            if self._status != DownloadStatus.IDLE:
+            if self._bulk_in_progress():
                 return {"success": False, "message": "Download already in progress"}
-
-            self._stop_requested = False
-            self._status = DownloadStatus.RUNNING
-            self._reset_progress()
-
-            self._thread = threading.Thread(target=self._download_worker, daemon=True)
-            self._thread.start()
-
-            return {"success": True, "message": "Download started"}
+            self._enqueue(self.PRIORITY_FULL, "full_refresh")
+            return {"success": True, "message": "Full refresh queued"}
 
     def stop(self):
-        """Request the download to stop."""
+        """Cancel queued work; the in-flight download finishes on its own."""
         with self._lock:
-            if self._status == DownloadStatus.IDLE:
+            if self._status == DownloadStatus.IDLE and self._queue.empty():
                 return {"success": False, "message": "No download in progress"}
-
             self._stop_requested = True
+            self._drain_queue()
             self._status = DownloadStatus.STOPPING
-
             return {"success": True, "message": "Stop requested"}
 
-    def _reset_progress(self):
-        """Reset progress tracking."""
-        self._total_pages = 0
-        self._completed_pages = 0
-        self._skipped_pages = 0
-        self._failed_pages = 0
-        self._current_page = ""
-        self._wait_remaining = 0
-        self._last_error = ""
+    def _drain_queue(self):
+        try:
+            while True:
+                self._queue.get_nowait()
+        except queue.Empty:
+            pass
 
     def download_from_url(self, url):
-        """Parse a CardMarket URL and download that page."""
+        """Parse a CardMarket URL and queue that page (non-blocking)."""
         from urllib.parse import urlparse
         parsed = urlparse(url.strip())
 
@@ -136,192 +196,201 @@ class DownloadManager:
         return self.download_single_page(canonical_name)
 
     def download_single_page(self, page_name):
-        """Download a single page synchronously. Returns result dict."""
-        with self._lock:
-            if self._status != DownloadStatus.IDLE:
-                return {"success": False, "message": "Another download is in progress"}
+        """Queue a single high-priority page. Returns immediately."""
+        if page_name.endswith('.json'):
+            page_name = page_name[:-5]
+        position = self._count_pages_ahead()
+        self._enqueue(self.PRIORITY_SINGLE, "single", page_name)
+        return {
+            "success": True,
+            "queued": True,
+            "position": position,
+            "page_name": page_name,
+            "message": f"Queued ({position} ahead)" if position else "Queued",
+        }
 
-            self._status = DownloadStatus.RUNNING
-            self._reset_progress()
-            self._total_pages = 1
-            self._current_page = page_name
+    # --------------------------------------------------------------- the worker
 
-        driver = None
-        result = {"success": False, "message": ""}
+    def _expand_full_refresh(self):
+        """Enqueue one BULK job per stale page (skips already-downloaded ones)."""
+        page_files = []
+        for f in os.listdir(PAGES_DIR):
+            if f.endswith(".json"):
+                filepath = os.path.join(PAGES_DIR, f)
+                page_files.append((f, os.path.getmtime(filepath)))
+        page_files.sort(key=lambda x: x[1])  # oldest first
 
-        try:
-            # Initialize browser
-            driver = create_browser()
-            if driver is None:
-                result["message"] = "Failed to initialize browser"
-                return result
-
-            # Download the page
-            download_result = download_page_with_selenium(driver, page_name + ".json", 0)
-
-            if download_result == "success":
-                self._completed_pages = 1
-                # Import the downloaded page
-                self._status = DownloadStatus.IMPORTING
-                self._current_page = "Importing..."
-                try:
-                    watcherbase.import_all_pages()
-                except Exception as e:
-                    print(f"[WARNING] Import failed: {e}")
-                result["success"] = True
-                result["message"] = "Download and import completed"
-            elif download_result == "invalid_session":
-                result["message"] = "Session invalid - please try again"
+        already_downloaded = get_already_downloaded()
+        queued = 0
+        for page, _mtime in page_files:
+            if page[:-5] in already_downloaded:
+                self._skipped_pages += 1
             else:
-                self._failed_pages = 1
-                result["message"] = "Download failed"
+                self._queue.put((self.PRIORITY_BULK, next(self._seq), "bulk", page))
+                queued += 1
+        if queued == 0 and self._skipped_pages == 0:
+            self._last_error = "No pages found in pages/ directory"
+        return queued
 
-        except Exception as e:
-            result["message"] = str(e)
+    def _has_single_waiting(self):
+        return any(p[2] == "single" for p in self._snapshot())
 
-        finally:
-            if driver is not None:
-                try:
-                    driver.quit()
-                except:
-                    pass
-            self._current_page = ""
-            self._status = DownloadStatus.IDLE
+    def _wait_before_bulk(self):
+        """Honour the inter-bulk rate limit. Returns False if a single arrived
+        (caller should requeue the bulk job and let the single run first)."""
+        if time.time() >= self._next_bulk_time:
+            return True
+        self._status = DownloadStatus.WAITING
+        self._current_page = "Waiting before next download..."
+        while True:
+            if self._stop_requested:
+                return True
+            if self._has_single_waiting():
+                self._wait_remaining = 0
+                return False
+            remaining = self._next_bulk_time - time.time()
+            if remaining <= 0:
+                self._wait_remaining = 0
+                self._status = DownloadStatus.RUNNING
+                return True
+            self._wait_remaining = int(remaining)
+            time.sleep(1)
 
-        return result
+    def _schedule_next_bulk(self):
+        wait_min = get_setting('download_wait_min', 5)
+        wait_max = get_setting('download_wait_max', 10)
+        self._next_bulk_time = time.time() + random.uniform(wait_min, wait_max) * 60
 
-    def _download_worker(self):
-        """Background worker that performs the downloads."""
+    def _worker_loop(self):
         driver = None
-
         try:
-            # Get list of pages to download with their modification times
-            page_files = []
-            for f in os.listdir(PAGES_DIR):
-                if f.endswith(".json"):
-                    filepath = os.path.join(PAGES_DIR, f)
-                    mtime = os.path.getmtime(filepath)
-                    page_files.append((f, mtime))
+            while True:
+                # Settle the UI to idle once everything pending is done, while
+                # keeping the worker (and browser) alive for a short window.
+                if (self._queue.empty() and self._current_job_kind is None
+                        and (self._completed_pages or self._failed_pages
+                             or self._skipped_pages)):
+                    self._status = DownloadStatus.IDLE
+                    self._current_page = ""
 
-            if not page_files:
-                self._last_error = "No pages found in pages/ directory"
-                return
+                try:
+                    priority, seq, kind, page_name = self._queue.get(timeout=30)
+                except queue.Empty:
+                    break  # idle long enough: let the thread exit (see finally)
 
-            # Sort by modification time (oldest first)
-            page_files.sort(key=lambda x: x[1])
-
-            # Check which pages have already been downloaded
-            already_downloaded = get_already_downloaded()
-            pages_to_download = []
-
-            for page, mtime in page_files:
-                page_name_no_ext = page[:-5]
-                if page_name_no_ext in already_downloaded:
-                    self._skipped_pages += 1
-                else:
-                    pages_to_download.append(page)
-
-            self._total_pages = len(pages_to_download)
-
-            if self._total_pages == 0:
-                self._last_error = "All pages already downloaded"
-                return
-
-            # Initialize browser
-            self._current_page = "Initializing browser..."
-            driver = create_browser()
-
-            if driver is None:
-                self._last_error = "Failed to initialize browser"
-                return
-
-            counter = len(already_downloaded)
-            i = 0
-
-            while i < len(pages_to_download):
-                # Check for stop request
                 if self._stop_requested:
-                    break
+                    continue  # queue was drained by stop(); wind down to idle
 
-                page_name = pages_to_download[i]
-                self._current_page = page_name[:-5] if page_name.endswith('.json') else page_name
-
-                # Check session validity
-                if not is_session_valid(driver):
-                    self._current_page = "Restarting browser..."
-                    try:
-                        driver.quit()
-                    except:
-                        pass
-                    driver = create_browser()
-                    if driver is None:
-                        self._last_error = "Failed to restart browser"
-                        break
-
-                # Download the page
-                result = download_page_with_selenium(driver, page_name, counter)
-
-                if result == "success":
-                    self._completed_pages += 1
-                    counter += 1
-                    i += 1
-
-                    # Import immediately after successful download
-                    self._status = DownloadStatus.IMPORTING
-                    self._current_page = "Importing downloaded pages..."
-                    try:
-                        watcherbase.import_all_pages()
-                    except Exception as e:
-                        print(f"[WARNING] Import failed: {e}")
+                if kind == "full_refresh":
                     self._status = DownloadStatus.RUNNING
-
-                elif result == "invalid_session":
-                    # Retry after restarting browser
-                    try:
-                        driver.quit()
-                    except:
-                        pass
-                    driver = create_browser()
-                    if driver is None:
-                        self._last_error = "Failed to restart browser"
-                        break
+                    self._current_job_kind = "full_refresh"
+                    self._current_page = "Scanning for stale pages..."
+                    self._expand_full_refresh()
+                    self._current_job_kind = None
                     continue
-                else:  # "failed"
-                    self._failed_pages += 1
-                    counter += 1
-                    i += 1
 
-                # Wait between downloads (unless stopping or last page)
-                if not self._stop_requested and i < len(pages_to_download):
-                    self._status = DownloadStatus.WAITING
-                    wait_min = get_setting('download_wait_min', 5)
-                    wait_max = get_setting('download_wait_max', 10)
-                    # Scale wait time from min to max based on progress
-                    wait_seconds = int(wait_min * 60 + ((wait_max - wait_min) * 60 * (i / len(pages_to_download))))
-                    wait_seconds = min(wait_seconds, wait_max * 60)  # Cap at max
+                # A page job (single or bulk)
+                if kind == "bulk":
+                    if not self._wait_before_bulk():
+                        # A single jumped the queue: requeue this bulk job.
+                        self._queue.put((self.PRIORITY_BULK, next(self._seq),
+                                         "bulk", page_name))
+                        continue
 
-                    self._wait_remaining = wait_seconds
-                    self._current_page = "Waiting before next download..."
-
-                    while self._wait_remaining > 0 and not self._stop_requested:
-                        time.sleep(1)
-                        self._wait_remaining -= 1
-
-                    self._status = DownloadStatus.RUNNING
-
+                driver = self._run_page_job(kind, page_name, driver)
+                self._current_job_kind = None
         except Exception as e:
             self._last_error = str(e)
-
         finally:
-            # Clean up browser
             if driver is not None:
                 try:
                     driver.quit()
-                except:
+                except Exception:
                     pass
+            with self._worker_lock:
+                self._worker_thread = None
+                # A job may have arrived during teardown; respawn rather than
+                # strand it (closes the enqueue/exit race with _ensure_worker).
+                if not self._queue.empty() and not self._stop_requested:
+                    self._worker_thread = threading.Thread(
+                        target=self._worker_loop, daemon=True)
+                    self._worker_thread.start()
+                else:
+                    self._go_idle()
 
-            self._current_page = ""
-            self._status = DownloadStatus.IDLE
+    def _run_page_job(self, kind, page_name, driver):
+        """Download + import a single page. Returns the (possibly new) driver."""
+        self._status = DownloadStatus.RUNNING
+        self._current_job_kind = kind
+        base = page_name[:-5] if page_name.endswith('.json') else page_name
+        self._current_page = base
+
+        if driver is None:
+            self._current_page = "Initializing browser..."
+            driver = create_browser()
+            if driver is None:
+                self._last_error = "Failed to initialize browser"
+                self._failed_pages += 1
+                return None
+            self._current_page = base
+
+        if not is_session_valid(driver):
+            self._current_page = "Restarting browser..."
+            try:
+                driver.quit()
+            except Exception:
+                pass
+            driver = create_browser()
+            if driver is None:
+                self._last_error = "Failed to restart browser"
+                self._failed_pages += 1
+                return None
+            self._current_page = base
+
+        file_name = page_name if page_name.endswith('.json') else page_name + ".json"
+        result = download_page_with_selenium(driver, file_name, self._dl_counter)
+        self._dl_counter += 1
+
+        if result == "invalid_session":
+            # Restart and retry once by requeuing at the same priority.
+            try:
+                driver.quit()
+            except Exception:
+                pass
+            driver = create_browser()
+            prio = self.PRIORITY_SINGLE if kind == "single" else self.PRIORITY_BULK
+            self._queue.put((prio, next(self._seq), kind, page_name))
+            return driver
+
+        if result == "success":
+            self._completed_pages += 1
+            self._status = DownloadStatus.IMPORTING
+            self._current_page = "Importing..."
+            try:
+                self._last_import_report = watcherbase.import_all_pages()
+            except Exception as e:
+                print(f"[WARNING] Import failed: {e}")
+            self._finished_names.append(base)
+            self._status = DownloadStatus.RUNNING
+        else:  # "failed"
+            self._failed_pages += 1
+            self._finished_names.append(base)
+
+        # Rate-limit the *next* bulk download; singles never wait.
+        self._schedule_next_bulk()
+        return driver
+
+    def _go_idle(self):
+        """Reset the active-session counters and return to idle."""
+        self._status = DownloadStatus.IDLE
+        self._current_page = ""
+        self._current_job_kind = None
+        self._wait_remaining = 0
+        self._stop_requested = False
+        self._completed_pages = 0
+        self._skipped_pages = 0
+        self._failed_pages = 0
+        self._finished_names = []
 
 
 # Global instance

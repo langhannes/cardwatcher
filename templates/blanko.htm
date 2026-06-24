@@ -1803,33 +1803,54 @@ CardWatcher
 		btnText.textContent = 'Downloading...';
 		spinner.classList.remove('d-none');
 
+		var pageName = '{{ page_name }}';
+		var base = pageName.endsWith('.json') ? pageName.slice(0, -5) : pageName;
+
+		function resetButton() {
+			btn.disabled = false;
+			btnText.textContent = 'Download';
+			spinner.classList.add('d-none');
+		}
+
+		// Poll until this card's download has been processed, then reload.
+		function waitForThisPage() {
+			fetch('/api/download/status')
+				.then(r => r.json())
+				.then(data => {
+					if ((data.finished || []).indexOf(base) !== -1) {
+						window.location.reload();
+						return;
+					}
+					setTimeout(waitForThisPage, 1000);
+				})
+				.catch(() => setTimeout(waitForThisPage, 2000));
+		}
+
 		fetch('/api/download/single', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
-				page_name: '{{ page_name }}'
+				page_name: pageName
 			})
 		})
 		.then(response => response.json())
 		.then(data => {
-			if (data.success) {
-				// Reload the page to show updated data
-				window.location.reload();
+			if (data.queued) {
+				// Non-blocking queue: show position and wait for completion.
+				btnText.textContent = data.position
+					? 'Queued (' + data.position + ' ahead)...'
+					: 'Downloading...';
+				waitForThisPage();
 			} else {
-				alert('Download failed: ' + data.message);
-				// Re-enable button
-				btn.disabled = false;
-				btnText.textContent = 'Download';
-				spinner.classList.add('d-none');
+				alert('Download failed: ' + (data.message || 'unknown error'));
+				resetButton();
 			}
 		})
 		.catch(error => {
 			alert('Error: ' + error);
-			btn.disabled = false;
-			btnText.textContent = 'Download';
-			spinner.classList.add('d-none');
+			resetButton();
 		});
 	});
 </script>

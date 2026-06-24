@@ -186,6 +186,34 @@
 	</div>
 </div>
 
+<!-- Automation -->
+<div class="settings-section">
+	<h3>Automation</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Daily Auto-Refresh</div>
+			<div class="setting-description">Automatically run a full refresh once a day (catch-up on launch if overdue). When on, opening a page no longer triggers an import.</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="auto_import_enabled" {% if settings.auto_import_enabled %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Import Saved Downloads</div>
+			<div class="setting-description">Import any HTML pages you saved manually into the downloads folder.</div>
+		</div>
+		<div class="setting-control">
+			<button type="button" class="btn btn-sm btn-outline-primary" onclick="importDownloads()">Import now</button>
+			<span id="importStatus" style="margin-left:8px; font-size:0.85rem;"></span>
+		</div>
+	</div>
+</div>
+
 <!-- Download Settings -->
 <div class="settings-section">
 	<h3>Download Settings</h3>
@@ -445,6 +473,7 @@ function saveSettings() {
 		port: parseInt(form.querySelector('[name="port"]').value) || 5000,
 		auto_open_browser: form.querySelector('[name="auto_open_browser"]').checked,
 		show_console: form.querySelector('[name="show_console"]').checked,
+		auto_import_enabled: form.querySelector('[name="auto_import_enabled"]').checked,
 		download_wait_min: parseInt(form.querySelector('[name="download_wait_min"]').value) || 5,
 		download_wait_max: parseInt(form.querySelector('[name="download_wait_max"]').value) || 10,
 		page_load_timeout: parseInt(form.querySelector('[name="page_load_timeout"]').value) || 30,
@@ -494,6 +523,25 @@ function saveSettings() {
 		status.style.color = '#dc3545';
 		status.textContent = 'Error: ' + err;
 	});
+}
+
+function importDownloads() {
+	var el = document.getElementById('importStatus');
+	el.style.color = '#007bff';
+	el.textContent = 'Importing...';
+	fetch('/api/import/run', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			var rep = data.report || {};
+			el.style.color = (rep.failed && rep.failed.length) ? '#dc3545' : '#28a745';
+			el.textContent = 'Imported ' + (rep.imported || 0) +
+				', skipped ' + (rep.skipped || 0) +
+				', failed ' + ((rep.failed || []).length);
+		})
+		.catch(err => {
+			el.style.color = '#dc3545';
+			el.textContent = 'Error: ' + err;
+		});
 }
 </script>
 

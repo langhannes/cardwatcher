@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "card": "Rayquaza EX  (BW-P 145)",
+  "set": " BW Promos - Singles",
+  "canonical_name": "Pokemon_Products_Singles_BW-Promos_Rayquaza-EX",
+  "image": "data/images/Pokemon_Products_Singles_BW-Promos_Rayquaza-EX.jpg",
+  "languages": [
+    "Japanese",
+    "Korean",
+    "T-Chinese"
+  ],
+  "only_germany": "False",
+  "available": 0,
+  "sold": 0,
+  "inserted": 0,
+  "listings": [
+    {
+      "card": "Rayquaza EX  (BW-P 145)",
+      "canonical_name": "Pokemon_Products_Singles_BW-Promos_Rayquaza-EX",
+      "seller": {
+        "name": "TopNard",
+        "country": "Item location: Italy"
+      },
+      "language": "Japanese",
+      "price": 3999.99,
+      "quantity": 0,
+      "condition": "LP",
+      "comment": "",
+      "date": 1771924102.7193205,
+      "ended": true,
+      "new": false,
+      "previous_prices": [],
+      "previous_quantities": [],
+      "first_date": 1768161008.1085277,
+      "last_date": 0.0,
+      "price_is_new": false,
+      "quantity_change": 0,
+      "first_ed": 0,
+      "reverse_holo": 0,
+      "archived": false
+    },
+    {
+      "card": "Rayquaza EX  (BW-P 145)",
+      "canonical_name": "Pokemon_Products_Singles_BW-Promos_Rayquaza-EX",
+      "seller": {
+        "name": "belmont95",
+        "country": "Item location: Italy"
+      },
+      "language": "Japanese",
+      "price": 4900.0,
+      "quantity": 0,
+      "condition": "PL",
+      "comment": "HAVE ONLY 1 LITTLE CREASE - THIS CARD IS PART OF MY PERSONAL COLLECTION",
+      "date": 1740082728.2364278,
+      "ended": true,
+      "new": false,
+      "previous_prices": [
+        [
+          4500.0,
+          0.0
+        ]
+      ],
+      "previous_quantities": [],
+      "first_date": 1709034986.0392492,
+      "last_date": 0.0,
+      "price_is_new": false,
+      "quantity_change": 0,
+      "first_ed": 0,
+      "reverse_holo": 0,
+      "archived": false
+    },
+    {
+      "card": "Rayquaza EX  (BW-P 145)",
+      "canonical_name": "Pokemon_Products_Singles_BW-Promos_Rayquaza-EX",
+      "seller": {
+        "name": "MomTCG",
+        "country": "Item location: Italy"
+      },
+      "language": "Japanese",
+      "price": 14900.0,
+      "quantity": 1,
+      "condition": "PL",
+      "comment": "HAVE ONLY 1 LITTLE CREASE - THIS CARD IS PART OF MY PERSONAL COLLECTION",
+      "date": 1782206670.584519,
+      "ended": false,
+      "new": false,
+      "previous_prices": [],
+      "previous_quantities": [
+        [
+          1,
+          1780470835.53315
+        ],
+        [
+          0,
+          1780470835.53315
+        ]
+      ],
+      "first_date": 1770204762.887126,
+      "last_date": 0.0,
+      "price_is_new": false,
+      "quantity_change": 0,
+      "first_ed": 0,
+      "reverse_holo": 0,
+      "archived": true
+    }
+  ]
+}

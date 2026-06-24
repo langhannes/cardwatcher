@@ -8,7 +8,7 @@ import math
 from app.page import Page
 from app.listing import Listing
 from app.language_libraries import *
-from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR
+from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR, FAILED_DIR
 
 class watcherbase():
 
@@ -43,6 +43,30 @@ class watcherbase():
             shutil.rmtree(os.path.join(DOWNLOADS_DIR, file_name[:-4]+"-Dateien"))
         except:
             print("delete_download | no folder to delete")
+
+    def move_to_failed(file_name):
+        """Quarantine a download that raised during import into downloads/failed/.
+
+        Unlike delete_download we keep the file (and its assets) so the offending
+        page can be inspected instead of silently lost.
+        """
+        try:
+            os.makedirs(FAILED_DIR, exist_ok=True)
+            dest = os.path.join(FAILED_DIR, file_name)
+            if os.path.exists(dest):
+                os.remove(dest)
+            shutil.move(os.path.join(DOWNLOADS_DIR, file_name), dest)
+            print("move_to_failed | quarantined " + file_name)
+            # Move the saved-assets folder alongside it, if present.
+            assets = file_name[:-4] + "-Dateien"
+            assets_src = os.path.join(DOWNLOADS_DIR, assets)
+            if os.path.isdir(assets_src):
+                assets_dest = os.path.join(FAILED_DIR, assets)
+                if os.path.exists(assets_dest):
+                    shutil.rmtree(assets_dest)
+                shutil.move(assets_src, assets_dest)
+        except Exception as e:
+            print("move_to_failed | ERROR quarantining " + file_name + ": " + str(e))
 
     def calculate_price_average_simple(prices):
         """
@@ -747,98 +771,17 @@ class watcherbase():
         except Exception as e:
             print("save_image: ERROR: " + str(e))
 
-    def import_all_pages():
-        price_history = {}
-        if not os.path.isdir(DOWNLOADS_DIR):
-            print("watcherbase | no downloads folder found")
-            return
-        file_list = os.listdir(DOWNLOADS_DIR)
-        file_info_list = [(file_name, os.path.getmtime(os.path.join(DOWNLOADS_DIR, file_name))) for file_name in file_list if file_name.lower().endswith(".htm")]
-        sorted_file_info_list = sorted(file_info_list, key=lambda x: x[1])
-        for file_name,timestamp in sorted_file_info_list:
-            print("import_all_pages | importing " + file_name)
-            content = ""
-            with open(os.path.join(DOWNLOADS_DIR, file_name),'r',encoding="utf-8") as f:
-                content = f.read()
+    def _parse_listings(table_body, page, timestamp, report):
+        """Parse the article rows of one page, isolating per-row failures.
 
-            parsed_html = BeautifulSoup(content,features="lxml")
-            if not parsed_html.body:
-                watcherbase.delete_download(file_name)
-                print("import_all_pages | no html found")
-                continue
-            table_body = parsed_html.body.find('div', attrs={'class':'table-body'})
-
-            page = Page()
-            if not parsed_html.find_all('link'):
-                watcherbase.delete_download(file_name)
-                print("import_all_pages | no link found")
-                continue
-            page.canonical_name = watcherbase.get_name_from_address(parsed_html.find_all('link')[0]['href'])
-
-            if not parsed_html.body.find('div',attrs={'class':'page-title-container'}):
-                watcherbase.delete_download(file_name)
-                print("import_all_pages | no page-title found")
-                continue
-            page.card = parsed_html.body.find('div',attrs={'class':'page-title-container'}).find('h1').find(string=True,recursive=False).replace('Ã©','e')
-            
-            if not parsed_html.body.find('div',attrs={'id':'articleFilterSellerLocation'}):
-                watcherbase.delete_download(file_name)
-                print("import_all_pages | no seller location filter found")
-                continue
-            checkmark = parsed_html.body.find('div',attrs={'id':'articleFilterSellerLocation'}).find('input',attrs={'class':'form-check-input'})
-            checked_country = parsed_html.body.find('div',attrs={'id':'articleFilterSellerLocation'}).find('div',attrs={'class','form-check'}).find('label').text
-            page.only_germany = False
-            if 'checked' in checkmark.attrs and ("Deutschland" in checked_country or "Germany" in checked_country):
-                page.only_germany = (checkmark['checked'] == 'checked')
-            print("import_all_pages | only listings from germany: " + str(page.only_germany))
-
-            # get the active languages
-            all_languages = []
-            product_languages = parsed_html.body.find('div',attrs={'id':'articleFilterProductLanguage'})
-            if not product_languages:
-                watcherbase.delete_download(file_name)
-                print("import_all_pages | no language filter found")
-                continue
-            for language in product_languages.find_all('div',attrs={'class':'form-check'}):
-                all_languages.append(language_to_english[language.text] if language.text in language_to_english else language.text)
-                checkbox = language.find('input',attrs={'class':'form-check-input'})
-                if "checked" in checkbox.attrs and checkbox['checked'] == "checked":
-                    page.languages.append(language.text)
-            # if no language is checked, all languages in the list are active
-            if len(page.languages) == 0:
-                for language in all_languages:
-                    page.languages.append(language_to_english[language] if language in language_to_english else language)
-
-            # get the product image
-            card_slideshow = parsed_html.body.find('div',attrs={'class':'card-slideshow'})
-            if card_slideshow:
-                image_path = card_slideshow.find_all('div',attrs={'class':'slide'})[1].find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
-            else:
-                image_path = parsed_html.body.find('section',attrs={'id':'image'}).find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
-            page.image = "data/images/" + (page.canonical_name) + ".jpg"
-            image_dest = os.path.join(IMAGES_DIR, page.canonical_name + ".jpg")
-            if image_path.startswith("http://") or image_path.startswith("https://") or image_path.startswith("//"):
-                # Selenium download: image was downloaded by the downloader, not a local file
-                if not os.path.exists(image_dest):
-                    print(f"import_all_pages | WARNING: image not found at {image_dest}")
-            else:
-                watcherbase.save_image(os.path.join(DOWNLOADS_DIR, image_path), image_dest)
-            
-            # get the set the product is from    
-            page.set = parsed_html.body.find('div',attrs={'class':'page-title-container'}).find('h1').find('span').text.replace('Ã©','e')
-            
-            # check if the user loaded all listings
-            if parsed_html.find('button',attrs={'id':'loadMoreButton'}):
-                page.loadMoreButton = True
-            
-            for item in parsed_html.find_all('button', attrs={'class':'mt-2 text-muted text-center'}):
-                if item.text == "We only show the first 300 articles. Please use the filters for more precise results.":
-                    page.loadMoreButton = True
-                    break
-
-            # iterate over the available listings and parse them
-            prices = []
-            for row in table_body.find_all('div', attrs={'class':'article-row'}):
+        A single malformed row is skipped and counted in report['rows_skipped']
+        rather than aborting the whole page. Returns the list of parsed prices.
+        """
+        prices = []
+        if table_body is None:
+            return prices
+        for row in table_body.find_all('div', attrs={'class':'article-row'}):
+            try:
                 # skip rows that sell playsets, those are usually not actual playsets, but some other random combinations
                 if row.find('span',attrs={'data-bs-original-title':'Playset'}):
                     continue
@@ -852,54 +795,175 @@ class watcherbase():
                 listing.canonical_name = page.canonical_name
                 page.listings.append(listing)
                 prices.append(listing.price)
-            page.price_average = Page.calculate_price_average_robust(prices)
+            except Exception as e:
+                report['rows_skipped'] += 1
+                print("import_all_pages | skipping malformed row: " + str(e))
+        return prices
 
-            # open the corresponding old page and compare it with the newly created one
-            old_page = Page()
-            old_page.canonical_name = page.canonical_name
-            old_page.import_page(old_page.canonical_name+".json")
+    def _import_one_file(file_name, timestamp, price_history, report):
+        """Parse and merge a single downloaded .htm file.
 
-            # Calculate averages BEFORE update (excluding archived and ended)
-            old_available_prices = [l.price for l in old_page.listings if not l.ended and not l.archived]
-            old_available_avg = Page.calculate_price_average_robust(old_available_prices) if old_available_prices else 0
-            old_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
-            old_ended_avg = watcherbase.calculate_price_average_time_weighted(old_ended_prices) if old_ended_prices else 0
-            old_min = min(old_available_prices) if old_available_prices else 0
-            old_floor = watcherbase.calculate_market_prices(old_page)['floor']
+        Returns 'imported' on success or 'skipped' for a structurally-invalid
+        page (which is deleted). Unexpected errors propagate to the caller, which
+        quarantines the file in downloads/failed/.
+        """
+        with open(os.path.join(DOWNLOADS_DIR, file_name),'r',encoding="utf-8") as f:
+            content = f.read()
 
-            old_page.update_page(page)
-            old_page.save()
-            print("import_all_pages | page saved under " + os.path.join(PAGES_DIR,(old_page.canonical_name+".json")))
+        parsed_html = BeautifulSoup(content,features="lxml")
+        if not parsed_html.body:
             watcherbase.delete_download(file_name)
+            print("import_all_pages | no html found")
+            return 'skipped'
+        table_body = parsed_html.body.find('div', attrs={'class':'table-body'})
 
-            # Calculate averages AFTER update (excluding archived and ended)
-            new_available_prices = [l.price for l in old_page.listings if not l.ended and not l.archived]
-            new_available_avg = Page.calculate_price_average_robust(new_available_prices) if new_available_prices else 0
-            available_avg_change = new_available_avg - old_available_avg
-            new_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
-            new_ended_avg = watcherbase.calculate_price_average_time_weighted(new_ended_prices) if new_ended_prices else 0
-            ended_avg_change = new_ended_avg - old_ended_avg
+        page = Page()
+        if not parsed_html.find_all('link'):
+            watcherbase.delete_download(file_name)
+            print("import_all_pages | no link found")
+            return 'skipped'
+        page.canonical_name = watcherbase.get_name_from_address(parsed_html.find_all('link')[0]['href'])
 
-            # Calculate period-based price averages
-            metrics = watcherbase.calculate_all_period_averages(old_page)
-            price_history[page.canonical_name] = metrics
+        if not parsed_html.body.find('div',attrs={'class':'page-title-container'}):
+            watcherbase.delete_download(file_name)
+            print("import_all_pages | no page-title found")
+            return 'skipped'
+        page.card = parsed_html.body.find('div',attrs={'class':'page-title-container'}).find('h1').find(string=True,recursive=False).replace('Ã©','e')
 
-            new_min = metrics.get('current_min', 0) or 0
-            new_floor = (metrics.get('market') or {}).get('floor', 0) or 0
+        if not parsed_html.body.find('div',attrs={'id':'articleFilterSellerLocation'}):
+            watcherbase.delete_download(file_name)
+            print("import_all_pages | no seller location filter found")
+            return 'skipped'
+        checkmark = parsed_html.body.find('div',attrs={'id':'articleFilterSellerLocation'}).find('input',attrs={'class':'form-check-input'})
+        checked_country = parsed_html.body.find('div',attrs={'id':'articleFilterSellerLocation'}).find('div',attrs={'class','form-check'}).find('label').text
+        page.only_germany = False
+        if 'checked' in checkmark.attrs and ("Deutschland" in checked_country or "Germany" in checked_country):
+            page.only_germany = (checkmark['checked'] == 'checked')
+        print("import_all_pages | only listings from germany: " + str(page.only_germany))
 
-            # Add last_download section with all metrics
-            price_history[page.canonical_name]['last_download'] = {
-                'avg': round(new_available_avg, 2),
-                'avg_change': round(available_avg_change, 2),
-                'ended_avg': round(new_ended_avg, 2),
-                'ended_avg_change': round(ended_avg_change, 2),
-                'min': round(new_min, 2),
-                'min_change': round(new_min - old_min, 2),
-                'floor': round(new_floor, 2),
-                'floor_change': round(new_floor - old_floor, 2),
-                'inserted': old_page.inserted,
-                'sold': old_page.sold
-            }
+        # get the active languages
+        all_languages = []
+        product_languages = parsed_html.body.find('div',attrs={'id':'articleFilterProductLanguage'})
+        if not product_languages:
+            watcherbase.delete_download(file_name)
+            print("import_all_pages | no language filter found")
+            return 'skipped'
+        for language in product_languages.find_all('div',attrs={'class':'form-check'}):
+            all_languages.append(language_to_english[language.text] if language.text in language_to_english else language.text)
+            checkbox = language.find('input',attrs={'class':'form-check-input'})
+            if "checked" in checkbox.attrs and checkbox['checked'] == "checked":
+                page.languages.append(language.text)
+        # if no language is checked, all languages in the list are active
+        if len(page.languages) == 0:
+            for language in all_languages:
+                page.languages.append(language_to_english[language] if language in language_to_english else language)
+
+        # get the product image
+        card_slideshow = parsed_html.body.find('div',attrs={'class':'card-slideshow'})
+        if card_slideshow:
+            image_path = card_slideshow.find_all('div',attrs={'class':'slide'})[1].find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
+        else:
+            image_path = parsed_html.body.find('section',attrs={'id':'image'}).find('img')['src'].replace('%20',' ').replace('%C3%A9','é')
+        page.image = "data/images/" + (page.canonical_name) + ".jpg"
+        image_dest = os.path.join(IMAGES_DIR, page.canonical_name + ".jpg")
+        if image_path.startswith("http://") or image_path.startswith("https://") or image_path.startswith("//"):
+            # Selenium download: image was downloaded by the downloader, not a local file
+            if not os.path.exists(image_dest):
+                print(f"import_all_pages | WARNING: image not found at {image_dest}")
+        else:
+            watcherbase.save_image(os.path.join(DOWNLOADS_DIR, image_path), image_dest)
+
+        # get the set the product is from
+        page.set = parsed_html.body.find('div',attrs={'class':'page-title-container'}).find('h1').find('span').text.replace('Ã©','e')
+
+        # check if the user loaded all listings
+        if parsed_html.find('button',attrs={'id':'loadMoreButton'}):
+            page.loadMoreButton = True
+
+        for item in parsed_html.find_all('button', attrs={'class':'mt-2 text-muted text-center'}):
+            if item.text == "We only show the first 300 articles. Please use the filters for more precise results.":
+                page.loadMoreButton = True
+                break
+
+        # iterate over the available listings and parse them (per-row isolated)
+        prices = watcherbase._parse_listings(table_body, page, timestamp, report)
+        page.price_average = Page.calculate_price_average_robust(prices)
+
+        # open the corresponding old page and compare it with the newly created one
+        old_page = Page()
+        old_page.canonical_name = page.canonical_name
+        old_page.import_page(old_page.canonical_name+".json")
+
+        # Calculate averages BEFORE update (excluding archived and ended)
+        old_available_prices = [l.price for l in old_page.listings if not l.ended and not l.archived]
+        old_available_avg = Page.calculate_price_average_robust(old_available_prices) if old_available_prices else 0
+        old_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
+        old_ended_avg = watcherbase.calculate_price_average_time_weighted(old_ended_prices) if old_ended_prices else 0
+        old_min = min(old_available_prices) if old_available_prices else 0
+        old_floor = watcherbase.calculate_market_prices(old_page)['floor']
+
+        old_page.update_page(page)
+        old_page.save()
+        print("import_all_pages | page saved under " + os.path.join(PAGES_DIR,(old_page.canonical_name+".json")))
+        watcherbase.delete_download(file_name)
+
+        # Calculate averages AFTER update (excluding archived and ended)
+        new_available_prices = [l.price for l in old_page.listings if not l.ended and not l.archived]
+        new_available_avg = Page.calculate_price_average_robust(new_available_prices) if new_available_prices else 0
+        available_avg_change = new_available_avg - old_available_avg
+        new_ended_prices = [(l.price, l.date) for l in old_page.listings if l.ended and not l.archived]
+        new_ended_avg = watcherbase.calculate_price_average_time_weighted(new_ended_prices) if new_ended_prices else 0
+        ended_avg_change = new_ended_avg - old_ended_avg
+
+        # Calculate period-based price averages
+        metrics = watcherbase.calculate_all_period_averages(old_page)
+        price_history[page.canonical_name] = metrics
+
+        new_min = metrics.get('current_min', 0) or 0
+        new_floor = (metrics.get('market') or {}).get('floor', 0) or 0
+
+        # Add last_download section with all metrics
+        price_history[page.canonical_name]['last_download'] = {
+            'avg': round(new_available_avg, 2),
+            'avg_change': round(available_avg_change, 2),
+            'ended_avg': round(new_ended_avg, 2),
+            'ended_avg_change': round(ended_avg_change, 2),
+            'min': round(new_min, 2),
+            'min_change': round(new_min - old_min, 2),
+            'floor': round(new_floor, 2),
+            'floor_change': round(new_floor - old_floor, 2),
+            'inserted': old_page.inserted,
+            'sold': old_page.sold
+        }
+        return 'imported'
+
+    def import_all_pages():
+        """Import all downloaded .htm files. One bad page or row can't abort the run.
+
+        Returns a report: {imported, skipped, failed:[file names], rows_skipped}.
+        """
+        report = {'imported': 0, 'skipped': 0, 'failed': [], 'rows_skipped': 0}
+        price_history = {}
+        if not os.path.isdir(DOWNLOADS_DIR):
+            print("watcherbase | no downloads folder found")
+            return report
+        file_list = os.listdir(DOWNLOADS_DIR)
+        file_info_list = [(file_name, os.path.getmtime(os.path.join(DOWNLOADS_DIR, file_name))) for file_name in file_list if file_name.lower().endswith(".htm")]
+        sorted_file_info_list = sorted(file_info_list, key=lambda x: x[1])
+        for file_name,timestamp in sorted_file_info_list:
+            print("import_all_pages | importing " + file_name)
+            try:
+                status = watcherbase._import_one_file(file_name, timestamp, price_history, report)
+                if status == 'imported':
+                    report['imported'] += 1
+                else:
+                    report['skipped'] += 1
+            except Exception as e:
+                # One bad page must never take down the import or the app.
+                report['failed'].append(file_name)
+                print("import_all_pages | ERROR importing " + file_name + ": " + str(e))
+                watcherbase.move_to_failed(file_name)
+
         # Load existing price_history.json, merge with new data, and save
         existing_price_history = {}
         if os.path.exists(os.path.join(CHANGES_DIR, "price_history.json")):
@@ -916,3 +980,8 @@ class watcherbase():
         # Save updated price history
         with open(os.path.join(CHANGES_DIR, "price_history.json"), "w", encoding="utf-8") as f:
             json.dump(existing_price_history, f, indent=2)
+
+        print(f"import_all_pages | done: {report['imported']} imported, "
+              f"{report['skipped']} skipped, {len(report['failed'])} failed, "
+              f"{report['rows_skipped']} rows skipped")
+        return report

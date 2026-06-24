@@ -286,13 +286,30 @@ function addByUrl() {
 	})
 	.then(r => r.json())
 	.then(data => {
-		if (data.success) {
-			statusEl.textContent = 'Added!';
-			statusEl.style.color = '#28a745';
+		if (data.queued) {
 			input.value = '';
-			setTimeout(() => { statusEl.textContent = ''; }, 4000);
-			// Reload search results to show new card
-			setTimeout(() => { location.reload(); }, 1500);
+			statusEl.style.color = '#007bff';
+			statusEl.textContent = data.position
+				? 'Queued (' + data.position + ' ahead)...'
+				: 'Downloading...';
+			startPolling();
+			// Wait for this card to finish importing, then reload to show it.
+			const base = data.page_name;
+			const waitForCard = () => {
+				fetch('/api/download/status')
+					.then(r => r.json())
+					.then(s => {
+						if ((s.finished || []).indexOf(base) !== -1) {
+							statusEl.textContent = 'Added!';
+							statusEl.style.color = '#28a745';
+							setTimeout(() => { location.reload(); }, 800);
+						} else {
+							setTimeout(waitForCard, 1500);
+						}
+					})
+					.catch(() => setTimeout(waitForCard, 2500));
+			};
+			waitForCard();
 		} else {
 			statusEl.textContent = data.message || 'Failed';
 			statusEl.style.color = '#dc3545';
@@ -354,7 +371,8 @@ function updateUI(data) {
 	} else if (data.status === 'running') {
 		const pageName = data.current_page || '';
 		const shortName = pageName.length > 40 ? '...' + pageName.slice(-37) : pageName;
-		statusText.textContent = shortName;
+		const ahead = data.queue_length > 0 ? ' (' + data.queue_length + ' queued)' : '';
+		statusText.textContent = shortName + ahead;
 		statusText.style.color = '#007bff';
 		waitTimer.style.display = 'none';
 	} else if (data.status === 'stopping') {
