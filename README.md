@@ -16,6 +16,7 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 - **History**: per-listing quantity and add/sell/relist history tracked over time.
 - **Collection**: track owned cards (quantity, condition, language) and see total value.
 - **Automated downloads**: a background priority queue refreshes all cards while letting an individual **Download** jump the line; an optional daily auto-refresh keeps data current on its own.
+- **Import & Sync page**: one place for the download queue, adding a card by URL, importing saved downloads, the download/import settings, daily auto-refresh, and data sync — reached from the **Import & Sync** button in the header.
 - **Data sync**: pull shared data, optionally push your downloads back.
 - **Search, sort & archive**: filter by name, sort by price/change/metric, archive cards you no longer track.
 - **Dark mode**: a ☾ / ☀ toggle in the header switches the whole app between light and dark; your choice is remembered.
@@ -94,20 +95,22 @@ Click **My Collection** to view only cards you own, with per-card and total valu
 
 ### Syncing
 
-Header buttons: **Pull** (fetch latest shared data) and **Full Sync** (pull + push your local downloads; needs git credentials).
+On the **Import & Sync** page (header button), use **Pull** (fetch latest shared data) and **Full Sync** (pull + push your local downloads; needs git credentials).
 
 ## Downloading Card Data
 
 CardMarket uses Cloudflare protection, so pages are fetched via built-in browser automation or saved manually.
 
-- **Automated** — click **Start Download** in the control bar to refresh all tracked cards (**Stop** to cancel), or the **Download** button on a single card's page. Downloads run through a single background queue: an individual **Download** jumps ahead of a running full refresh and starts as soon as the current page finishes, so it never blocks.
-- **Manual** — open the listing on CardMarket, click every "Show More", then save (Ctrl+S) as "Webpage, Complete" into the `downloads/` folder in your data directory. CardWatcher imports it on the next refresh, or use **Settings → Import Saved Downloads → Import now**.
+- **Automated** — open the **Import & Sync** page and click **Refresh all now** to refresh all tracked cards (**Stop** to cancel), or the **Download** button on a single card's page. Downloads run through a single background queue: an individual **Download** jumps ahead of a running full refresh and starts as soon as the current page finishes, so it never blocks.
+- **Manual** — open the listing on CardMarket, click every "Show More", then save (Ctrl+S) as "Webpage, Complete" into the `downloads/` folder in your data directory. CardWatcher imports it on the next refresh, or use **Import & Sync → Import saved downloads**.
 
-**Daily auto-refresh:** enable **Settings → Daily Auto-Refresh** to run a full refresh once a day automatically (it also catches up on launch if the last run was over a day ago). While enabled, opening a page no longer triggers an import — the queue worker owns it.
+Download/import behaviour (wait times, page-load timeout, "Show More" limit, headless/minimized browser) is configured under **Download & Import Settings** on the same page; the full settings list still lives under **Settings**.
+
+**Daily auto-refresh:** enable **Daily Auto-Refresh** (on the Import & Sync page or in **Settings**) to run a full refresh once a day automatically (it also catches up on launch if the last run was over a day ago). While enabled, opening a page no longer triggers an import — the queue worker owns it.
 
 ### Adding a new card
 
-- **Paste URL (easiest)** — paste a CardMarket listing URL into **"Paste CardMarket URL to add…"** in the control bar and press **+ Add**. Works with any language path (`/en/`, `/de/`, `/fr/`, …).
+- **Paste URL (easiest)** — on the **Import & Sync** page, paste a CardMarket listing URL into the **Add a Card** box and press **+ Add**. Works with any language path (`/en/`, `/de/`, `/fr/`, …).
 - **Manual** — save the page as described above; the new card is imported automatically.
 
 ## Data Storage

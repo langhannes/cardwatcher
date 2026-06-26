@@ -28,7 +28,8 @@ DEFAULT_SETTINGS = {
 
     # Automation
     "auto_import_enabled": False,  # Run a daily full refresh on a timer (WP5)
-    "last_auto_run": 0,            # Internal: timestamp of last auto refresh
+    "last_auto_run": 0,            # Internal: when the last auto refresh was triggered
+    "last_auto_finished": 0,       # Internal: when the last full refresh actually finished (WP8)
 
     # Download settings
     "download_wait_min": 5,       # Minimum wait between downloads (minutes)

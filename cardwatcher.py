@@ -40,7 +40,7 @@ from app.collection import (
 )
 from app.sync import sync_manager
 from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR, get_setting
-from app.scheduler import AutoRefreshScheduler
+from app.scheduler import AutoRefreshScheduler, schedule_status
 
 # Daily auto-refresh timer (started in __main__). Enqueues a full refresh via
 # the download queue worker; gated by the auto_import_enabled setting.
@@ -215,6 +215,30 @@ def import_downloads():
     """
     report = watcherbase.import_all_pages()
     return jsonify({"success": True, "report": report})
+
+
+@app.route('/api/schedule/status', methods=['GET'])
+def schedule_status_api():
+    """Auto-refresh schedule: enabled, last finished, next run (with relatives)."""
+    return jsonify(schedule_status())
+
+
+def _failed_imports():
+    """Names of quarantined downloads waiting in downloads/failed/ (WP2)."""
+    from app.config import FAILED_DIR
+    if not os.path.isdir(FAILED_DIR):
+        return []
+    return sorted(f for f in os.listdir(FAILED_DIR) if f.lower().endswith('.htm'))
+
+
+@app.route('/import', methods=['GET'])
+def import_management():
+    """Import-management page: queue status, schedule, refresh/import controls."""
+    from app.config import load_settings
+    return render_template('import.htm',
+                           schedule=schedule_status(),
+                           failed_imports=_failed_imports(),
+                           settings=load_settings())
 
 
 @app.route('/api/download/single', methods=['POST'])

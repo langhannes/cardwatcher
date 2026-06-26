@@ -19,8 +19,14 @@ class watcherbase():
     # Conditions treated as "average condition". Damaged grades (LP/PL/PO) are
     # excluded; the set is broadened automatically when too few samples remain.
     GOOD_CONDITIONS = ('MT', 'NM', 'EX', 'GD')
-    # Tiebreak order when two languages have equal supply (most-traded wins).
+    # Canonical-language preference order (NOT a tiebreak): the dominant
+    # language is the first of these that is actually on offer. English covers
+    # Western cards (they always have English listings), Japanese covers
+    # Japanese-origin cards, Chinese only a card that exists solely in Chinese.
     LANGUAGE_PRIORITY = ('English', 'Japanese', 'S-Chinese', 'T-Chinese', 'Korean')
+    # A higher-priority language needs at least this many listings before it
+    # wins, so one mislabeled stray doesn't hijack an otherwise foreign market.
+    MIN_LANGUAGE_LISTINGS = 2
     # Blend weights: transaction (realized sales) vs floor (buy-now low band).
     BLEND_W_TRANSACTION = 0.6
     BLEND_W_FLOOR = 0.4
@@ -28,6 +34,8 @@ class watcherbase():
     FLOOR_PERCENTILE = 10
     # Minimum samples before we trust the condition-filtered set; else broaden.
     MIN_CONDITION_SAMPLES = 3
+    # Sentinel distinguishing "language not supplied" from an explicit None.
+    _UNSET = object()
 
     def get_name_from_address(address):
         return address[30:].replace('/','_')
@@ -478,22 +486,33 @@ class watcherbase():
         return active, sold
 
     def dominant_language(active_listings):
-        """The most-supplied language among listings (qty-weighted, priority tiebreak)."""
+        """The canonical trading language, chosen by availability not by supply.
+
+        Walks LANGUAGE_PRIORITY and returns the first language that is on offer
+        (English → Japanese → Chinese → …). Choosing by availability — rather
+        than "whichever language has the most listings right now" — keeps the
+        language stable over time: supply shifts day to day, and a supply-based
+        choice flips the language back and forth, which makes the floor/blend
+        jump between the price levels of different languages. A higher-priority
+        language must clear MIN_LANGUAGE_LISTINGS so a single stray (e.g. a
+        mislabeled English listing on a Japanese-only product) can't hijack it.
+        Languages outside the priority list (German/French/… only) fall back to
+        the most-supplied one.
+        """
         totals = {}
         for l in active_listings:
             totals[l.language] = totals.get(l.language, 0) + max(1, l.quantity or 1)
         if not totals:
             return None
-        best = max(totals.values())
-        leaders = [lang for lang, t in totals.items() if t == best]
-        if len(leaders) == 1:
-            return leaders[0]
+        solid = {lang: n for lang, n in totals.items()
+                 if n >= watcherbase.MIN_LANGUAGE_LISTINGS}
+        pool = solid or totals
         for lang in watcherbase.LANGUAGE_PRIORITY:
-            if lang in leaders:
+            if lang in pool:
                 return lang
-        return sorted(leaders)[0]
+        return max(pool, key=lambda k: pool[k])
 
-    def calculate_market_prices(page, at_time=None):
+    def calculate_market_prices(page, at_time=None, lang=_UNSET):
         """Representative market price computed three ways.
 
         Returns {'blend', 'transaction', 'floor', 'language', 'n_sold', 'n_ask'}.
@@ -501,18 +520,28 @@ class watcherbase():
         - floor: low band (FLOOR_PERCENTILE) of outlier-filtered current asks.
         - blend: weighted mix of transaction and floor (the all-round number).
         All filtered to the dominant language and "average condition" grades.
+
+        ``lang`` pins the language to filter on. When left unset it is the
+        dominant language of the snapshot at ``at_time``. Callers building a
+        time series should pin a single canonical language across every day,
+        otherwise the dominant language flips as the reconstructed supply
+        changes and the floor/blend/sold numbers jump between price levels of
+        different languages.
         """
         active, sold = watcherbase._listings_at_time(page, at_time)
-        lang = (watcherbase.dominant_language([l for l, _ in active])
-                or watcherbase.dominant_language([l for l, _ in sold]))
+        if lang is watcherbase._UNSET:
+            lang = (watcherbase.dominant_language([l for l, _ in active])
+                    or watcherbase.dominant_language([l for l, _ in sold]))
 
         def filtered(pairs):
             same_lang = [(l, p) for (l, p) in pairs if lang is None or l.language == lang]
             good = [(l, p) for (l, p) in same_lang if l.condition in watcherbase.GOOD_CONDITIONS]
             if len(good) >= watcherbase.MIN_CONDITION_SAMPLES:
                 return good
-            # Too few in good condition — broaden to all conditions (same language).
-            return same_lang if same_lang else pairs
+            # Too few in good condition — broaden conditions, but never broaden
+            # across languages: mixing in cheaper languages is what makes the
+            # floor jump around. No same-language samples means no price here.
+            return same_lang
 
         active_f = filtered(active)
         sold_f = filtered(sold)
@@ -585,10 +614,17 @@ class watcherbase():
         if start < earliest:
             start = earliest
 
+        # Pin one canonical language for the whole series so the floor/blend/
+        # sold lines track a single market instead of flipping between
+        # languages as the reconstructed supply changes day to day. The current
+        # snapshot's dominant language is the anchor (matching the search view).
+        canonical_lang = watcherbase.calculate_market_prices(page)['language']
+
         labels, blend, transaction, floor = [], [], [], []
         day = start
         while day <= today:
-            mp = watcherbase.calculate_market_prices(page, at_time=day.timestamp())
+            mp = watcherbase.calculate_market_prices(
+                page, at_time=day.timestamp(), lang=canonical_lang)
             labels.append(day.strftime('%d.%m.%Y'))
             blend.append(mp['blend'] if mp['blend'] > 0 else None)
             transaction.append(mp['transaction'] if mp['transaction'] > 0 else None)

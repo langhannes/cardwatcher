@@ -39,9 +39,22 @@ validated by backtests.
 Recommended order: **WP1 → WP2 → WP3 → WP4 → WP5 → WP6.** WP2 can ship on its own;
 WP3 should precede WP6; WP4 and WP5 are best done together (same module + route).
 
+### Status
+
+- ✅ **WP1** Testing suite — done (pytest suite under `tests/`).
+- ✅ **WP2** Isolate import failures — done (per-file/row isolation, `downloads/failed/`).
+- ⬜ **WP3** SQLite metrics store — **not started** (do next; precedes WP6).
+- ✅ **WP4** Download queue + prioritised updates — done.
+- ✅ **WP5** Automated daily refresh — done.
+- ⬜ **WP6** Backtests & tuning — **not started** (needs WP3's `metric_history`).
+- ✅ **WP7** Consolidate the download UI — done (dedicated `/import` page).
+- ✅ **WP8** Surface next/last update times — done.
+
+Remaining: **WP3** then **WP6**.
+
 ---
 
-## WP1 — Testing suite (do first)
+## WP1 — Testing suite (do first) ✅ DONE
 
 **Goal:** lock current behaviour so the refactors below are verifiable.
 
@@ -64,7 +77,7 @@ WP3 should precede WP6; WP4 and WP5 are best done together (same module + route)
 - **Run:** `python -m pytest`. **Deliverable:** green suite + a one-line note in
   README/BUILD on how to run it.
 
-## WP2 — Isolate import failures
+## WP2 — Isolate import failures ✅ DONE
 
 **Goal:** one bad page or row never takes down import or the app.
 
@@ -78,7 +91,7 @@ WP3 should precede WP6; WP4 and WP5 are best done together (same module + route)
 - **Tests:** feed a deliberately malformed row/file fixture and assert the rest
   still import and the failure is recorded. **Deliverable:** import is crash-proof.
 
-## WP3 — SQLite metrics store (+ text backup)
+## WP3 — SQLite metrics store (+ text backup) ⬜ NOT STARTED (do next)
 
 **Goal:** replace `price_history.json` with a local SQLite DB and record a daily
 metric time-series for backtests, with a git-friendly export.
@@ -116,7 +129,7 @@ metric time-series for backtests, with a git-friendly export.
   `migrate_to_sqlite` on the fixture. **Deliverable:** app reads/writes metrics
   from SQLite; `price_history.json` retired; export committed on sync.
 
-## WP4 — Download queue + prioritised individual updates
+## WP4 — Download queue + prioritised individual updates ✅ DONE
 
 **Goal:** turn `DownloadManager` into one persistent worker draining a priority
 queue; individual updates jump ahead and run ASAP instead of blocking/being
@@ -140,7 +153,7 @@ rejected.
   (mock the selenium calls). **Deliverable:** individual "Download" never blocks and
   runs ASAP; bulk still rate-limited.
 
-## WP5 — Automated daily refresh (+ setting, remove page-load import)
+## WP5 — Automated daily refresh (+ setting, remove page-load import) ✅ DONE
 
 **Goal:** the full refresh runs by itself; the `/` route stops importing.
 
@@ -160,7 +173,7 @@ rejected.
   mock queue. **Deliverable:** enable the setting → daily auto-refresh; main page no
   longer blocks on import.
 
-## WP6 — Backtests & tuning
+## WP6 — Backtests & tuning ⬜ NOT STARTED (needs WP3)
 
 **Goal:** validate which market-price method is most representative and whether the
 signals lead price, then tune the constants from data.
@@ -179,6 +192,69 @@ signals lead price, then tune the constants from data.
 - **Tests:** backtest math on a small synthetic `metric_history`. **Deliverable:**
   a data-backed answer to "which price is the real one" and tuned thresholds.
 
+## WP7 — Consolidate the download UI (follow-up to WP4/WP5) ✅ DONE
+
+**As shipped:** chose the dedicated **`/import`** page (`templates/import.htm`,
+route in `cardwatcher.py`). The bulk download bar was removed from
+`dashboard.htm` and `search.htm` (replaced by an **⬇ Import & Sync** header link);
+the per-card **Download** on `blanko.htm` stays. The Import page now also hosts
+the **Sync** (Pull / Full Sync) controls and the **download/import settings**
+(auto-refresh toggle, wait times, etc.) that previously lived elsewhere, plus the
+WP4 queue status and the WP2 failed-imports list.
+
+**Goal:** with the queue (WP4) and daily auto-refresh (WP5) owning bulk
+downloading, the prominent **Start Download** control no longer belongs on the
+everyday views. Keep only the per-card (individual) download/import.
+
+- Remove the bulk download control bar (**Start Download** / **Stop** / progress)
+  from the dashboard (`templates/dashboard.htm`) and search (`templates/search.htm`)
+  header. The per-card **Download** button on the detail page
+  (`templates/blanko.htm`) stays — that's the individual import path.
+- Move the remaining bulk affordances to a dedicated home. Two options (decide
+  during the WP):
+  - simplest: fold "Refresh all now" + "Import saved downloads" into
+    **Settings** (next to the WP5 `auto_import_enabled` toggle), or
+  - an **Import management** page: queue depth / current job, failed-import list
+    from `downloads/failed/` (WP2), a "Refresh now" and "Import downloads"
+    button, and the `last_auto_run` status. This is the natural place to surface
+    the WP4 `get_status()` queue info and the WP2 import report.
+- The header download-status JS (`pollStatus`/`updateUI` in `search.htm`) moves
+  with it or is dropped from the everyday views; the per-card button keeps its
+  own poll-until-done flow.
+- **Deliverable:** dashboard/search are clean (no bulk download bar); bulk
+  refresh + import live in Settings or an Import-management page; individual
+  download still works from a card page.
+
+## WP8 — Surface next/last update times ✅ DONE
+
+**As shipped:** added the `last_auto_finished` setting, stamped by the queue
+worker when a `FULL_REFRESH` drains (`download_manager._maybe_stamp_finished`).
+`app/scheduler.py` gained `schedule_status()` + `humanize_duration`/`time_ago`/
+`time_until`, exposed via `GET /api/schedule/status` and shown on the `/import`
+page ("Last refresh finished: … · Next refresh: …"), live-updating.
+
+**Goal:** the user can see, at a glance, **when the next auto-refresh will run**
+and **when the last update finished**.
+
+- **Data already available / to add:**
+  - last finished: derive from `last_auto_run` (WP5) — but note it's currently
+    stamped on *enqueue*, not completion. Add a `last_auto_finished` timestamp
+    set by the queue worker when a `FULL_REFRESH` drains (WP4), so "last update"
+    reflects real completion, not just trigger time.
+  - next run: compute from `last_auto_run + interval` (the WP5 `DAY_SECONDS`),
+    only when `auto_import_enabled`; otherwise show "manual / off".
+- **Expose it:** add the two timestamps to a status payload — either extend
+  `download_manager.get_status()` or a small `/api/schedule/status` route that
+  reads the scheduler/settings. Return both raw epoch and a friendly "in 3h" /
+  "2h ago" string (mirror `sync.py`'s `time_ago` formatting).
+- **Show it:** on the Import-management page / Settings (WP7), e.g.
+  "Last refresh: 2h ago · Next: in 22h" with a live-updating relative time.
+  When a refresh is in progress, show "running now" instead of the next-time.
+- **Tests:** the next-run/last-finished computation (pure, faked clock); the
+  `time_ago` formatting for both past and future deltas.
+- **Deliverable:** the UI clearly shows when data was last refreshed and when the
+  next automatic refresh is due.
+
 ---
 
 ## Verification (end to end)
@@ -194,7 +270,12 @@ signals lead price, then tune the constants from data.
    refresh auto-starts; `/` no longer calls import.
 6. WP6: open the backtest summary; confirm method-accuracy and bucket-lead tables
    populate; adjust a constant and see the numbers move.
-7. Rebuild exe via the clean venv and smoke-test `GET / → 200`.
+7. WP7: dashboard/search no longer show the bulk download bar; "Refresh now" /
+   "Import downloads" work from Settings (or the Import-management page); a
+   card-page **Download** still imports that card.
+8. WP8: with auto-refresh on, the UI shows "Last refresh: … ago · Next: in …";
+   after a refresh completes the "last finished" time updates.
+9. Rebuild exe via the clean venv and smoke-test `GET / → 200`.
 
 ## Notes
 

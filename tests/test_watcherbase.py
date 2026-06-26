@@ -85,6 +85,71 @@ def test_calculate_market_prices_floor_only_when_no_sales():
     assert result["blend"] == result["floor"] == 10.3
 
 
+def test_floor_ignores_other_languages():
+    # English is the dominant (most-supplied) language and sits ~100. A handful
+    # of cheap Japanese asks must not drag the English floor down.
+    english = [make_listing(seller=f"en{i}", price=p, quantity=1, ended=False)
+               for i, p in enumerate([100.0, 102.0, 104.0, 106.0, 108.0])]
+    japanese = [make_listing(seller=f"jp{i}", price=p, quantity=1, ended=False,
+                             language="Japanese")
+                for i, p in enumerate([55.0, 58.0])]
+    result = watcherbase.calculate_market_prices(_FakePage(english + japanese))
+    assert result["language"] == "English"
+    assert result["floor"] >= 100.0
+
+
+def test_pinned_language_does_not_fall_back_to_other_languages():
+    # When a language is pinned but has no listings in the snapshot, the metric
+    # is empty rather than silently borrowing another (cheaper) language.
+    japanese = [make_listing(seller=f"jp{i}", price=p, quantity=1, ended=False,
+                             language="Japanese")
+                for i, p in enumerate([55.0, 58.0, 60.0])]
+    result = watcherbase.calculate_market_prices(
+        _FakePage(japanese), lang="English")
+    assert result["floor"] == 0.0
+    assert result["n_ask"] == 0
+
+
+# --- dominant_language (priority by availability) ---------------------------
+
+def test_dominant_language_prefers_english_even_when_outnumbered():
+    # A Western card: English exists, so it wins regardless of Japanese supply.
+    listings = ([make_listing(seller=f"jp{i}", language="Japanese")
+                 for i in range(10)]
+                + [make_listing(seller=f"en{i}", language="English")
+                   for i in range(2)])
+    assert watcherbase.dominant_language(listings) == "English"
+
+
+def test_dominant_language_falls_through_to_japanese():
+    # No English on offer -> Japanese (Japanese-origin card).
+    listings = [make_listing(seller=f"jp{i}", language="Japanese")
+                for i in range(4)]
+    assert watcherbase.dominant_language(listings) == "Japanese"
+
+
+def test_dominant_language_chinese_only():
+    listings = [make_listing(seller=f"cn{i}", language="S-Chinese")
+                for i in range(3)]
+    assert watcherbase.dominant_language(listings) == "S-Chinese"
+
+
+def test_dominant_language_ignores_single_stray():
+    # One mislabeled English listing must not hijack a Japanese-only product.
+    listings = ([make_listing(seller=f"jp{i}", language="Japanese")
+                 for i in range(6)]
+                + [make_listing(seller="stray", language="English")])
+    assert watcherbase.dominant_language(listings) == "Japanese"
+
+
+def test_dominant_language_non_priority_falls_back_to_supply():
+    # Only Western non-English languages present -> most-supplied wins.
+    listings = ([make_listing(seller=f"de{i}", language="German")
+                 for i in range(3)]
+                + [make_listing(seller="fr", language="French")])
+    assert watcherbase.dominant_language(listings) == "German"
+
+
 # --- calculate_all_period_averages (shape) ----------------------------------
 
 def test_calculate_all_period_averages_shape():

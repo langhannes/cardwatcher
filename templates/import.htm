@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<title>Import & Downloads | CardWatcher</title>
+<link href="{{ url_for('static', filename='Blanko/master.min.css') }}" rel="stylesheet">
+<style type="text/css">
+.settings-section {
+	background: #fff;
+	border: 1px solid #dee2e6;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 20px;
+}
+.settings-section h3 {
+	margin-top: 0;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eee;
+	color: #333;
+}
+.stat-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px 0;
+	border-bottom: 1px solid #f0f0f0;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: #6c757d; }
+.stat-value { font-weight: 500; color: #333; }
+.progress-track {
+	flex: 1;
+	background: #e9ecef;
+	border-radius: 4px;
+	height: 18px;
+	overflow: hidden;
+	margin: 0 12px;
+}
+.progress-fill { height: 100%; background: #28a745; transition: width 0.3s; width: 0%; }
+.failed-list { font-family: monospace; font-size: 0.85em; color: #dc3545; }
+.muted { color: #6c757d; font-size: 0.85em; }
+/* Editable settings rows (mirrors the look on /settings). */
+.setting-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 0;
+	border-bottom: 1px solid #f0f0f0;
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-info { flex: 1; padding-right: 16px; }
+.setting-label { font-weight: 500; color: #333; }
+.setting-description { font-size: 0.85em; color: #6c757d; margin-top: 2px; }
+.setting-control { text-align: right; }
+.setting-control input[type="number"] { width: 70px; text-align: center; }
+.form-switch { display: flex; justify-content: flex-end; }
+.form-switch .form-check-input { width: 3em; height: 1.5em; cursor: pointer; }
+.section-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eee;
+}
+.section-head h3 { margin: 0; padding: 0; border: none; }
+</style>
+<link href="{{ url_for('static', filename='dark.css') }}" rel="stylesheet">
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
+</head>
+<body>
+
+<header id="header" class="fixed-top">
+	<nav class="navbar navbar-light">
+		<a href="/" class="navbar-brand">
+			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">CardWatcher</span>
+		</a>
+		<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()" style="margin-left: auto;">&#9790;</button>
+	</nav>
+</header>
+
+<main class="container" style="padding-top: 90px; padding-bottom: 60px;">
+
+<div class="page-title-container d-flex align-items-center mb-4">
+	<div class="flex-grow-1"><h1>Import &amp; Downloads</h1></div>
+	<a href="/settings" class="btn btn-outline-primary me-2">&#9881; Settings</a>
+	<a href="/" class="btn btn-outline-primary">Back to Home</a>
+</div>
+
+<!-- Refresh status -->
+<div class="settings-section">
+	<h3>Download Queue</h3>
+	<div class="stat-row">
+		<span class="stat-label">Status</span>
+		<span class="stat-value" id="statusText">…</span>
+	</div>
+	<div class="stat-row" id="progressRow" style="display: none;">
+		<span class="stat-label">Progress</span>
+		<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+		<span class="stat-value" id="progressText">0 / 0</span>
+	</div>
+	<div class="stat-row">
+		<span class="stat-label">Queue</span>
+		<span class="stat-value" id="queueText">0 pending</span>
+	</div>
+	<div class="stat-row">
+		<span class="stat-label">Current</span>
+		<span class="stat-value" id="currentText">—</span>
+	</div>
+	<div class="d-flex gap-2 mt-3">
+		<button id="refreshBtn" onclick="refreshAll()" class="btn btn-success btn-sm">Refresh all now</button>
+		<button id="stopBtn" onclick="stopRefresh()" class="btn btn-danger btn-sm" style="display: none;">Stop</button>
+		<button onclick="importDownloads()" class="btn btn-outline-primary btn-sm">Import saved downloads</button>
+		<span id="actionStatus" class="muted align-self-center"></span>
+	</div>
+</div>
+
+<!-- Add a card -->
+<div class="settings-section">
+	<div class="section-head">
+		<h3>Add a Card</h3>
+		<span id="addUrlStatus" class="muted"></span>
+	</div>
+	<div class="muted mb-2">Paste a CardMarket product URL to download and start tracking it.</div>
+	<div class="d-flex gap-2 align-items-center">
+		<input type="text" id="addUrlInput" placeholder="Paste CardMarket URL to add…" class="form-control form-control-sm" style="max-width: 480px;" onkeydown="if(event.key==='Enter') addByUrl()">
+		<button onclick="addByUrl()" class="btn btn-outline-success btn-sm" style="white-space: nowrap;">+ Add</button>
+	</div>
+</div>
+
+<!-- Sync -->
+<div class="settings-section">
+	<div class="section-head">
+		<h3>Sync</h3>
+		<span id="syncStatus" class="muted">Last sync: checking…</span>
+	</div>
+	<div class="muted mb-2">Pull the latest tracked data from GitHub, or push your local changes back (Full Sync requires git credentials).</div>
+	<div class="d-flex gap-2">
+		<button id="syncPullBtn" onclick="syncPull()" class="btn btn-outline-primary btn-sm" title="Pull latest data from GitHub">&#8595; Pull</button>
+		<button id="syncFullBtn" onclick="syncFull()" class="btn btn-outline-primary btn-sm" title="Pull and push changes (requires git credentials)">&#8597; Full Sync</button>
+	</div>
+</div>
+
+<!-- Schedule status -->
+<div class="settings-section">
+	<h3>Automatic Refresh</h3>
+	<div class="stat-row">
+		<span class="stat-label">Daily auto-refresh</span>
+		<span class="stat-value" id="autoEnabled">{{ 'On' if schedule.enabled else 'Off' }}</span>
+	</div>
+	<div class="stat-row">
+		<span class="stat-label">Last refresh finished</span>
+		<span class="stat-value" id="lastFinished">{{ schedule.last_finished_ago }}</span>
+	</div>
+	<div class="stat-row">
+		<span class="stat-label">Next refresh</span>
+		<span class="stat-value" id="nextRun">{{ schedule.next_run_in }}</span>
+	</div>
+</div>
+
+<!-- Download & import settings -->
+<div class="settings-section">
+	<div class="section-head">
+		<h3>Download &amp; Import Settings</h3>
+		<span id="settingsStatus" class="muted"></span>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Daily Auto-Refresh</div>
+			<div class="setting-description">Automatically run a full refresh once a day (catch-up on launch if overdue). When on, opening a page no longer triggers an import.</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="auto_import_enabled" {% if settings.auto_import_enabled %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Wait Time Between Downloads</div>
+			<div class="setting-description">Random delay between page downloads to avoid Cloudflare detection (minutes)</div>
+		</div>
+		<div class="setting-control d-flex align-items-center gap-2">
+			<input type="number" class="form-control form-control-sm" name="download_wait_min" value="{{ settings.download_wait_min }}" min="1" max="30">
+			<span>to</span>
+			<input type="number" class="form-control form-control-sm" name="download_wait_max" value="{{ settings.download_wait_max }}" min="1" max="60">
+			<span>min</span>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Page Load Timeout</div>
+			<div class="setting-description">Maximum time to wait for Cloudflare challenge and page load (seconds)</div>
+		</div>
+		<div class="setting-control d-flex align-items-center gap-2">
+			<input type="number" class="form-control form-control-sm" name="page_load_timeout" value="{{ settings.page_load_timeout }}" min="10" max="120">
+			<span>sec</span>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">"Show More" Click Limit</div>
+			<div class="setting-description">Maximum number of times to click "Show More" button per page</div>
+		</div>
+		<div class="setting-control">
+			<input type="number" class="form-control form-control-sm" name="show_more_limit" value="{{ settings.show_more_limit }}" min="1" max="100">
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Headless Browser</div>
+			<div class="setting-description">Run Chrome without visible window (faster but harder to debug)</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="browser_headless" {% if settings.browser_headless %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Start Browser Minimized</div>
+			<div class="setting-description">Minimize browser window when starting downloads</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" name="browser_minimized" {% if settings.browser_minimized %}checked{% endif %}>
+			</div>
+		</div>
+	</div>
+
+	<div class="d-flex justify-content-end mt-3">
+		<button id="saveSettingsBtn" onclick="saveImportSettings()" class="btn btn-primary btn-sm">Save Settings</button>
+	</div>
+	<div class="muted mt-2">More options (display, collection, server) live in <a href="/settings">Settings</a>.</div>
+</div>
+
+<!-- Failed imports -->
+<div class="settings-section">
+	<h3>Failed Imports</h3>
+	{% if failed_imports %}
+	<p class="muted">These downloads raised an error during import and were moved to <code>downloads/failed/</code> for inspection:</p>
+	<ul class="failed-list">
+		{% for f in failed_imports %}<li>{{ f }}</li>{% endfor %}
+	</ul>
+	{% else %}
+	<p class="muted">No failed imports. 🎉</p>
+	{% endif %}
+</div>
+
+</main>
+
+<script>
+let pollTimer = null;
+
+function fmtStatus(s) {
+	return { idle: 'Idle', running: 'Running', waiting: 'Waiting', stopping: 'Stopping', importing: 'Importing' }[s] || s;
+}
+
+function applyStatus(data) {
+	document.getElementById('statusText').textContent = fmtStatus(data.status);
+	const running = data.status !== 'idle';
+	document.getElementById('refreshBtn').style.display = running ? 'none' : 'inline-block';
+	document.getElementById('stopBtn').style.display = running ? 'inline-block' : 'none';
+
+	const progressRow = document.getElementById('progressRow');
+	if (running && data.total > 0) {
+		progressRow.style.display = 'flex';
+		document.getElementById('progressFill').style.width = data.progress_percent + '%';
+		let txt = (data.completed + data.failed) + ' / ' + data.total;
+		if (data.skipped > 0) txt += ' (' + data.skipped + ' skipped)';
+		document.getElementById('progressText').textContent = txt;
+	} else {
+		progressRow.style.display = 'none';
+	}
+
+	document.getElementById('queueText').textContent = (data.queue_length || 0) + ' pending';
+	let current = data.current_page || '—';
+	if (data.wait_remaining > 0) {
+		const m = Math.floor(data.wait_remaining / 60), s = data.wait_remaining % 60;
+		current += ' (next in ' + m + 'm ' + s + 's)';
+	}
+	document.getElementById('currentText').textContent = current;
+
+	// Stop polling when idle, but do one schedule refresh to pick up "last finished".
+	if (data.status === 'idle' && pollTimer) {
+		clearInterval(pollTimer);
+		pollTimer = null;
+		updateSchedule();
+	}
+}
+
+function pollStatus() {
+	fetch('/api/download/status').then(r => r.json()).then(applyStatus).catch(() => {});
+}
+
+function startPolling() {
+	if (pollTimer) return;
+	pollStatus();
+	pollTimer = setInterval(pollStatus, 1000);
+}
+
+function updateSchedule() {
+	fetch('/api/schedule/status').then(r => r.json()).then(s => {
+		document.getElementById('autoEnabled').textContent = s.enabled ? 'On' : 'Off';
+		document.getElementById('lastFinished').textContent = s.last_finished_ago;
+		document.getElementById('nextRun').textContent = s.enabled ? s.next_run_in : 'off';
+	}).catch(() => {});
+}
+
+function refreshAll() {
+	const el = document.getElementById('actionStatus');
+	fetch('/api/download/start', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			el.textContent = data.message || '';
+			startPolling();
+		})
+		.catch(err => { el.textContent = 'Error: ' + err; });
+}
+
+function stopRefresh() {
+	fetch('/api/download/stop', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => { document.getElementById('actionStatus').textContent = data.message || ''; })
+		.catch(err => { document.getElementById('actionStatus').textContent = 'Error: ' + err; });
+}
+
+function importDownloads() {
+	const el = document.getElementById('actionStatus');
+	el.textContent = 'Importing…';
+	fetch('/api/import/run', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			const rep = data.report || {};
+			el.textContent = 'Imported ' + (rep.imported || 0) + ', skipped ' + (rep.skipped || 0) +
+				', failed ' + ((rep.failed || []).length);
+			if ((rep.failed || []).length) setTimeout(() => location.reload(), 1200);
+		})
+		.catch(err => { el.textContent = 'Error: ' + err; });
+}
+
+function addByUrl() {
+	const input = document.getElementById('addUrlInput');
+	const statusEl = document.getElementById('addUrlStatus');
+	const url = input.value.trim();
+	if (!url) return;
+	statusEl.style.color = '#007bff';
+	statusEl.textContent = 'Adding…';
+	fetch('/api/download/url', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ url: url })
+	})
+		.then(r => r.json())
+		.then(data => {
+			if (data.queued) {
+				input.value = '';
+				statusEl.style.color = '#007bff';
+				statusEl.textContent = data.position
+					? 'Queued (' + data.position + ' ahead)…'
+					: 'Downloading…';
+				startPolling();
+				const base = data.page_name;
+				const waitForCard = () => {
+					fetch('/api/download/status')
+						.then(r => r.json())
+						.then(s => {
+							if ((s.finished || []).indexOf(base) !== -1) {
+								statusEl.style.color = '#28a745';
+								statusEl.textContent = 'Added!';
+								setTimeout(() => { statusEl.textContent = ''; }, 4000);
+							} else {
+								setTimeout(waitForCard, 1500);
+							}
+						})
+						.catch(() => setTimeout(waitForCard, 2500));
+				};
+				waitForCard();
+			} else {
+				statusEl.style.color = '#dc3545';
+				statusEl.textContent = data.message || 'Failed';
+				setTimeout(() => { statusEl.textContent = ''; }, 6000);
+			}
+		})
+		.catch(err => {
+			statusEl.style.color = '#dc3545';
+			statusEl.textContent = 'Error';
+			console.error('Add URL error:', err);
+		});
+}
+
+function saveImportSettings() {
+	const btn = document.getElementById('saveSettingsBtn');
+	const status = document.getElementById('settingsStatus');
+	const q = name => document.querySelector('[name="' + name + '"]');
+	btn.disabled = true;
+	btn.textContent = 'Saving…';
+
+	let waitMin = parseInt(q('download_wait_min').value) || 5;
+	let waitMax = parseInt(q('download_wait_max').value) || 10;
+	if (waitMin > waitMax) { const t = waitMin; waitMin = waitMax; waitMax = t; }
+
+	const payload = {
+		auto_import_enabled: q('auto_import_enabled').checked,
+		download_wait_min: waitMin,
+		download_wait_max: waitMax,
+		page_load_timeout: parseInt(q('page_load_timeout').value) || 30,
+		show_more_limit: parseInt(q('show_more_limit').value) || 20,
+		browser_headless: q('browser_headless').checked,
+		browser_minimized: q('browser_minimized').checked
+	};
+
+	fetch('/api/settings', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(payload)
+	})
+		.then(r => r.json())
+		.then(data => {
+			btn.disabled = false;
+			btn.textContent = 'Save Settings';
+			if (data.success) {
+				status.style.color = '#28a745';
+				status.textContent = 'Saved';
+				updateSchedule();
+				setTimeout(() => { status.textContent = ''; }, 3000);
+			} else {
+				status.style.color = '#dc3545';
+				status.textContent = 'Error: ' + (data.message || 'Failed to save');
+			}
+		})
+		.catch(err => {
+			btn.disabled = false;
+			btn.textContent = 'Save Settings';
+			status.style.color = '#dc3545';
+			status.textContent = 'Error: ' + err;
+		});
+}
+
+function updateSyncStatus() {
+	fetch('/api/sync/status')
+		.then(r => r.json())
+		.then(data => {
+			const statusEl = document.getElementById('syncStatus');
+			const pullBtn = document.getElementById('syncPullBtn');
+			const fullBtn = document.getElementById('syncFullBtn');
+			if (!data.available) {
+				statusEl.textContent = data.message || 'Sync unavailable';
+				statusEl.style.color = '#dc3545';
+				pullBtn.disabled = true;
+				fullBtn.disabled = true;
+			} else {
+				statusEl.textContent = 'Last sync: ' + data.time_ago;
+				statusEl.style.color = '#6c757d';
+				pullBtn.disabled = false;
+				fullBtn.disabled = false;
+			}
+		})
+		.catch(() => { document.getElementById('syncStatus').textContent = 'Error'; });
+}
+
+function syncPull() {
+	const btn = document.getElementById('syncPullBtn');
+	const statusEl = document.getElementById('syncStatus');
+	btn.disabled = true;
+	btn.innerHTML = '&#8595; Pulling…';
+	statusEl.textContent = 'Pulling from remote…';
+	statusEl.style.color = '#007bff';
+	fetch('/api/sync/pull', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8595; Pull';
+			statusEl.style.color = data.success ? '#28a745' : '#dc3545';
+			statusEl.textContent = (data.success ? '' : 'Error: ') + data.message;
+			if (data.success && data.message !== 'Already up to date') {
+				setTimeout(() => location.reload(), 1500);
+			}
+		})
+		.catch(err => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8595; Pull';
+			statusEl.style.color = '#dc3545';
+			statusEl.textContent = 'Error: ' + err;
+		});
+}
+
+function syncFull() {
+	const btn = document.getElementById('syncFullBtn');
+	const statusEl = document.getElementById('syncStatus');
+	btn.disabled = true;
+	btn.innerHTML = '&#8597; Syncing…';
+	statusEl.textContent = 'Full sync in progress…';
+	statusEl.style.color = '#007bff';
+	fetch('/api/sync/full', { method: 'POST' })
+		.then(r => r.json())
+		.then(data => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8597; Full Sync';
+			statusEl.style.color = data.success ? '#28a745' : '#dc3545';
+			statusEl.textContent = (data.success ? '' : 'Error: ') + data.message;
+			if (data.success) setTimeout(() => location.reload(), 1500);
+		})
+		.catch(err => {
+			btn.disabled = false;
+			btn.innerHTML = '&#8597; Full Sync';
+			statusEl.style.color = '#dc3545';
+			statusEl.textContent = 'Error: ' + err;
+		});
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	fetch('/api/download/status').then(r => r.json()).then(data => {
+		applyStatus(data);
+		if (data.status !== 'idle') startPolling();
+	}).catch(() => {});
+	updateSchedule();
+	updateSyncStatus();
+	setInterval(updateSchedule, 30000);
+});
+</script>
+</body>
+</html>

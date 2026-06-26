@@ -27,7 +27,7 @@ from app.selenium_downloader import (
     download_page_with_selenium
 )
 from app.watcherbase import watcherbase
-from app.config import PAGES_DIR, get_setting
+from app.config import PAGES_DIR, get_setting, set_setting
 
 
 class DownloadStatus(Enum):
@@ -74,6 +74,10 @@ class DownloadManager:
         # Rate limiting (bulk only)
         self._next_bulk_time = 0.0
         self._dl_counter = 0
+
+        # True while a full refresh's bulk jobs are still draining (WP8). Used to
+        # stamp last_auto_finished when the batch completes.
+        self._full_refresh_active = False
 
         # Progress tracking for the current active session
         self._completed_pages = 0
@@ -228,9 +232,25 @@ class DownloadManager:
             else:
                 self._queue.put((self.PRIORITY_BULK, next(self._seq), "bulk", page))
                 queued += 1
-        if queued == 0 and self._skipped_pages == 0:
-            self._last_error = "No pages found in pages/ directory"
+        if queued > 0:
+            self._full_refresh_active = True
+        else:
+            # Nothing to download — the refresh is already complete.
+            set_setting('last_auto_finished', time.time())
+            if self._skipped_pages == 0:
+                self._last_error = "No pages found in pages/ directory"
         return queued
+
+    def _maybe_stamp_finished(self):
+        """Stamp last_auto_finished once a full refresh's bulk jobs have drained."""
+        if not self._full_refresh_active:
+            return
+        if self._current_job_kind in ("bulk", "full_refresh"):
+            return
+        if any(p[2] in ("bulk", "full_refresh") for p in self._snapshot()):
+            return
+        set_setting('last_auto_finished', time.time())
+        self._full_refresh_active = False
 
     def _has_single_waiting(self):
         return any(p[2] == "single" for p in self._snapshot())
@@ -299,6 +319,7 @@ class DownloadManager:
 
                 driver = self._run_page_job(kind, page_name, driver)
                 self._current_job_kind = None
+                self._maybe_stamp_finished()
         except Exception as e:
             self._last_error = str(e)
         finally:
@@ -391,6 +412,7 @@ class DownloadManager:
         self._skipped_pages = 0
         self._failed_pages = 0
         self._finished_names = []
+        self._full_refresh_active = False
 
 
 # Global instance

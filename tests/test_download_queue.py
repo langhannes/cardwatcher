@@ -99,6 +99,52 @@ def test_expand_full_refresh_skips_already_downloaded(dm, monkeypatch, tmp_path)
     assert dm._skipped_pages == 1
 
 
+def test_maybe_stamp_finished_waits_for_bulk(dm, monkeypatch):
+    stamped = []
+    monkeypatch.setattr(dm_module, "set_setting",
+                        lambda k, v: stamped.append((k, v)))
+    dm._full_refresh_active = True
+    dm._current_job_kind = None
+
+    # A bulk job still pending -> the refresh isn't finished yet.
+    dm._queue.put((DownloadManager.PRIORITY_BULK, next(dm._seq), "bulk", "A.json"))
+    dm._maybe_stamp_finished()
+    assert stamped == []
+    assert dm._full_refresh_active is True
+
+    # Drain the last bulk job -> now the refresh is complete and gets stamped.
+    dm._queue.get_nowait()
+    dm._maybe_stamp_finished()
+    assert any(k == "last_auto_finished" for k, _ in stamped)
+    assert dm._full_refresh_active is False
+
+
+def test_maybe_stamp_finished_noop_outside_refresh(dm, monkeypatch):
+    stamped = []
+    monkeypatch.setattr(dm_module, "set_setting",
+                        lambda k, v: stamped.append((k, v)))
+    dm._full_refresh_active = False
+    dm._maybe_stamp_finished()
+    assert stamped == []
+
+
+def test_expand_full_refresh_all_downloaded_stamps_finished(dm, monkeypatch, tmp_path):
+    pages = tmp_path / "pages"
+    pages.mkdir()
+    (pages / "A.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(dm_module, "PAGES_DIR", str(pages))
+    monkeypatch.setattr(dm_module, "get_already_downloaded", lambda: {"A"})
+    stamped = []
+    monkeypatch.setattr(dm_module, "set_setting",
+                        lambda k, v: stamped.append((k, v)))
+
+    queued = dm._expand_full_refresh()
+    assert queued == 0
+    assert dm._full_refresh_active is False
+    # Nothing to download -> the refresh counts as finished immediately.
+    assert any(k == "last_auto_finished" for k, _ in stamped)
+
+
 def test_start_guards_against_duplicate_refresh(dm):
     first = dm.start()
     assert first["success"] is True

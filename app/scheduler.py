@@ -19,6 +19,62 @@ DAY_SECONDS = 24 * 60 * 60
 CHECK_INTERVAL = 60 * 60  # re-evaluate the schedule hourly while running
 
 
+def humanize_duration(seconds):
+    """Compact magnitude of a duration, e.g. '5m', '3h', '2d'."""
+    seconds = int(abs(seconds))
+    if seconds < 60:
+        return "less than a minute"
+    if seconds < 3600:
+        return f"{seconds // 60}m"
+    if seconds < 86400:
+        return f"{seconds // 3600}h"
+    return f"{seconds // 86400}d"
+
+
+def time_ago(ts, now):
+    """'2h ago' for a past timestamp, 'never' for a falsy one."""
+    if not ts:
+        return "never"
+    return f"{humanize_duration(now - ts)} ago"
+
+
+def time_until(ts, now):
+    """'in 3h' for a future timestamp, 'due now' once it has passed."""
+    delta = ts - now
+    if delta <= 0:
+        return "due now"
+    return f"in {humanize_duration(delta)}"
+
+
+def schedule_status(now=None):
+    """Snapshot of the auto-refresh schedule for the UI.
+
+    Returns enabled flag, last finished time (real completion, WP8), and the
+    next scheduled run — each with a friendly relative-time string.
+    """
+    now = now if now is not None else time.time()
+    enabled = bool(get_setting('auto_import_enabled', False))
+    last_run = get_setting('last_auto_run', 0) or 0
+    last_finished = get_setting('last_auto_finished', 0) or 0
+
+    if not enabled:
+        next_run, next_run_in = 0, "off"
+    elif not last_run:
+        next_run, next_run_in = now, "due now"
+    else:
+        next_run = last_run + DAY_SECONDS
+        next_run_in = time_until(next_run, now)
+
+    return {
+        "enabled": enabled,
+        "last_finished": last_finished,
+        "last_finished_ago": time_ago(last_finished, now),
+        "last_run": last_run,
+        "next_run": next_run,
+        "next_run_in": next_run_in,
+    }
+
+
 def should_auto_run(now, last_auto_run, enabled, interval=DAY_SECONDS):
     """Pure decision: is an automated full refresh due?
 
