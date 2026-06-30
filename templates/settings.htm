@@ -277,6 +277,23 @@
 	</div>
 </div>
 
+<!-- Appearance -->
+<div class="settings-section">
+	<h3>Appearance</h3>
+
+	<div class="setting-row">
+		<div class="setting-info">
+			<div class="setting-label">Dark Mode</div>
+			<div class="setting-description">Switch the interface between light and dark. Saved on this device (same as the &#9790; / &#9728; button in the header).</div>
+		</div>
+		<div class="setting-control">
+			<div class="form-check form-switch">
+				<input class="form-check-input" type="checkbox" id="darkModeToggle" onchange="cwToggleTheme()">
+			</div>
+		</div>
+	</div>
+</div>
+
 <!-- Display Defaults -->
 <div class="settings-section">
 	<h3>Display Defaults</h3>
@@ -543,6 +560,18 @@ function importDownloads() {
 			el.textContent = 'Error: ' + err;
 		});
 }
+</script>
+
+<script>
+// Keep the Dark Mode switch in sync with the actual theme — on load and whenever
+// the theme changes (e.g. via the header button). Theme state lives in
+// localStorage (theme.js), so this toggle is client-side, not a saved setting.
+function cwSyncDarkToggle() {
+	var t = document.getElementById('darkModeToggle');
+	if (t) t.checked = document.documentElement.classList.contains('dark');
+}
+window.cwOnThemeChange = cwSyncDarkToggle;
+document.addEventListener('DOMContentLoaded', cwSyncDarkToggle);
 </script>
 
 </body>

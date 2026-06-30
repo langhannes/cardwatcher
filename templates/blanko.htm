@@ -36,6 +36,19 @@ CardWatcher
 	display:none !important;
 }
 
+/* The card-art panel (#image) has a fixed 376px height from CardMarket's CSS.
+   In the flex layout the raw image isn't bound to it and spills past its border,
+   so constrain it to the panel and keep its aspect ratio. */
+#image { overflow: hidden; }
+#image img {
+	max-width: 100%;
+	max-height: 100%;
+	width: auto;
+	height: auto;
+	min-width: 0;
+	object-fit: contain;
+}
+
 /* Price-move direction on a listing row. The row's status background can itself
    be green/orange/red (new / quantity change), so a plain colored number risks
    green-on-green; a light halo keeps the dark text legible on any status color. */
