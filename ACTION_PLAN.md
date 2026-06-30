@@ -49,8 +49,43 @@ WP3 should precede WP6; WP4 and WP5 are best done together (same module + route)
 - ⬜ **WP6** Backtests & tuning — **not started** (needs WP3's `metric_history`).
 - ✅ **WP7** Consolidate the download UI — done (dedicated `/import` page).
 - ✅ **WP8** Surface next/last update times — done.
+- ⬜ **WP9** Article scan thumbnails — **PoC done** (`poc_article_images.py`),
+  productionizing pending. Independent of the others.
 
-Remaining: **WP3** then **WP6**.
+Remaining: **WP3** then **WP6**; plus independent **WP9** (PoC validated).
+
+---
+
+## Issues
+
+Bugs/polish, independent of the WPs above.
+
+### Fixed
+
+- ✅ **"Show console" setting did nothing when false** — nothing acted on the
+  setting. Added `_apply_console_visibility()` in `cardwatcher.py` (hides the
+  console via `ShowWindow` on the frozen Windows build at startup).
+- ✅ **Default search parameters weren't applied** — the `/` route + `search.htm`
+  hardcoded `name`/`last`/`available`. Added `_resolve_search_params()` which
+  falls back to the `default_*` settings; template now uses the resolved values.
+- ✅ **Cards far too large in desktop view on mobile** — `blanko.htm` was missing
+  the `<meta name="viewport">` tag (so mobile rendered it desktop-width). Added it.
+- ✅ **Dashboard card icons too small** — `.dash-thumb` bumped from 76×106 to
+  120×168 in `dashboard.htm`.
+- ✅ **Dark mode: filter toggles invisible on card pages** — checkboxes got a dark
+  fill + dark border. `dark.css` now gives them a lighter border + coloured
+  checked state.
+- ✅ **Dark mode: settings & import pages not themed** — those pages hardcode light
+  backgrounds on their own `.settings-section`/`.setting-row`/etc. classes.
+  `dark.css` now re-skins them, and the switch toggles get a light knob image.
+- ✅ **Search button was still in German ("Suche")** — translated to "Search" in
+  `dashboard.htm`, `search.htm`, `blanko.htm` (+ blanko search placeholder).
+- ✅ **No "My Collection" entry from the dashboard** — added the same green
+  My Collection button to the dashboard header.
+- ✅ **Dark mode: green-on-green unreadable prices on card pages** — a new listing's
+  green status row + a green price-drop number collided. Price direction is now a
+  `.price-down`/`.price-up` class (light/dark themed in CSS) with a contrast halo,
+  instead of an unoverridable inline color.
 
 ---
 
@@ -255,6 +290,62 @@ and **when the last update finished**.
 - **Deliverable:** the UI clearly shows when data was last refreshed and when the
   next automatic refresh is due.
 
+## WP9 — Article scan thumbnails ⬜ NOT STARTED (PoC done, independent)
+
+**Goal:** capture the seller-uploaded photos ("scans") that some listings carry
+and show a thumbnail next to those listings. Reference, not full archival.
+
+**PoC (done):** `poc_article_images.py` proves the whole flow end-to-end against a
+graded One Piece card (5/5 scans captured). Key findings, which the production
+work should reuse:
+
+- **The earlier failure mode:** re-requesting the image URL from a separate HTTP
+  client (`requests` with copied cookies) is **blocked by Cloudflare** — only the
+  real browser is allowed. So we must never make a second request.
+- **Cloudflare-safe capture:** while the browser is still on the product page
+  (already cleared), have it load the scan as an `<img>` subresource (exactly what
+  a hover does), then read the bytes from the browser cache via CDP
+  `Page.getResourceContent`. No new network request; also sidesteps CORS taint.
+- **Where the URLs live:** each scanned row has `span.fonticon-camera` whose
+  tooltip (`data-bs-original-title`) embeds the thumbnail `<img>`, plus a row
+  anchor to the full scan. Host: `marketplace-article-scans.s3.cardmarket.com`.
+  Pattern: full `…/<articleId>/<articleId>.jpg`, thumb `…/<articleId>/<articleId>t.jpg`
+  (the `?timestamp=` query is just cache-busting and can be dropped).
+- **The article ID is the key** — it's the dedup handle (skip if already saved)
+  and the link between a scan and its specific listing.
+- **Size decision — thumbnails only.** Measured: full scans ~2.6 MB avg (up to
+  5712 px), thumbnails ~34 KB avg (~350–620 px, still condition-legible) — a ~75×
+  difference. Across 175 cards, full scans would be multiple GB (bloats the synced
+  git data repo); thumbnails are tens of MB. Keep the `<articleId>` + full-scan URL
+  so full-res can be fetched on demand later if ever wanted.
+
+**Approach (productionize):**
+
+- Extract scans during the existing download, in
+  `app/selenium_downloader.download_page_with_selenium` **after the HTML is saved
+  while the browser is still on the page**: run the scan-extraction JS (lift
+  `DISCOVERY_JS` / `LOAD_IMAGES_JS` from the PoC), derive `<id>t.jpg`, load the
+  thumbs in-browser, capture via CDP. Per page this only loads a few small
+  subresources — negligible time, no extra navigations, no extra Cloudflare risk.
+- **Dedup:** save to `IMAGES_DIR/scans/<articleId>t.jpg`; skip if the file exists.
+- **Wire to listings:** parse the article ID (and `has_scan`) in
+  `app/listing.py` `parse_from_row()`, serialize in `__str__`/`import_listing`
+  (mirror the steps in CLAUDE.md "add a new card attribute"), and render the
+  thumbnail in `build_row()` next to the row (served via the existing
+  `/data/images/` route, e.g. `data/images/scans/<id>t.jpg`).
+- **Decided — no pruning:** a scan is **kept after its listing ends** (it stays a
+  useful historical record of that specific copy's condition). Dedup by
+  `<articleId>`; never delete on end.
+- **Decision still open:** **commit thumbnails to the data repo** (tens of MB,
+  syncs everywhere) **or keep them local-only** (`.gitignore images/scans/`).
+
+**Tests:** scan-URL derivation (full↔thumb, strip timestamp); article-ID parse in
+`parse_from_row()` on a fixture row that has `fonticon-camera`; dedup skip when the
+file already exists. Browser/CDP path stays manual (as with the rest of selenium).
+
+**Deliverable:** during a normal refresh, new listings with seller photos get a
+~34 KB thumbnail saved once and shown beside the listing.
+
 ---
 
 ## Verification (end to end)
@@ -275,7 +366,10 @@ and **when the last update finished**.
    card-page **Download** still imports that card.
 8. WP8: with auto-refresh on, the UI shows "Last refresh: … ago · Next: in …";
    after a refresh completes the "last finished" time updates.
-9. Rebuild exe via the clean venv and smoke-test `GET / → 200`.
+9. WP9: refresh a card that has seller photos → a `<id>t.jpg` thumbnail lands in
+   `images/scans/` (downloaded once, not re-fetched on the next refresh) and shows
+   beside the listing; a card without photos adds nothing.
+10. Rebuild exe via the clean venv and smoke-test `GET / → 200`.
 
 ## Notes
 

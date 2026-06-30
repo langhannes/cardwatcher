@@ -39,7 +39,7 @@ from app.collection import (
     load_pages_for_collection
 )
 from app.sync import sync_manager
-from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR, get_setting
+from app.config import PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR, get_setting, load_settings
 from app.scheduler import AutoRefreshScheduler, schedule_status
 
 # Daily auto-refresh timer (started in __main__). Enqueues a full refresh via
@@ -55,6 +55,21 @@ def _import_downloads_if_manual():
     """
     if not get_setting('auto_import_enabled', False):
         watcherbase.import_all_pages()
+
+
+def _resolve_search_params():
+    """Resolve the search grid's sort/price params from the request, falling back
+    to the user's configured display defaults (settings) when not in the URL."""
+    settings = load_settings()
+    sort_by = request.args.get('sortBy') or settings.get('default_sort_by', 'name')
+    # Explicit ?order wins; then the configured default; finally a smart default
+    # (ascending for name, descending for price-like fields).
+    sort_order = (request.args.get('order')
+                  or settings.get('default_sort_order')
+                  or ('asc' if sort_by == 'name' else 'desc'))
+    price_period = request.args.get('pricePeriod') or settings.get('default_price_period', 'last')
+    price_type = request.args.get('priceType') or settings.get('default_price_type', 'available')
+    return sort_by, sort_order, price_period, price_type
 
 # Filter out noisy status endpoint from logs
 class StatusFilter(logging.Filter):
@@ -75,16 +90,12 @@ def cardwatcher():
     if request.args.get('searchString',''):
         print("cardwatcher | search: " +request.args.get('searchString',''))
         _import_downloads_if_manual()
-        sort_by = request.args.get('sortBy', 'name')
-        # Smart default: descending for price fields, ascending for name
-        default_order = 'asc' if sort_by == 'name' else 'desc'
-        sort_order = request.args.get('order', default_order)
-        price_period = request.args.get('pricePeriod', 'last')
-        price_type = request.args.get('priceType', 'available')
+        sort_by, sort_order, price_period, price_type = _resolve_search_params()
         collection_filter = request.args.get('collection', '') == 'true'
         collection = Collection().load() if collection_filter else None
         search = watchersearch.build_search(request.args.get('searchString',''), sort_by, sort_order, price_period, price_type, collection)
-        return render_template('search.htm',search_elements=search, sort_order=sort_order)
+        return render_template('search.htm', search_elements=search, sort_by=sort_by,
+                               sort_order=sort_order, price_period=price_period, price_type=price_type)
 
     # otherwise we're leaving the search site
     # first, check if the user requested a specifig page
@@ -176,16 +187,12 @@ def cardwatcher():
     # No specific page requested. Show the full search grid only when explicitly
     # asked (Browse all / collection view); otherwise the landing is the dashboard.
     elif request.args.get('view') == 'search' or request.args.get('collection', '') == 'true':
-        sort_by = request.args.get('sortBy', 'name')
-        # Smart default: descending for price fields, ascending for name
-        default_order = 'asc' if sort_by == 'name' else 'desc'
-        sort_order = request.args.get('order', default_order)
-        price_period = request.args.get('pricePeriod', 'last')
-        price_type = request.args.get('priceType', 'available')
+        sort_by, sort_order, price_period, price_type = _resolve_search_params()
         collection_filter = request.args.get('collection', '') == 'true'
         collection = Collection().load() if collection_filter else None
         search = watchersearch.build_search("", sort_by, sort_order, price_period, price_type, collection)
-        return render_template('search.htm',search_elements=search, sort_order=sort_order)
+        return render_template('search.htm', search_elements=search, sort_by=sort_by,
+                               sort_order=sort_order, price_period=price_period, price_type=price_type)
     else:
         return render_template('dashboard.htm', **dashboard.build_dashboard())
 
@@ -675,6 +682,29 @@ def sync_full():
     return jsonify(result)
 
 
+def _apply_console_visibility():
+    """Hide the console window when the show_console setting is off.
+
+    The PyInstaller build ships with console=True, so the packaged app always
+    has its own console window; honour the setting by hiding it at startup.
+    Only meaningful on Windows for the frozen exe — when run as a script the
+    console is the user's own terminal, so we leave it alone.
+    """
+    import sys
+    from app.config import IS_FROZEN
+    if sys.platform != 'win32' or not IS_FROZEN:
+        return
+    if get_setting('show_console', True):
+        return
+    try:
+        import ctypes
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)  # SW_HIDE
+    except Exception:
+        pass
+
+
 def is_port_available(port):
     """Check if a port is available for binding."""
     import socket
@@ -698,6 +728,9 @@ def find_available_port(start_port, max_attempts=10):
 if __name__ == '__main__':
     # Args were parsed and paths initialized in _early_init() above
     args = _startup_args
+
+    # Hide the console window if the user disabled it (frozen Windows build).
+    _apply_console_visibility()
 
     # Ensure data directories exist
     for d in [PAGES_DIR, ARCHIVE_DIR, IMAGES_DIR, CHANGES_DIR, DOWNLOADS_DIR]:

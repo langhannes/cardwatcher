@@ -6,6 +6,7 @@
 
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 <title>
 CardWatcher
@@ -34,6 +35,13 @@ CardWatcher
 .hidden-reverse {
 	display:none !important;
 }
+
+/* Price-move direction on a listing row. The row's status background can itself
+   be green/orange/red (new / quantity change), so a plain colored number risks
+   green-on-green; a light halo keeps the dark text legible on any status color. */
+.price-down { color: rgb(0,100,0) !important; }
+.price-up   { color: rgb(139,0,0) !important; }
+.price-down, .price-up { text-shadow: 0 0 2px rgba(255,255,255,0.9), 0 0 1px rgba(255,255,255,0.9); }
 
 /* Mobile table width fix */
 @media (max-width: 991.98px) {
@@ -97,10 +105,10 @@ CardWatcher
 		<form method="GET" id="searchForm" action="/" class="justify-content-center">
 			<div id="Search" class="form-group mb-0">
 				<div id="autoCompWrapper" class="input-group input-group-sm autocomplete-wrapper show container">
-				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Suche auf&nbsp;Cardmarket..." aria-label="Search" class="form-control autocomplete-input">
+				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Search CardWatcher..." aria-label="Search" class="form-control autocomplete-input">
 
-				<button type="submit" id="search-btn" title="Suche" class="btn btn-light">
-				<span class="mx-2 mx-lg-4 fw-bold ">Suche
+				<button type="submit" id="search-btn" title="Search" class="btn btn-light">
+				<span class="mx-2 mx-lg-4 fw-bold ">Search
 				</span>
 				</button>
 				</div>

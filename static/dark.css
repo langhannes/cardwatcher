@@ -156,3 +156,36 @@ html.dark .dash-hint, html.dark .dash-secondary, html.dark .dash-empty { color: 
 	color: inherit;
 }
 html.dark .cw-theme-btn { border-color: var(--cw-border); }
+
+/* ---- Settings & Import pages (their own .settings-section/.setting-row CSS
+   hardcodes light backgrounds; re-skin those custom classes for dark) ---- */
+html.dark .settings-section { background: var(--cw-surface) !important; border-color: var(--cw-border) !important; }
+html.dark .settings-section h3,
+html.dark .section-head { border-color: var(--cw-border) !important; color: var(--cw-text) !important; }
+html.dark .setting-row,
+html.dark .stat-row { border-color: var(--cw-border) !important; }
+html.dark .setting-label,
+html.dark .stat-value { color: var(--cw-text) !important; }
+html.dark .setting-description,
+html.dark .stat-label,
+html.dark .muted { color: var(--cw-muted) !important; }
+html.dark .save-bar { background: var(--cw-surface) !important; border-color: var(--cw-border) !important; }
+html.dark .path-display,
+html.dark .progress-track { background: var(--cw-input) !important; color: var(--cw-text) !important; }
+
+/* ---- Checkboxes & switches (filter toggles on the card page + the settings
+   switches were near-invisible: a dark box on a dark surface, and the switch
+   knob is a near-black circle). Give them a visible border, a clearly-coloured
+   checked state, and a light switch knob. ---- */
+html.dark .form-check-input { background-color: var(--cw-input); border-color: var(--cw-muted); }
+html.dark .form-check-input:checked { background-color: #3d6fd4 !important; border-color: #3d6fd4 !important; }
+html.dark .form-switch .form-check-input:not(:checked) {
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%28255,255,255,0.6%29'/%3e%3c/svg%3e");
+}
+
+/* Price-move numbers on the listing rows: brighten the light-mode dark green/red
+   (unreadable on a dark surface) and use a dark halo so they stay legible on the
+   green/orange/red status backgrounds too. */
+html.dark .price-down { color: #5fd98a !important; }
+html.dark .price-up   { color: #ff8a8a !important; }
+html.dark .price-down, html.dark .price-up { text-shadow: 0 1px 2px rgba(0,0,0,0.9); }

@@ -4,6 +4,10 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 
 ![Dashboard](image-files/main-page.jpeg)
 
+## Download
+
+**[⬇ Download CardWatcher.exe](https://github.com/hanfffff/cardmarket/raw/main/dist/CardWatcher.exe)** (Windows, ~29 MB) — no installation needed. After downloading, follow the one-time data setup in [Quick Start](#quick-start-windows) below.
+
 ## Features
 
 - **Dashboard**: home-page overview — biggest price movers, biggest net supply losses, and pressure/divergence signals.
@@ -25,7 +29,7 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 
 ### Option 1: Pre-built executable
 
-1. Download `CardWatcher.exe` from the `dist/` folder.
+1. [Download `CardWatcher.exe`](https://github.com/hanfffff/cardmarket/raw/main/dist/CardWatcher.exe) (or grab it from the `dist/` folder).
 2. Clone the data repository:
    ```bash
    git clone https://github.com/hanfffff/cardwatcher-data.git
@@ -74,7 +78,7 @@ Use the search box or **Browse all cards** for the full gallery.
 
 ![Browse all cards](image-files/search.png)
 
-A sortable gallery of every tracked card. Each card shows **Avail**, **Sold**, **From**, and **Floor** prices (each with its change for the selected period) plus a stock badge with quantity, +added/−sold, and Net Supply Change % (green = growing, red = shrinking). Sort by name, price, price change, lowest price, or a supply metric, over Last Download / 1W / 1M / 2M / 6M.
+A sortable gallery of every tracked card. Each card shows **Avail**, **Sold**, **From**, and **Floor** prices (each with its change for the selected period) plus a stock badge with quantity, +added/−sold, and Net Supply Change % (green = growing, red = shrinking). Sort by name, price, price change, lowest price, or a supply metric, over Last Download / 1W / 1M / 2M / 6M. The starting sort order, period, and price type come from **Display Defaults** in **Settings**, so the gallery opens the way you prefer.
 
 ### Card detail
 

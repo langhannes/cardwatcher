@@ -61,8 +61,8 @@
 				<div id="autoCompWrapper" class="input-group input-group-sm autocomplete-wrapper show container">
 				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Search CardWatcher..." aria-label="Search" class="form-control autocomplete-input">
 
-				<button type="submit" id="search-btn" title="Suche" class="btn btn-light">
-				<span class="mx-2 mx-lg-4 fw-bold ">Suche
+				<button type="submit" id="search-btn" title="Search" class="btn btn-light">
+				<span class="mx-2 mx-lg-4 fw-bold ">Search
 				</span>
 				</button>
 				</div>
@@ -84,11 +84,11 @@
 	</h1>
 	<div class="d-flex align-items-center gap-3">
 		{% if request.args.get('collection') == 'true' %}
-			<a href="/?view=search&searchString={{ request.args.get('searchString', '') }}&sortBy={{ request.args.get('sortBy', 'name') }}&order={{ request.args.get('order', 'asc') }}&pricePeriod={{ request.args.get('pricePeriod', 'last') }}&priceType={{ request.args.get('priceType', 'available') }}" class="btn btn-sm btn-outline-primary">
+			<a href="/?view=search&searchString={{ request.args.get('searchString', '') }}&sortBy={{ sort_by }}&order={{ sort_order }}&pricePeriod={{ price_period }}&priceType={{ price_type }}" class="btn btn-sm btn-outline-primary">
 				Show All Cards
 			</a>
 		{% else %}
-			<a href="/?collection=true&searchString={{ request.args.get('searchString', '') }}&sortBy={{ request.args.get('sortBy', 'name') }}&order={{ request.args.get('order', 'asc') }}&pricePeriod={{ request.args.get('pricePeriod', 'last') }}&priceType={{ request.args.get('priceType', 'available') }}" class="btn btn-success">
+			<a href="/?collection=true&searchString={{ request.args.get('searchString', '') }}&sortBy={{ sort_by }}&order={{ sort_order }}&pricePeriod={{ price_period }}&priceType={{ price_type }}" class="btn btn-success">
 				<span style="margin-right: 4px;">&#9829;</span> My Collection
 			</a>
 		{% endif %}
@@ -140,17 +140,17 @@
 			</div>
 			<div class="col-auto">
 				<select name="sortBy" id="sortBy" class="form-select form-select-sm" onchange="document.getElementById('order').value = (this.value === 'name' ? 'asc' : 'desc'); this.form.submit()">
-					<option value="name" {% if request.args.get('sortBy', 'name') == 'name' %}selected{% endif %}>Name</option>
+					<option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
 					{% if request.args.get('collection') == 'true' %}
-					<option value="collectionPrice" {% if request.args.get('sortBy', 'name') == 'collectionPrice' %}selected{% endif %}>Collection Value</option>
+					<option value="collectionPrice" {% if sort_by == 'collectionPrice' %}selected{% endif %}>Collection Value</option>
 					{% else %}
-					<option value="price" {% if request.args.get('sortBy', 'name') == 'price' %}selected{% endif %}>Price</option>
-					<option value="priceChange" {% if request.args.get('sortBy', 'name') == 'priceChange' %}selected{% endif %}>Price Change (€)</option>
-					<option value="percentChange" {% if request.args.get('sortBy', 'name') == 'percentChange' %}selected{% endif %}>Percentage Change (%)</option>
-					<option value="lowestPrice" {% if request.args.get('sortBy', 'name') == 'lowestPrice' %}selected{% endif %}>Lowest Price</option>
-					<option value="netSupply" {% if request.args.get('sortBy', 'name') == 'netSupply' %}selected{% endif %}>Net Supply Change</option>
-					<option value="drainage" {% if request.args.get('sortBy', 'name') == 'drainage' %}selected{% endif %}>Drainage</option>
-					<option value="inflation" {% if request.args.get('sortBy', 'name') == 'inflation' %}selected{% endif %}>Inflation</option>
+					<option value="price" {% if sort_by == 'price' %}selected{% endif %}>Price</option>
+					<option value="priceChange" {% if sort_by == 'priceChange' %}selected{% endif %}>Price Change (€)</option>
+					<option value="percentChange" {% if sort_by == 'percentChange' %}selected{% endif %}>Percentage Change (%)</option>
+					<option value="lowestPrice" {% if sort_by == 'lowestPrice' %}selected{% endif %}>Lowest Price</option>
+					<option value="netSupply" {% if sort_by == 'netSupply' %}selected{% endif %}>Net Supply Change</option>
+					<option value="drainage" {% if sort_by == 'drainage' %}selected{% endif %}>Drainage</option>
+					<option value="inflation" {% if sort_by == 'inflation' %}selected{% endif %}>Inflation</option>
 					{% endif %}
 				</select>
 			</div>
@@ -169,11 +169,11 @@
 			</div>
 			<div class="col-auto">
 				<select name="pricePeriod" id="pricePeriod" class="form-select form-select-sm" onchange="this.form.submit()">
-					<option value="last" {% if request.args.get('pricePeriod', 'last') == 'last' %}selected{% endif %}>Last Download</option>
-					<option value="1w" {% if request.args.get('pricePeriod', 'last') == '1w' %}selected{% endif %}>1 Week</option>
-					<option value="1m" {% if request.args.get('pricePeriod', 'last') == '1m' %}selected{% endif %}>1 Month</option>
-					<option value="2m" {% if request.args.get('pricePeriod', 'last') == '2m' %}selected{% endif %}>2 Months</option>
-					<option value="6m" {% if request.args.get('pricePeriod', 'last') == '6m' %}selected{% endif %}>6 Months</option>
+					<option value="last" {% if price_period == 'last' %}selected{% endif %}>Last Download</option>
+					<option value="1w" {% if price_period == '1w' %}selected{% endif %}>1 Week</option>
+					<option value="1m" {% if price_period == '1m' %}selected{% endif %}>1 Month</option>
+					<option value="2m" {% if price_period == '2m' %}selected{% endif %}>2 Months</option>
+					<option value="6m" {% if price_period == '6m' %}selected{% endif %}>6 Months</option>
 				</select>
 			</div>
 			<div class="col-auto">
@@ -181,8 +181,8 @@
 			</div>
 			<div class="col-auto">
 				<select name="priceType" id="priceType" class="form-select form-select-sm" onchange="this.form.submit()">
-					<option value="available" {% if request.args.get('priceType', 'available') == 'available' %}selected{% endif %}>Available</option>
-					<option value="sold" {% if request.args.get('priceType', 'available') == 'sold' %}selected{% endif %}>Sold</option>
+					<option value="available" {% if price_type == 'available' %}selected{% endif %}>Available</option>
+					<option value="sold" {% if price_type == 'sold' %}selected{% endif %}>Sold</option>
 				</select>
 			</div>
 			{% endif %}

@@ -19,7 +19,7 @@
 .dash-subhead { font-size: 1.05rem; font-weight: 800; margin: 0 0 12px; color: #333; }
 .dash-card { display: flex; align-items: center; gap: 16px; padding: 12px 14px; border: 1px solid #ececec; border-left: 5px solid var(--accent, #ccc); border-radius: 14px; margin-bottom: 12px; text-decoration: none; color: inherit; background: linear-gradient(135deg, #ffffff 55%, var(--tint, transparent)); box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform .15s ease, box-shadow .15s ease; }
 .dash-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,0,0,0.16); }
-.dash-thumb { width: 76px; height: 106px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; background: #f3f3f3; box-shadow: 0 2px 6px rgba(0,0,0,0.22); transition: transform .15s ease; }
+.dash-thumb { width: 120px; height: 168px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; background: #f3f3f3; box-shadow: 0 2px 6px rgba(0,0,0,0.22); transition: transform .15s ease; }
 .dash-card:hover .dash-thumb { transform: scale(1.05); }
 .dash-info { min-width: 0; flex: 1; }
 .dash-primary { display: inline-block; font-size: 1.2rem; font-weight: 800; color: var(--accent, #333); background: var(--tint, rgba(0,0,0,0.05)); padding: 2px 12px; border-radius: 999px; line-height: 1.35; }
@@ -47,6 +47,7 @@
 		</a>
 		<div class="d-flex align-items-center gap-2">
 			<a href="/?view=search" class="btn btn-sm btn-outline-primary">Browse all cards</a>
+			<a href="/?collection=true" class="btn btn-sm btn-success"><span style="margin-right: 4px;">&#9829;</span> My Collection</a>
 			<a href="/import" class="btn btn-sm btn-outline-primary" title="Downloads, import &amp; sync management">&#8681; Import &amp; Sync</a>
 			<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings">&#9881; Settings</a>
 			<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()">&#9790;</button>
@@ -57,7 +58,7 @@
 			<div id="Search" class="form-group mb-0">
 				<div id="autoCompWrapper" class="input-group input-group-sm autocomplete-wrapper show container">
 				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Search CardWatcher..." aria-label="Search" class="form-control autocomplete-input">
-				<button type="submit" id="search-btn" title="Suche" class="btn btn-light"><span class="mx-2 mx-lg-4 fw-bold">Suche</span></button>
+				<button type="submit" id="search-btn" title="Search" class="btn btn-light"><span class="mx-2 mx-lg-4 fw-bold">Search</span></button>
 				</div>
 			</div>
 		</form>

@@ -298,9 +298,13 @@ class Listing:
         quantity_string = str(self.quantity) + (("(" + str(self.quantity-self.quantity_change) + ")") if self.quantity_change else "")
     
         price_style = ""
+        # Direction of the last price move, applied as a class so dark.css can
+        # theme it (an inline color would be a colored-text-on-colored-status-bg
+        # contrast trap, e.g. dark green on a green "new listing" row).
+        price_class = ""
         price_string = str(self.price).replace('.',',') + ("0" if len(str(self.price).split('.')[1]) == 1 else "")
         if len(self.previous_prices) > 0:
-            price_style = " style=\"color:" + ("rgb(0,100,0)" if self.price < float(self.previous_prices[-1][0]) else "rgb(139,0,0)") + " !important\" "
+            price_class = "price-down" if self.price < float(self.previous_prices[-1][0]) else "price-up"
             price_string += " (" + str(self.previous_prices[-1][0]).replace('.',',') + ("0" if len(str(self.previous_prices[-1][0]).split('.')[1]) == 1 else "") + ")"
             list_of_previous_prices = ""
             for prev_price in self.previous_prices:
@@ -321,6 +325,7 @@ class Listing:
         if self.archived:
             price_string = f"<s style=\"opacity: 0.6;\">{price_string}</s>"
             price_style = " style=\"color: #999 !important;\" "
+            price_class = ""
 
         first_edition_marker = ""
         first_edition_hider = "none"
@@ -409,7 +414,7 @@ class Listing:
                                 "<div style=\"width:10rem\" class=\"price-container d-flex justify-content-end\">" + \
                                     "<div class=\"d-flex flex-column\">" + \
                                         "<div class=\"d-flex align-items-center justify-content-end\">" + \
-                                            "<span class=\"color-primary small text-end text-nowrap fw-bold\" " + price_style + ">" + \
+                                            "<span class=\"color-primary small text-end text-nowrap fw-bold " + price_class + "\" " + price_style + ">" + \
                                                 price_string +\
                                             "</span>" + \
                                         "</div>" + \
