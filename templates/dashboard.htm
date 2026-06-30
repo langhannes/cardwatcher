@@ -47,7 +47,6 @@
 		</a>
 		<div class="d-flex align-items-center gap-2">
 			<a href="/?view=search" class="btn btn-sm btn-outline-primary">Browse all cards</a>
-			<a href="/?collection=true" class="btn btn-sm btn-success"><span style="margin-right: 4px;">&#9829;</span> My Collection</a>
 			<a href="/import" class="btn btn-sm btn-outline-primary" title="Downloads, import &amp; sync management">&#8681; Import &amp; Sync</a>
 			<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings">&#9881; Settings</a>
 			<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()">&#9790;</button>
@@ -66,7 +65,10 @@
 </header>
 
 <main class="container" style="padding-top: 100px; padding-bottom: 5rem;">
-	<h1 class="page-header">Dashboard</h1>
+	<div class="d-flex justify-content-between align-items-center mb-3">
+		<h1 class="page-header mb-0">Dashboard</h1>
+		<a href="/?collection=true" class="btn btn-success"><span style="margin-right: 4px;">&#9829;</span> My Collection</a>
+	</div>
 
 	<section class="dash-section">
 		<h2>Biggest price movers</h2>
