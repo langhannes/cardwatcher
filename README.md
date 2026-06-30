@@ -6,7 +6,7 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 
 ## Download
 
-**[⬇ Download CardWatcher.exe](https://github.com/hanfffff/cardmarket/raw/main/dist/CardWatcher.exe)** (Windows, ~29 MB) — no installation needed. After downloading, follow the one-time data setup in [Quick Start](#quick-start-windows) below.
+**[⬇ Download CardWatcher.exe](https://github.com/langhannes/cardwatcher/raw/main/dist/CardWatcher.exe)** (Windows, ~29 MB) — no installation needed. After downloading, follow the one-time data setup in [Quick Start](#quick-start-windows) below.
 
 ## Features
 
@@ -29,10 +29,10 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 
 ### Option 1: Pre-built executable
 
-1. [Download `CardWatcher.exe`](https://github.com/hanfffff/cardmarket/raw/main/dist/CardWatcher.exe) (or grab it from the `dist/` folder).
+1. [Download `CardWatcher.exe`](https://github.com/langhannes/cardwatcher/raw/main/dist/CardWatcher.exe) (or grab it from the `dist/` folder).
 2. Clone the data repository:
    ```bash
-   git clone https://github.com/hanfffff/cardwatcher-data.git
+   git clone https://github.com/langhannes/cardwatcher-data.git
    ```
 3. Run `CardWatcher.exe`. On first launch, point it at your `cardwatcher-data` folder.
 
@@ -41,8 +41,8 @@ The app opens in your browser automatically. If port 5000 is busy, it picks the 
 ### Option 2: Run from source
 
 ```bash
-git clone https://github.com/hanfffff/cardwatcher.git
-git clone https://github.com/hanfffff/cardwatcher-data.git
+git clone https://github.com/langhannes/cardwatcher.git
+git clone https://github.com/langhannes/cardwatcher-data.git
 cd cardwatcher
 pip install -r requirements.txt
 python cardwatcher.py
