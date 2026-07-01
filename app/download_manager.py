@@ -89,6 +89,10 @@ class DownloadManager:
         self._last_error = ""
         self._last_import_report = None
         self._finished_names = []  # page names completed since last idle
+        # Page names whose *download* failed (e.g. wrong URL -> no listings
+        # table). Kept across idle so the user can see which cards didn't update;
+        # cleared when a new full refresh starts.
+        self._failed_names = []
 
     # ------------------------------------------------------------------ status
 
@@ -116,6 +120,7 @@ class DownloadManager:
             "import_rows_skipped": report.get("rows_skipped", 0),
             "import_report": self._last_import_report,
             "finished": list(self._finished_names),
+            "failed_names": list(self._failed_names),
         }
 
     def _calculate_progress(self, total):
@@ -159,6 +164,7 @@ class DownloadManager:
         with self._lock:
             if self._bulk_in_progress():
                 return {"success": False, "message": "Download already in progress"}
+            self._failed_names = []  # fresh slate for this refresh
             self._enqueue(self.PRIORITY_FULL, "full_refresh")
             return {"success": True, "message": "Full refresh queued"}
 
@@ -396,6 +402,9 @@ class DownloadManager:
         else:  # "failed"
             self._failed_pages += 1
             self._finished_names.append(base)
+            self._last_error = f"Download failed: {base} (page may have moved or the URL is wrong)"
+            if base not in self._failed_names:
+                self._failed_names.append(base)
 
         # Rate-limit the *next* bulk download; singles never wait.
         self._schedule_next_bulk()
