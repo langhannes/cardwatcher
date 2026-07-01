@@ -61,20 +61,46 @@ def test_calculate_market_prices_blend_sold_floor():
     now = time.time()
     active = [make_listing(seller=f"ask{i}", price=p, quantity=1, ended=False)
               for i, p in enumerate([10.0, 11.0, 12.0, 13.0])]
+    # Five fresh sales -> recency-weighted W=5 >= BLEND_SOLD_FULL, so the sold
+    # side is fully trusted and blend is the plain 0.6/0.4 mix.
     sold = [make_listing(seller=f"sold{i}", price=20.0, quantity=1, ended=True, date=now)
-            for i in range(3)]
+            for i in range(5)]
 
     result = watcherbase.calculate_market_prices(_FakePage(active + sold))
 
     assert result["language"] == "English"
     assert result["n_ask"] == 4
-    assert result["n_sold"] == 3
-    # transaction: time-weighted mean of three 20.0 sales at "now" -> 20.0
+    assert result["n_sold"] == 5
+    # transaction: time-weighted mean of five 20.0 sales at "now" -> 20.0
     assert result["transaction"] == 20.0
     # floor: 10th percentile of [10,11,12,13] -> 10.3
     assert result["floor"] == 10.3
-    # blend: (0.6*20 + 0.4*10.3) = 16.12
+    # blend: full confidence -> (0.6*20 + 0.4*10.3) = 16.12
     assert result["blend"] == 16.12
+
+
+def test_blend_leans_to_floor_when_sales_are_sparse():
+    # A surging card: live asks have run up (floor ~100) but only a single, older
+    # realized sale exists at the old price (20). With W well below BLEND_SOLD_FULL
+    # the sold side's weight is largely handed to the floor, so blend sits far
+    # above the stale sold price instead of lagging at the old 0.6/0.4 level.
+    now = time.time()
+    day = 24 * 60 * 60
+    active = [make_listing(seller=f"ask{i}", price=p, quantity=1, ended=False)
+              for i, p in enumerate([100.0, 102.0, 104.0, 106.0, 108.0])]
+    sold = [make_listing(seller="sold0", price=20.0, quantity=1, ended=True,
+                         date=now - 20 * day)]  # one old sale -> low confidence
+
+    result = watcherbase.calculate_market_prices(_FakePage(active + sold))
+
+    # One ~20-day-old sale: W = 2^(-20/10) = 0.25, conf = 0.25/4 ~= 0.06.
+    # The plain 0.6/0.4 blend would be ~0.6*20 + 0.4*100 = 52; adaptive weighting
+    # keeps blend much closer to the live floor.
+    assert result["transaction"] == 20.0
+    assert result["floor"] >= 100.0
+    plain_blend = 0.6 * result["transaction"] + 0.4 * result["floor"]
+    assert result["blend"] > plain_blend + 20      # clearly leaning to floor
+    assert result["blend"] >= 0.8 * result["floor"]  # and close to it
 
 
 def test_calculate_market_prices_floor_only_when_no_sales():

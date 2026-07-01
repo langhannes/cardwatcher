@@ -28,8 +28,21 @@ class watcherbase():
     # wins, so one mislabeled stray doesn't hijack an otherwise foreign market.
     MIN_LANGUAGE_LISTINGS = 2
     # Blend weights: transaction (realized sales) vs floor (buy-now low band).
+    # These are the weights when sold data is fully trusted; the transaction's
+    # share is scaled down by a confidence factor (see BLEND_SOLD_PRIOR) when
+    # recent sales are sparse or stale, so blend leans on the live floor during
+    # surges instead of lagging behind an old sold average.
     BLEND_W_TRANSACTION = 0.6
     BLEND_W_FLOOR = 0.4
+    # Confidence in the sold price = min(1, W / BLEND_SOLD_FULL), where W is a
+    # recency-weighted count of realized sales. Crucially W uses a SHORTER
+    # half-life than the sold average (BLEND_SOLD_HALFLIFE below): the average is
+    # smoothed over a month, but a month-old sale should not vouch for today's
+    # price after a surge, so confidence must decay faster. At/above BLEND_SOLD_FULL
+    # blend is the full 0.6/0.4 mix (well-sold cards unchanged); below it the sold
+    # share shades to the live floor; with no fresh sales blend is the pure floor.
+    BLEND_SOLD_FULL = 4.0
+    BLEND_SOLD_HALFLIFE = 10.0  # days; recency horizon for trusting sold data
     # Percentile of the (outlier-filtered) asks used as the buy-now floor.
     FLOOR_PERCENTILE = 10
     # Minimum samples before we trust the condition-filtered set; else broaden.
@@ -146,7 +159,32 @@ class watcherbase():
 
         return weighted_sum / total_weight
 
-    
+    def _recency_weight_sum(price_date_pairs, half_life_days=30, reference_time=None):
+        """Sum of the exponential-decay weights used by the time-weighted average.
+
+        Mirrors calculate_price_average_time_weighted's weighting so it reads as
+        an "effective number of recent sales": many fresh sales -> large sum,
+        a few old sales -> small sum. Used to gauge confidence in the sold price.
+        """
+        if not price_date_pairs:
+            return 0.0
+        now = reference_time if reference_time is not None else time.time()
+        total = 0.0
+        for _price, timestamp in price_date_pairs:
+            try:
+                ts = float(timestamp) if timestamp else 0
+            except (ValueError, TypeError):
+                ts = 0
+            if ts <= 0:
+                days_ago = 365
+            else:
+                days_ago = (now - ts) / (24 * 60 * 60)
+                if days_ago < 0:
+                    continue
+            total += math.pow(2, -days_ago / half_life_days)
+        return total
+
+
 
     def get_price_at_time(listing, target_time):
         """
@@ -548,6 +586,7 @@ class watcherbase():
 
         # Transaction: realized sales, IQR-filtered then time-weighted.
         transaction = 0.0
+        sold_weight = 0.0  # recency-weighted count of sales -> confidence in sold
         if sold_f:
             sold_pairs = [(p, l.date) for (l, p) in sold_f]
             bounds = watcherbase._iqr_bounds([p for p, _ in sold_pairs])
@@ -557,6 +596,9 @@ class watcherbase():
                     sold_pairs = kept
             transaction = watcherbase.calculate_price_average_time_weighted(
                 sold_pairs, reference_time=at_time)
+            sold_weight = watcherbase._recency_weight_sum(
+                sold_pairs, half_life_days=watcherbase.BLEND_SOLD_HALFLIFE,
+                reference_time=at_time)
 
         # Floor: low band of outlier-filtered current asks.
         floor = 0.0
@@ -569,11 +611,20 @@ class watcherbase():
                     asks = kept
             floor = watcherbase._percentile(asks, watcherbase.FLOOR_PERCENTILE)
 
-        # Blend: weighted mix, falling back to whichever component exists.
+        # Blend: adaptive mix of the sold price and the live floor. The sold
+        # side's weight is scaled by confidence = min(1, W / BLEND_SOLD_FULL),
+        # where W is the recency-weighted count of realized sales. With enough
+        # fresh sales (W >= BLEND_SOLD_FULL) confidence is 1 and blend is the full
+        # 0.6/0.4 mix; when sales are sparse or stale confidence falls toward 0
+        # and the sold share is handed to the floor, so blend tracks the live
+        # market during a surge instead of lagging behind an old sold average.
         if transaction > 0 and floor > 0:
             wt = watcherbase.BLEND_W_TRANSACTION
             wf = watcherbase.BLEND_W_FLOOR
-            blend = (wt * transaction + wf * floor) / (wt + wf)
+            conf = min(1.0, sold_weight / watcherbase.BLEND_SOLD_FULL)
+            tw = wt * conf                 # effective sold weight
+            fw = wf + wt * (1 - conf)      # floor absorbs the rest
+            blend = (tw * transaction + fw * floor) / (wt + wf)
         elif transaction > 0:
             blend = transaction
         else:
