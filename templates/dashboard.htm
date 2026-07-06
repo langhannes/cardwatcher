@@ -9,6 +9,7 @@
 <link href="{{ url_for('static', filename='Search/master.min.css') }}" rel="stylesheet">
 <link href="{{ url_for('static', filename='Search/product_search.min.css') }}" rel="stylesheet">
 <style>
+html, body { background-image: none !important; }
 .dash-section { margin-bottom: 2.75rem; }
 .dash-section > h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; letter-spacing: -0.01em; }
 .dash-section > h2::before { content: ''; width: 6px; height: 1.1em; border-radius: 3px; background: linear-gradient(180deg, #012169, #3b6fd4); }
@@ -26,15 +27,9 @@
 .dash-name { font-size: 0.92rem; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px; }
 .dash-secondary { font-size: 0.8rem; color: #888; margin-top: 3px; }
 .dash-empty { color: #999; font-size: 0.85em; padding: 8px 0; }
-/* The download/sync bar is tall and, inside its fixed-height navbar row, was
-   centered and overflowing upward — covering the bottom of the search field so
-   only its top was tappable. Let each header row grow to its content instead,
-   and give the page enough top clearance on small screens. */
 #header .navbar { height: auto !important; min-height: 45px; }
 #header .navbar > * { align-self: center; }
-@media (max-width: 768px) {
-	main.container { padding-top: 230px !important; }
-}
+@media (max-width: 768px) { main.container { padding-top: 230px !important; } }
 </style>
 <link href="{{ url_for('static', filename='dark.css') }}" rel="stylesheet">
 <script src="{{ url_for('static', filename='theme.js') }}"></script>
@@ -73,21 +68,31 @@
 	<section class="dash-section">
 		<h2>Biggest price movers</h2>
 		<div class="dash-hint">Largest 1-week change in blended market price (cards with &ge;10 available).</div>
-		<div class="dash-cols">{{ movers_html | safe }}</div>
+		<div class="dash-cols" id="moversPanel"><div class="dash-empty">Loading…</div></div>
 	</section>
 
 	<section class="dash-section">
 		<h2>Net supply loss</h2>
 		<div class="dash-hint">Cards being bought up this week — supply shrinking fastest (started week with &ge;10 available).</div>
-		<div class="dash-grid">{{ supply_html | safe }}</div>
+		<div class="dash-grid" id="supplyPanel"></div>
 	</section>
 
 	<section class="dash-section">
 		<h2>Pressure / divergence</h2>
 		<div class="dash-hint">Where price and supply moves disagree. <b>Coiling</b>: supply drained but price flat (possible upward pressure). <b>Overbought</b>: price up without supply shrinking. <b>Cooling</b>: price up but sellers piling in.</div>
-		<div class="dash-cols">{{ pressure_html | safe }}</div>
+		<div class="dash-cols" id="pressurePanel"></div>
 	</section>
 </main>
 
+<script>
+window.CW_CFG = {
+	imageBase: 'data/images/',
+	priceHistoryUrl: 'data/price_history.json',
+	manifestUrl: 'api/manifest',
+	cardHref: function (fileName) { return '?name=' + encodeURIComponent(fileName); }
+};
+</script>
+<script src="{{ url_for('static', filename='viewer/cw-common.js') }}"></script>
+<script src="{{ url_for('static', filename='viewer/dashboard.js') }}"></script>
 </body>
 </html>

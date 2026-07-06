@@ -61,6 +61,8 @@ python -m pytest
 
 ## Using CardWatcher
 
+The dashboard and the search gallery are rendered **client-side** in your browser: they load a lightweight card index from `/api/manifest` plus `price_history.json` and build the grids with JavaScript (`static/viewer/`), which keeps them responsive as your tracked-card count grows. Individual card pages are still rendered server-side.
+
 ### Dashboard (home page)
 
 The home page summarises the most notable movements across all tracked cards in three panels:

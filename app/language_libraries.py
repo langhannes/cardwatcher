@@ -49,7 +49,8 @@ language_flags = {  "German":"-80px -0px",
                     "Dutch":"-368px -0px",
                     "Polish":"-400px -0px",
                     "Czech":"-432px -0px",
-                    "Hungarian":"-464px -0px"}
+                    "Hungarian":"-464px -0px",
+                    "Indonesian":"-544px -0px"}
 language_to_english = {"Deutsch":"German","German":"German",
                        "Englisch":"English","English":"English",
                        "Japanisch":"Japanese","Japanese":"Japanese",
@@ -64,7 +65,8 @@ language_to_english = {"Deutsch":"German","German":"German",
                        "Niederländisch":"Dutch","Dutch":"Dutch",
                        "Polnisch":"Polish","Polish":"Polish",
                        "Tschechisch":"Czech","Czech":"Czech",
-                       "Ungarisch":"Hungarian","Hungarian":"Hungarian"}
+                       "Ungarisch":"Hungarian","Hungarian":"Hungarian",
+                       "Indonesisch":"Indonesian","Indonesian":"Indonesian"}
 location_to_english = { "Artikelstandort: Italien":"Item location: Italy","Item location: Italy":"Item location: Italy",
                         "Artikelstandort: Malta":"Item location: Malta","Item location: Malta":"Item location: Malta",
                         "Artikelstandort: Deutschland":"Item location: Germany","Item location: Germany":"Item location: Germany",

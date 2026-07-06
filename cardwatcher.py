@@ -90,12 +90,9 @@ def cardwatcher():
     if request.args.get('searchString',''):
         print("cardwatcher | search: " +request.args.get('searchString',''))
         _import_downloads_if_manual()
-        sort_by, sort_order, price_period, price_type = _resolve_search_params()
-        collection_filter = request.args.get('collection', '') == 'true'
-        collection = Collection().load() if collection_filter else None
-        search = watchersearch.build_search(request.args.get('searchString',''), sort_by, sort_order, price_period, price_type, collection)
-        return render_template('search.htm', search_elements=search, sort_by=sort_by,
-                               sort_order=sort_order, price_period=price_period, price_type=price_type)
+        # Grid is rendered client-side (static/viewer/search.js) over the manifest
+        # + price_history; the server just serves the shell.
+        return render_template('search.htm')
 
     # otherwise we're leaving the search site
     # first, check if the user requested a specifig page
@@ -187,14 +184,11 @@ def cardwatcher():
     # No specific page requested. Show the full search grid only when explicitly
     # asked (Browse all / collection view); otherwise the landing is the dashboard.
     elif request.args.get('view') == 'search' or request.args.get('collection', '') == 'true':
-        sort_by, sort_order, price_period, price_type = _resolve_search_params()
-        collection_filter = request.args.get('collection', '') == 'true'
-        collection = Collection().load() if collection_filter else None
-        search = watchersearch.build_search("", sort_by, sort_order, price_period, price_type, collection)
-        return render_template('search.htm', search_elements=search, sort_by=sort_by,
-                               sort_order=sort_order, price_period=price_period, price_type=price_type)
+        # Client-side grid (see above).
+        return render_template('search.htm')
     else:
-        return render_template('dashboard.htm', **dashboard.build_dashboard())
+        # Dashboard panels are rendered client-side (static/viewer/dashboard.js).
+        return render_template('dashboard.htm')
 
 @app.route('/api/download/start', methods=['POST'])
 def start_download():
@@ -278,6 +272,19 @@ def download_from_url():
 @app.route('/data/images/<path:filename>')
 def serve_image(filename):
     return send_from_directory(IMAGES_DIR, filename)
+
+
+@app.route('/data/price_history.json')
+def serve_price_history():
+    """Serve the precomputed metrics the client-side dashboard/search read."""
+    return send_from_directory(CHANGES_DIR, 'price_history.json')
+
+
+@app.route('/api/manifest', methods=['GET'])
+def api_manifest():
+    """Active + archived card index ({canonical, updated}) for the viewer JS."""
+    import app.viewer as viewer
+    return jsonify(viewer.build_manifest())
 
 
 # Collection API routes

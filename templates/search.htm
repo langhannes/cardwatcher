@@ -1,99 +1,62 @@
-
 <!DOCTYPE html>
-
-<html lang="en" data-browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0">
+<html lang="en" data-browser="viewer">
 <head>
-
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
-<title>Search | Cardwatcher
-</title>
-<meta name="author" content="Sammelkartenmarkt GmbH &amp; Co. KG">
-<meta name="description" content="">
+<title>Search | Cardwatcher</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noIndex,follow">
-<!--[if IE]>
-<link rel="shortcut icon" href="//static.cardmarket.com/img/c0a10b062a8c3b48a5c29b779b3ac51e/static/misc/favicon.ico?>">
-<![endif]-->
-<meta name="msapplication-TileColor" content="#ffffff">
-<meta name="msapplication-TileImage" content="//static.cardmarket.com/img/526dbb9ae52c5e62404fe903e9769807/static/misc/mstile-144x144.png">
 <link href="{{ url_for('static', filename='Search/master.min.css') }}" rel="stylesheet">
 <link href="{{ url_for('static', filename='Search/product_search.min.css') }}" rel="stylesheet">
 <style>
-/* The download/sync bar is tall and, inside its fixed-height navbar row, was
-   centered and overflowing upward — covering the bottom of the search field so
-   only its top was tappable. Let each header row grow to its content instead,
-   and give the page enough top clearance on small screens. */
+html, body { background-image: none !important; }
 #header .navbar { height: auto !important; min-height: 45px; }
 #header .navbar > * { align-self: center; }
-@media (max-width: 768px) {
-	main.container { padding-top: 150px !important; }
-}
+@media (max-width: 768px) { main.container { padding-top: 150px !important; } }
 </style>
 <link href="{{ url_for('static', filename='dark.css') }}" rel="stylesheet">
 <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 
 <body>
-<div tabindex="-1" aria-hidden="true" id="modal" class="modal">
-<div class="modal-dialog">
-<div class="modal-content">
-</div>
-</div>
-</div>
 <header id="header" class="fixed-top">
 	<nav class="navbar navbar-light">
 		<a href="/" class="navbar-brand">
-			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">
-			CardWatcher
-			</span>
+			<span style="font-family:var(--bs-body-font-family);font-weight:bold;font-size:32px;" class="me-2">CardWatcher</span>
 		</a>
-		
 		<div class="d-flex align-items-center gap-2">
 			<a href="/import" class="btn btn-sm btn-outline-primary" title="Downloads, import &amp; sync management">&#8681; Import &amp; Sync</a>
 			<a href="/settings" class="btn btn-sm btn-outline-primary" title="Settings">&#9881; Settings</a>
 			<button type="button" class="cw-theme-btn" onclick="cwToggleTheme()">&#9790;</button>
 		</div>
-		</nav>
+	</nav>
 	<nav class="navbar navbar-light">
 		<form method="GET" id="searchForm" action="/" class="justify-content-center">
 			<div id="Search" class="form-group mb-0">
 				<div id="autoCompWrapper" class="input-group input-group-sm autocomplete-wrapper show container">
 				<input type="text" name="searchString" id="ProductSearchInput" placeholder="Search CardWatcher..." aria-label="Search" class="form-control autocomplete-input">
-
-				<button type="submit" id="search-btn" title="Search" class="btn btn-light">
-				<span class="mx-2 mx-lg-4 fw-bold ">Search
-				</span>
-				</button>
+				<button type="submit" id="search-btn" title="Search" class="btn btn-light"><span class="mx-2 mx-lg-4 fw-bold">Search</span></button>
 				</div>
 			</div>
 		</form>
 	</nav>
 </header>
 
-
 <main class="container" style="padding-top: 100px;">
-<!-- Collection Toggle Bar -->
 <div class="d-flex justify-content-between align-items-center mb-3">
 	<h1 class="H1_PageTitle page-header mb-0">
-		{% if request.args.get('collection') == 'true' %}
-			My Collection
-		{% else %}
-			Articles
-		{% endif %}
+		{% if request.args.get('collection') == 'true' %}My Collection{% else %}Articles{% endif %}
 	</h1>
 	<div class="d-flex align-items-center gap-3">
+		<span id="resultCount" class="text-muted small"></span>
 		{% if request.args.get('collection') == 'true' %}
-			<a href="/?view=search&searchString={{ request.args.get('searchString', '') }}&sortBy={{ sort_by }}&order={{ sort_order }}&pricePeriod={{ price_period }}&priceType={{ price_type }}" class="btn btn-sm btn-outline-primary">
-				Show All Cards
-			</a>
+			<a href="/?view=search" class="btn btn-sm btn-outline-primary">Show All Cards</a>
 		{% else %}
-			<a href="/?collection=true&searchString={{ request.args.get('searchString', '') }}&sortBy={{ sort_by }}&order={{ sort_order }}&pricePeriod={{ price_period }}&priceType={{ price_type }}" class="btn btn-success">
-				<span style="margin-right: 4px;">&#9829;</span> My Collection
-			</a>
+			<a href="/?collection=true" class="btn btn-success"><span style="margin-right: 4px;">&#9829;</span> My Collection</a>
 		{% endif %}
 	</div>
 </div>
+
 {% if request.args.get('collection') == 'true' %}
 <div id="collectionTotalBar" class="mb-4 p-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(40,167,69,0.3);">
 	<div class="d-flex justify-content-between align-items-start">
@@ -104,8 +67,6 @@
 		</div>
 		<div style="font-size: 3em; opacity: 0.3;">&#9829;</div>
 	</div>
-
-	<!-- Period Selector Buttons -->
 	<div id="historyPeriodBtns" class="mt-3" style="display: none;">
 		<div class="d-flex flex-wrap gap-3 align-items-center">
 			<div class="btn-group btn-group-sm" role="group">
@@ -120,97 +81,91 @@
 			</div>
 		</div>
 	</div>
-
-	<!-- Chart Container -->
 	<div id="historyChartContainer" class="mt-3" style="display: none; background: rgba(255,255,255,0.1); border-radius: 6px; padding: 10px;">
 		<canvas id="collectionHistoryChart" height="120"></canvas>
 	</div>
 </div>
 {% endif %}
+
 <div class="row mb-3">
 	<div class="col-12">
-		<form method="GET" action="/" class="row g-2 align-items-center">
-			<input type="hidden" name="searchString" id="searchStringHidden" value="{{ request.args.get('searchString', '') }}">
-				<input type="hidden" name="view" value="search">
-			{% if request.args.get('collection') == 'true' %}
-			<input type="hidden" name="collection" value="true">
-			{% endif %}
+		<div class="row g-2 align-items-center">
+			<input type="hidden" id="searchStringHidden" value="{{ request.args.get('searchString', '') }}">
+			<div class="col-auto"><label for="sortBy" class="col-form-label">Sort by:</label></div>
 			<div class="col-auto">
-				<label for="sortBy" class="col-form-label">Sort by:</label>
-			</div>
-			<div class="col-auto">
-				<select name="sortBy" id="sortBy" class="form-select form-select-sm" onchange="document.getElementById('order').value = (this.value === 'name' ? 'asc' : 'desc'); this.form.submit()">
-					<option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+				<select id="sortBy" class="form-select form-select-sm">
+					<option value="name">Name</option>
 					{% if request.args.get('collection') == 'true' %}
-					<option value="collectionPrice" {% if sort_by == 'collectionPrice' %}selected{% endif %}>Collection Value</option>
+					<option value="collectionPrice">Collection Value</option>
 					{% else %}
-					<option value="price" {% if sort_by == 'price' %}selected{% endif %}>Price</option>
-					<option value="priceChange" {% if sort_by == 'priceChange' %}selected{% endif %}>Price Change (€)</option>
-					<option value="percentChange" {% if sort_by == 'percentChange' %}selected{% endif %}>Percentage Change (%)</option>
-					<option value="lowestPrice" {% if sort_by == 'lowestPrice' %}selected{% endif %}>Lowest Price</option>
-					<option value="netSupply" {% if sort_by == 'netSupply' %}selected{% endif %}>Net Supply Change</option>
-					<option value="drainage" {% if sort_by == 'drainage' %}selected{% endif %}>Drainage</option>
-					<option value="inflation" {% if sort_by == 'inflation' %}selected{% endif %}>Inflation</option>
+					<option value="price">Price</option>
+					<option value="priceChange">Price Change (€)</option>
+					<option value="percentChange">Percentage Change (%)</option>
+					<option value="lowestPrice">Lowest Price</option>
+					<option value="netSupply">Net Supply Change</option>
+					<option value="drainage">Drainage</option>
+					<option value="inflation">Inflation</option>
 					{% endif %}
 				</select>
 			</div>
+			<div class="col-auto"><label for="order" class="col-form-label">Order:</label></div>
 			<div class="col-auto">
-				<label for="order" class="col-form-label">Order:</label>
-			</div>
-			<div class="col-auto">
-				<select name="order" id="order" class="form-select form-select-sm" onchange="this.form.submit()">
-					<option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
-					<option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+				<select id="order" class="form-select form-select-sm">
+					<option value="asc">Ascending</option>
+					<option value="desc">Descending</option>
 				</select>
 			</div>
 			{% if request.args.get('collection') != 'true' %}
+			<div class="col-auto"><label for="pricePeriod" class="col-form-label">Price Period:</label></div>
 			<div class="col-auto">
-				<label for="pricePeriod" class="col-form-label">Price Period:</label>
-			</div>
-			<div class="col-auto">
-				<select name="pricePeriod" id="pricePeriod" class="form-select form-select-sm" onchange="this.form.submit()">
-					<option value="last" {% if price_period == 'last' %}selected{% endif %}>Last Download</option>
-					<option value="1w" {% if price_period == '1w' %}selected{% endif %}>1 Week</option>
-					<option value="1m" {% if price_period == '1m' %}selected{% endif %}>1 Month</option>
-					<option value="2m" {% if price_period == '2m' %}selected{% endif %}>2 Months</option>
-					<option value="6m" {% if price_period == '6m' %}selected{% endif %}>6 Months</option>
+				<select id="pricePeriod" class="form-select form-select-sm">
+					<option value="last">Last Download</option>
+					<option value="1w">1 Week</option>
+					<option value="1m">1 Month</option>
+					<option value="2m">2 Months</option>
+					<option value="6m">6 Months</option>
 				</select>
 			</div>
+			<div class="col-auto"><label for="priceType" class="col-form-label">Price Type:</label></div>
 			<div class="col-auto">
-				<label for="priceType" class="col-form-label">Price Type:</label>
-			</div>
-			<div class="col-auto">
-				<select name="priceType" id="priceType" class="form-select form-select-sm" onchange="this.form.submit()">
-					<option value="available" {% if price_type == 'available' %}selected{% endif %}>Available</option>
-					<option value="sold" {% if price_type == 'sold' %}selected{% endif %}>Sold</option>
+				<select id="priceType" class="form-select form-select-sm">
+					<option value="available">Available</option>
+					<option value="sold">Sold</option>
 				</select>
 			</div>
 			{% endif %}
-		</form>
+		</div>
 	</div>
 </div>
-<section style="margin-bottom: 75.1667px; padding-bottom: 5rem;">
 
-<div class="row">
-	{{  search_elements  |  safe  }}
-</div>
+<section style="margin-bottom: 75.1667px; padding-bottom: 5rem;">
+	<div class="row" id="searchResults"><div class="col-12 text-muted">Loading…</div></div>
 </section>
 </main>
 
+<script>
+window.CW_CFG = {
+	imageBase: 'data/images/',
+	priceHistoryUrl: 'data/price_history.json',
+	manifestUrl: 'api/manifest',
+	collection: true,
+	collectionApi: 'api/collection',
+	cardHref: function (fileName) { return '?name=' + encodeURIComponent(fileName); }
+};
+</script>
+<script src="{{ url_for('static', filename='viewer/cw-common.js') }}"></script>
+<script src="{{ url_for('static', filename='viewer/search.js') }}"></script>
+
 <script src="{{ url_for('static', filename='Blanko/Chart_2_7_2.min.js') }}"></script>
 <script>
+// Collection total + value-history chart (unchanged; only shown in collection view).
 let collectionChart = null;
 let currentPeriod = '2m';
-
-// Add-by-URL and sync now live on the Import & Sync page (/import).
-
-// Collection history chart functions
 let currentMode = 'acquisition';
 
 function loadCollectionHistory(period, mode) {
 	currentPeriod = period || currentPeriod;
 	currentMode = mode || currentMode;
-
 	fetch('/api/collection/value-history?period=' + currentPeriod + '&mode=' + currentMode)
 		.then(r => r.json())
 		.then(data => {
@@ -219,135 +174,52 @@ function loadCollectionHistory(period, mode) {
 				document.getElementById('historyPeriodBtns').style.display = 'none';
 				return;
 			}
-
-			// Show containers
 			document.getElementById('historyChartContainer').style.display = 'block';
 			document.getElementById('historyPeriodBtns').style.display = 'block';
-
-			// Update change display
 			var changeEl = document.getElementById('collectionChange');
 			var changeSign = data.change >= 0 ? '+' : '';
 			var modeLabel = currentMode === 'portfolio' ? ' (market)' : '';
 			changeEl.innerHTML = changeSign + '€' + data.change.toFixed(2) +
 				' (' + changeSign + data.change_percent.toFixed(1) + '%)' + modeLabel + ' vs ' +
 				getPeriodLabel(currentPeriod) + ' ago';
-
-			// Destroy existing chart
-			if (collectionChart) {
-				collectionChart.destroy();
-			}
-
-			// Create new chart
+			if (collectionChart) collectionChart.destroy();
 			var ctx = document.getElementById('collectionHistoryChart').getContext('2d');
 			collectionChart = new Chart(ctx, {
 				type: 'line',
-				data: {
-					labels: formatDateLabels(data.labels),
-					datasets: [{
-						label: 'Collection Value',
-						data: data.values,
-						fill: true,
-						backgroundColor: 'rgba(255,255,255,0.2)',
-						borderColor: 'rgba(255,255,255,0.9)',
-						borderWidth: 2,
-						lineTension: 0.3,
-						pointRadius: 2,
-						pointHoverRadius: 4,
-						spanGaps: true
-					}]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					scales: {
-						yAxes: [{
-							ticks: {
-								beginAtZero: false,
-								fontColor: 'rgba(255,255,255,0.8)',
-								callback: function(value) {
-									return '€' + value.toFixed(0);
-								}
-							},
-							gridLines: {
-								color: 'rgba(255,255,255,0.1)'
-							}
-						}],
-						xAxes: [{
-							ticks: {
-								fontColor: 'rgba(255,255,255,0.8)',
-								maxTicksLimit: 8
-							},
-							gridLines: {
-								color: 'rgba(255,255,255,0.1)'
-							}
-						}]
-					},
-					legend: {
-						display: false
-					},
-					tooltips: {
-						callbacks: {
-							label: function(item) {
-								return '€' + item.yLabel.toFixed(2);
-							}
-						}
-					}
-				}
+				data: { labels: formatDateLabels(data.labels), datasets: [{
+					label: 'Collection Value', data: data.values, fill: true,
+					backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.9)',
+					borderWidth: 2, lineTension: 0.3, pointRadius: 2, pointHoverRadius: 4, spanGaps: true }] },
+				options: { responsive: true, maintainAspectRatio: false,
+					scales: { yAxes: [{ ticks: { beginAtZero: false, fontColor: 'rgba(255,255,255,0.8)',
+						callback: function(v){ return '€' + v.toFixed(0); } }, gridLines: { color: 'rgba(255,255,255,0.1)' } }],
+						xAxes: [{ ticks: { fontColor: 'rgba(255,255,255,0.8)', maxTicksLimit: 8 }, gridLines: { color: 'rgba(255,255,255,0.1)' } }] },
+					legend: { display: false },
+					tooltips: { callbacks: { label: function(item){ return '€' + item.yLabel.toFixed(2); } } } }
 			});
 		})
-		.catch(err => {
-			console.error('Error loading collection history:', err);
-		});
+		.catch(err => console.error('Error loading collection history:', err));
 }
+function formatDateLabels(labels) { return labels.map(function(d){ var p = d.split('-'); return p[2] + '.' + p[1]; }); }
+function getPeriodLabel(period) { return ({ '2w':'2 weeks','2m':'2 months','6m':'6 months','1y':'1 year' })[period] || period; }
 
-function formatDateLabels(labels) {
-	return labels.map(function(dateStr) {
-		var parts = dateStr.split('-');
-		return parts[2] + '.' + parts[1];  // DD.MM format
-	});
-}
-
-function getPeriodLabel(period) {
-	var labels = { '2w': '2 weeks', '2m': '2 months', '6m': '6 months', '1y': '1 year' };
-	return labels[period] || period;
-}
-
-// Check status on page load
 document.addEventListener('DOMContentLoaded', function() {
-
-	// Load collection total if on collection page
 	var collectionTotal = document.getElementById('collectionTotal');
 	if (collectionTotal) {
-		fetch('/api/collection/value')
-			.then(r => r.json())
-			.then(data => {
-				collectionTotal.innerHTML = '€' + data.total_value.toFixed(2) + '<span style="font-size: 0.5em; margin-left: 12px; opacity: 0.9;">' + data.card_count + ' cards (' + data.item_count + ' items)</span>';
-				// Load history chart
-				loadCollectionHistory('2m');
-			})
-			.catch(err => {
-				collectionTotal.textContent = 'Error loading';
-				console.error('Error loading collection value:', err);
-			});
-
-		// Period button click handlers
+		fetch('/api/collection/value').then(r => r.json()).then(data => {
+			collectionTotal.innerHTML = '€' + data.total_value.toFixed(2) + '<span style="font-size: 0.5em; margin-left: 12px; opacity: 0.9;">' + data.card_count + ' cards (' + data.item_count + ' items)</span>';
+			loadCollectionHistory('2m');
+		}).catch(err => { collectionTotal.textContent = 'Error loading'; console.error(err); });
 		document.querySelectorAll('.period-btn').forEach(function(btn) {
 			btn.addEventListener('click', function() {
-				document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
-				this.classList.add('active');
-				loadCollectionHistory(this.dataset.period, null);
+				document.querySelectorAll('.period-btn').forEach(function(b){ b.classList.remove('active'); });
+				this.classList.add('active'); loadCollectionHistory(this.dataset.period, null);
 			});
 		});
-
-		// Mode button click handlers
 		document.querySelectorAll('.mode-btn').forEach(function(btn) {
 			btn.addEventListener('click', function() {
-				document.querySelectorAll('.mode-btn').forEach(function(b) {
-					b.classList.remove('active', 'btn-light');
-					b.classList.add('btn-outline-light');
-				});
-				this.classList.add('active', 'btn-light');
-				this.classList.remove('btn-outline-light');
+				document.querySelectorAll('.mode-btn').forEach(function(b){ b.classList.remove('active','btn-light'); b.classList.add('btn-outline-light'); });
+				this.classList.add('active','btn-light'); this.classList.remove('btn-outline-light');
 				loadCollectionHistory(null, this.dataset.mode);
 			});
 		});

@@ -282,10 +282,10 @@ class Page:
             new_listing.archived = self.listings[0].archived
             # if the new page only has listings from germany, we don't want to show listings from other countries as ended
             if (page.only_germany
-                and location_to_english[new_listing.seller.country] !=  "Item location: Germany"):
+                and location_to_english.get(new_listing.seller.country, new_listing.seller.country) !=  "Item location: Germany"):
                 new_listing.ended = self.listings[0].ended
             # otherwise, if the language of the old listing is not in the new set of chosen languages, don't show it as ended, either
-            elif language_to_english[new_listing.language] not in page.languages:
+            elif language_to_english.get(new_listing.language, new_listing.language) not in page.languages:
                 new_listing.ended = self.listings[0].ended
             # if the user did not load all listings, don't let listings end that have a higher price than the last listing.
             elif page.loadMoreButton and self.listings[0].price >= highest_price:
@@ -390,7 +390,7 @@ class Page:
             selection += """<div class="form-check">
 	                            <input type="checkbox" name="sellerCountry[7]" id="language-"""+language+"""" value=\"language-"""+language+"""" class="language-checkbox form-check-input mb-1 me-2">
                                 <label for="language-"""+language+"""" class="d-inline-flex form-check-label">
-                                    <span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position:"""+language_flags[language]+""";" class="icon align-self-center me-2">
+                                    <span style="display: inline-block; width: 16px; height: 16px; background-image:url('static/Blanko/ssMain2.png'); background-position:"""+language_flags.get(language_to_english.get(language, language), "")+""";" class="icon align-self-center me-2">
                                     </span>
                                     <span>"""+language+"""</span>
                                 </label>
