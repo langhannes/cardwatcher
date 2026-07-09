@@ -21,16 +21,17 @@
   let COLLECTION_BY_CARD = {};          // canonical -> {qty, total, unit}
 
   function params() {
+    const c = cfg();
     const p = new URLSearchParams(window.location.search);
-    const sortBy = p.get("sortBy") || "name";
-    const order = p.get("order") || (sortBy === "name" ? "asc" : "desc");
+    const sortBy = p.get("sortBy") || c.defaultSortBy || "name";
+    const order = p.get("order") || c.defaultSortOrder || (sortBy === "name" ? "asc" : "desc");
     return {
       q: p.get("q") || p.get("searchString") || "",
       sortBy,
       order,
-      pricePeriod: p.get("pricePeriod") || "last",
-      priceType: p.get("priceType") || "available",
-      collectionView: p.get("collection") === "true" && cfg().collection,
+      pricePeriod: p.get("pricePeriod") || c.defaultPricePeriod || "last",
+      priceType: p.get("priceType") || c.defaultPriceType || "available",
+      collectionView: p.get("collection") === "true" && c.collection,
     };
   }
 

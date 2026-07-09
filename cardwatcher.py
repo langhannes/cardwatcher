@@ -71,6 +71,21 @@ def _resolve_search_params():
     price_type = request.args.get('priceType') or settings.get('default_price_type', 'available')
     return sort_by, sort_order, price_period, price_type
 
+
+def _render_search_shell():
+    """Render the client-side search grid shell, seeding CW_CFG with the user's
+    configured display defaults so the grid opens on the right sort/price view
+    when the URL omits those params (e.g. via the 'Browse all cards' link)."""
+    settings = load_settings()
+    return render_template(
+        'search.htm',
+        default_sort_by=settings.get('default_sort_by', 'name'),
+        # Leave empty when unset so the client applies its smart order default.
+        default_sort_order=settings.get('default_sort_order', ''),
+        default_price_period=settings.get('default_price_period', 'last'),
+        default_price_type=settings.get('default_price_type', 'available'),
+    )
+
 # Filter out noisy status endpoint from logs
 class StatusFilter(logging.Filter):
     def filter(self, record):
@@ -92,7 +107,7 @@ def cardwatcher():
         _import_downloads_if_manual()
         # Grid is rendered client-side (static/viewer/search.js) over the manifest
         # + price_history; the server just serves the shell.
-        return render_template('search.htm')
+        return _render_search_shell()
 
     # otherwise we're leaving the search site
     # first, check if the user requested a specifig page
@@ -185,7 +200,7 @@ def cardwatcher():
     # asked (Browse all / collection view); otherwise the landing is the dashboard.
     elif request.args.get('view') == 'search' or request.args.get('collection', '') == 'true':
         # Client-side grid (see above).
-        return render_template('search.htm')
+        return _render_search_shell()
     else:
         # Dashboard panels are rendered client-side (static/viewer/dashboard.js).
         return render_template('dashboard.htm')

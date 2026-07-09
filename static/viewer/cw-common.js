@@ -139,6 +139,13 @@
     manifestUrl: "manifest.json",               // CardWatcher: "api/manifest"
     collection: false,                          // CardWatcher: true
     collectionApi: "api/collection",
+    // Grid defaults when the URL omits them. CardWatcher overrides these from
+    // the user's settings (Default Sort By / Order / Price Period / Type).
+    // Empty defaultSortOrder means "smart default" (asc for name, desc otherwise).
+    defaultSortBy: "name",
+    defaultSortOrder: "",
+    defaultPricePeriod: "last",
+    defaultPriceType: "available",
     // Link to a card page. archived only matters to the static viewer, which
     // serves active vs archived cards from different dirs.
     cardHref: function (fileName, archived) {
