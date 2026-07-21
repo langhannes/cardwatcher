@@ -105,14 +105,17 @@ def build_dashboard():
             price_pct = (blend_now - blend_1w) / blend_1w * 100
             movers.append((price_pct, canonical, blend_now, blend_1w))
 
-        added = wk.get('listings_added') or 0
-        removed = wk.get('listings_removed') or 0
         base = wk.get('historical_available') or 0
         net_pct = None
         if base >= MIN_BASE:
-            net_pct = (added - removed) / base * 100
+            # Net item change over the week (same quantity the sparkline plots),
+            # so the % badge and the graph agree. Fall back to gross flow.
+            net_items = wk.get('available_change')
+            if net_items is None:
+                net_items = (wk.get('listings_added') or 0) - (wk.get('listings_removed') or 0)
+            net_pct = net_items / base * 100
             if net_pct < 0:
-                supply.append((net_pct, canonical, added, removed, base, blend_now))
+                supply.append((net_pct, canonical, base, available, blend_now))
 
         if price_pct is not None and net_pct is not None:
             pressure_rows.append({
@@ -147,11 +150,11 @@ def build_dashboard():
 
     # --- Net supply loss --------------------------------------------------
     supply.sort(key=lambda x: x[0])  # most negative first
-    def supply_row(net_pct, canonical, added, removed, base, blend_now):
+    def supply_row(net_pct, canonical, base, cur_avail, blend_now):
         return {
             'canonical': canonical, 'color': 'rgb(220,53,69)',
             'primary': f'{round(net_pct,1)}% supply',
-            'secondary': f'{base}→{base + added - removed} avail · {_fmt_eur(blend_now)}',
+            'secondary': f'{base}→{cur_avail} avail · {_fmt_eur(blend_now)}',
         }
     supply_html = _rows([supply_row(*s) for s in supply[:TOP_N]])
 

@@ -357,17 +357,22 @@ class watcherbase():
 
     def calculate_historical_available_count(page, days_ago):
         """
-        Calculate how many listings were available X days ago.
+        Calculate how many items were available X days ago.
         A listing was available if:
         - first_date <= cutoff (existed by then)
         - AND either not ended now, or ended after the cutoff date
+
+        Counts item quantities (summing listing.quantity), not listings, so it is
+        consistent with current_available in calculate_all_period_averages. The
+        listing's current quantity is used as the best available proxy for its
+        quantity at the historical point.
 
         Args:
             page: Page object with listings
             days_ago: Number of days to look back
 
         Returns:
-            int: Number of listings that were available at that time
+            int: Number of items available at that time
         """
         cutoff = time.time() - (days_ago * 24 * 60 * 60)
         count = 0
@@ -398,23 +403,26 @@ class watcherbase():
                     continue
 
             # Listing was available at the historical point in time
-            count += 1
+            count += listing.quantity
 
         return count
 
     def calculate_availability_changes(page, days_ago):
         """
-        Calculate how many listings were added and removed within the last X days.
+        Calculate how many items were added and removed within the last X days.
 
         Added: Listings that are currently available and were first seen within the period
         Removed: Listings that ended within the period (regardless of when first seen)
+
+        Counts item quantities (summing listing.quantity), not listings, so the net
+        supply change stays consistent with current_available / historical_available.
 
         Args:
             page: Page object with listings
             days_ago: Number of days to look back
 
         Returns:
-            tuple: (added_count, removed_count)
+            tuple: (added_items, removed_items)
         """
         cutoff = time.time() - (days_ago * 24 * 60 * 60)
         added = 0
@@ -439,12 +447,12 @@ class watcherbase():
             if not listing.ended:
                 # Active listing - check if it's new since cutoff
                 if first_date > cutoff:
-                    added += 1
+                    added += listing.quantity
             else:
                 # Ended listing - check if it ended within the period
                 # (last_seen > cutoff means it ended after the cutoff, i.e., within the period)
                 if last_seen > cutoff:
-                    removed += 1
+                    removed += listing.quantity
 
         return (added, removed)
 

@@ -36,11 +36,76 @@
     return (v >= 1000 ? String(Math.trunc(v)) : String(Math.round(v * 100) / 100)) + "€";
   }
 
+  // Age (in days) of each historical anchor, oldest first. `now` is age 0.
+  const ANCHORS = [
+    { key: "6m", age: 180 },
+    { key: "2m", age: 60 },
+    { key: "1m", age: 30 },
+    { key: "1w", age: 7 },
+  ];
+
+  // Build a {age, value} trend series from an entry's period snapshots.
+  //   kind "price"  -> blended market price at each anchor + now
+  //   kind "supply" -> available-listing count at each anchor + now
+  function seriesFrom(entry, kind) {
+    const pts = [];
+    for (const a of ANCHORS) {
+      const period = entry[a.key];
+      if (!period) continue;
+      const v = kind === "price"
+        ? (period.market || {}).blend
+        : period.historical_available;
+      if (typeof v === "number" && v > 0) pts.push({ age: a.age, value: v });
+    }
+    const nowVal = kind === "price"
+      ? (entry.market || {}).blend
+      : entry.current_available;
+    if (typeof nowVal === "number" && nowVal > 0) pts.push({ age: 0, value: nowVal });
+    return pts;
+  }
+
+  // Render a compact trend sparkline as inline SVG. `pts` is [{age, value}]
+  // oldest→newest; x is time-proportional across the card's own history span,
+  // y is normalized to the series' own min/max. Returns '' for <2 points.
+  function sparkline(pts, color) {
+    if (!pts || pts.length < 2) return "";
+    const W = 104, H = 40, PADX = 2, PADY = 4;
+    const iw = W - PADX * 2, ih = H - PADY * 2;
+    const maxAge = pts[0].age || 1;            // oldest anchor -> left edge
+    const values = pts.map((p) => p.value);
+    const lo = Math.min(...values), hi = Math.max(...values);
+    const span = hi - lo || 1;
+    const xy = pts.map((p) => {
+      const x = PADX + (1 - p.age / maxAge) * iw;
+      const y = PADY + (1 - (p.value - lo) / span) * ih;
+      return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+    });
+    const line = xy.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
+    const area = line + " L" + xy[xy.length - 1][0] + " " + (H - PADY) +
+      " L" + xy[0][0] + " " + (H - PADY) + " Z";
+    const last = xy[xy.length - 1];
+    const gid = "sg" + (sparkline._n = (sparkline._n || 0) + 1);
+    return (
+      '<svg class="dash-spark" viewBox="0 0 ' + W + " " + H + '" ' +
+        'preserveAspectRatio="none" aria-hidden="true" style="--spark:' + color + '">' +
+        "<defs><linearGradient id=\"" + gid + "\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">" +
+          '<stop offset="0" stop-color="' + color + '" stop-opacity="0.22"/>' +
+          '<stop offset="1" stop-color="' + color + '" stop-opacity="0"/>' +
+        "</linearGradient></defs>" +
+        '<path d="' + area + '" fill="url(#' + gid + ')"/>' +
+        '<path d="' + line + '" fill="none" stroke="' + color + '" ' +
+          'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+        '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="2.6" fill="' + color + '"/>' +
+      "</svg>"
+    );
+  }
+
   function rows(entries) {
     if (!entries.length) return '<div class="dash-empty">No cards meet the criteria yet.</div>';
     return entries.map((e) => {
       const meta = cardMeta(e.canonical);
       const color = e.color || "#444";
+      const spark = sparkline(e.spark, e.sparkColor || color);
       return (
         '<a href="' + window.CW.cfg().cardHref(meta.file, false) + '" class="dash-card" style="--accent:' + color + ";--tint:" + tint(color) + ';">' +
           '<img src="' + meta.image + '" alt="" class="lazy dash-thumb">' +
@@ -49,6 +114,7 @@
             '<div class="dash-name">' + escapeHtml(meta.name) + "</div>" +
             '<div class="dash-secondary">' + e.secondary + "</div>" +
           "</div>" +
+          (spark ? '<div class="dash-spark-wrap">' + spark + "</div>" : "") +
         "</a>"
       );
     }).join("");
@@ -66,23 +132,30 @@
       const wk = entry["1w"] || {};
       const blend1w = (wk.market || {}).blend || 0;
 
+      const priceSeries = seriesFrom(entry, "price");
+      const supplySeries = seriesFrom(entry, "supply");
+
       let pricePct = null;
       if (blendNow > 0 && blend1w > 0 && available >= MIN_AVAILABLE) {
         pricePct = (blendNow - blend1w) / blend1w * 100;
-        movers.push({ pct: pricePct, canonical, now: blendNow, prev: blend1w });
+        movers.push({ pct: pricePct, canonical, now: blendNow, prev: blend1w, priceSeries });
       }
 
-      const added = wk.listings_added || 0;
-      const removed = wk.listings_removed || 0;
       const base = wk.historical_available || 0;
       let netPct = null;
       if (base >= MIN_BASE) {
-        netPct = (added - removed) / base * 100;
-        if (netPct < 0) supply.push({ netPct, canonical, added, removed, base, blendNow });
+        // Net item change over the week — the same quantity the sparkline's last
+        // segment plots (current_available vs the 1w anchor), so the % badge and
+        // the graph can never disagree. Fall back to gross flow if unavailable.
+        const netItems = (wk.available_change != null)
+          ? wk.available_change
+          : ((wk.listings_added || 0) - (wk.listings_removed || 0));
+        netPct = netItems / base * 100;
+        if (netPct < 0) supply.push({ netPct, canonical, base, curAvail: available, blendNow, supplySeries });
       }
 
       if (pricePct != null && netPct != null) {
-        pressureRows.push({ canonical, price_pct: pricePct, net_pct: netPct, blend_now: blendNow });
+        pressureRows.push({ canonical, price_pct: pricePct, net_pct: netPct, blend_now: blendNow, priceSeries });
       }
     }
 
@@ -97,7 +170,7 @@
       const sign = m.pct >= 0 ? "+" : "";
       const color = m.pct > 0 ? "rgb(34,139,34)" : (m.pct < 0 ? "rgb(220,53,69)" : "#666");
       const arrow = m.pct > 0 ? " ↑" : (m.pct < 0 ? " ↓" : "");
-      return { canonical: m.canonical, color, primary: sign + r1(m.pct) + "%" + arrow, secondary: fmtEur(m.prev) + " → " + fmtEur(m.now) };
+      return { canonical: m.canonical, color, primary: sign + r1(m.pct) + "%" + arrow, secondary: fmtEur(m.prev) + " → " + fmtEur(m.now), spark: m.priceSeries };
     };
 
     const moversHtml =
@@ -109,7 +182,8 @@
     const supplyRow = (s) => ({
       canonical: s.canonical, color: "rgb(220,53,69)",
       primary: r1(s.netPct) + "% supply",
-      secondary: s.base + "→" + (s.base + s.added - s.removed) + " avail · " + fmtEur(s.blendNow),
+      secondary: s.base + "→" + s.curAvail + " avail · " + fmtEur(s.blendNow),
+      spark: s.supplySeries,
     });
     const supplyHtml = rows(supply.slice(0, TOP_N).map(supplyRow));
 
@@ -129,6 +203,7 @@
       canonical: r.canonical, color,
       primary: "price " + (r.price_pct >= 0 ? "+" : "") + r1(r.price_pct) + "%",
       secondary: "supply " + r1(r.net_pct) + "% · " + fmtEur(r.blend_now),
+      spark: r.priceSeries, sparkColor: color,
     });
 
     const pressureHtml =

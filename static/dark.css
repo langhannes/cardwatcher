@@ -143,6 +143,7 @@ html.dark .dash-thumb { background: #2a2f36; }
 html.dark .dash-name { color: var(--cw-text) !important; }
 html.dark .dash-section > h2, html.dark .dash-subhead { color: var(--cw-text); }
 html.dark .dash-hint, html.dark .dash-secondary, html.dark .dash-empty { color: var(--cw-muted); }
+html.dark .dash-spark { opacity: 1; }
 
 /* ---- Theme toggle button ---- */
 .cw-theme-btn {
