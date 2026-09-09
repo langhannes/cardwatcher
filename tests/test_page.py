@@ -264,6 +264,30 @@ def test_set_listing_grade_marks_it_manual(tmp_path, monkeypatch):
     assert page.set_listing_grade(99, "PSA", 10.0) is False
 
 
+def test_market_language_survives_a_save_load_round_trip(tmp_path, monkeypatch):
+    """The override is only useful if it outlives the next import."""
+    import app.page as page_module
+    monkeypatch.setattr(page_module, "PAGES_DIR", str(tmp_path))
+    monkeypatch.setattr(page_module, "ARCHIVE_DIR", str(tmp_path))
+
+    page = Page()
+    page.canonical_name = "Test_Card"
+    page.listings = [make_listing(seller="alice")]
+    assert page.market_language == ""
+
+    page.set_market_language("Japanese")
+
+    reloaded = Page()
+    assert reloaded.load_json("Test_Card.json") is True
+    assert reloaded.market_language == "Japanese"
+
+    # Clearing hands the choice back to the automatic pick.
+    reloaded.set_market_language("")
+    again = Page()
+    again.load_json("Test_Card.json")
+    assert again.market_language == ""
+
+
 # --- supply accounting: items, not rows -------------------------------------
 
 def test_inserted_and_sold_count_items_not_rows():

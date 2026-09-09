@@ -176,6 +176,53 @@ def test_dominant_language_non_priority_falls_back_to_supply():
     assert watcherbase.dominant_language(listings) == "German"
 
 
+# --- page_language (whole pool + override) ----------------------------------
+
+def test_page_language_counts_graded_copies():
+    # The real case: a Japanese promo whose supply has gone to slabs. Two raw
+    # S-Chinese copies must not outvote eight Japanese slabs -- pricing the card
+    # in Chinese is what filtering the slabs out of the vote produced.
+    listings = ([make_listing(seller=f"cn{i}", language="S-Chinese") for i in range(2)]
+                + [make_listing(seller=f"jp{i}", language="Japanese",
+                                grade_company="PSA", grade=10.0) for i in range(8)])
+    assert watcherbase.page_language(_FakePage(listings)) == "Japanese"
+
+
+def test_page_language_override_wins():
+    listings = [make_listing(seller=f"en{i}", language="English") for i in range(5)]
+    page = _FakePage(listings)
+    page.market_language = "Japanese"
+    assert watcherbase.page_language(page) == "Japanese"
+
+
+def test_page_language_empty_override_is_automatic():
+    listings = [make_listing(seller=f"en{i}", language="English") for i in range(5)]
+    page = _FakePage(listings)
+    page.market_language = ""
+    assert watcherbase.page_language(page) == "English"
+
+
+def test_page_language_falls_back_to_sold_when_nothing_on_offer():
+    listings = [make_listing(seller=f"jp{i}", language="Japanese", ended=True,
+                             date=time.time())
+                for i in range(3)]
+    assert watcherbase.page_language(_FakePage(listings)) == "Japanese"
+
+
+def test_market_prices_follow_the_language_override():
+    # Both languages on offer raw; the override picks which market is priced.
+    listings = ([make_listing(seller=f"en{i}", language="English", price=p)
+                 for i, p in enumerate([100.0, 110.0, 120.0])]
+                + [make_listing(seller=f"jp{i}", language="Japanese", price=p)
+                   for i, p in enumerate([10.0, 11.0, 12.0])])
+    page = _FakePage(listings)
+    assert watcherbase.calculate_market_prices(page)["language"] == "English"
+    page.market_language = "Japanese"
+    result = watcherbase.calculate_market_prices(page)
+    assert result["language"] == "Japanese"
+    assert result["floor"] < 15.0
+
+
 # --- calculate_all_period_averages (shape) ----------------------------------
 
 def test_calculate_all_period_averages_shape():

@@ -187,6 +187,13 @@ def cardwatcher():
         # Daily history of the three market-price methods for the price graph
         market_series = watcherbase.calculate_market_price_series(page)
 
+        # Which language every price figure on this page describes, plus what the
+        # listings alone would say -- the latter labels the "Automatic" option,
+        # so it has to ignore the override to stay honest.
+        market_language = watcherbase.page_language(page) or ''
+        market_language_auto = watcherbase.page_language(
+            page, respect_override=False) or ''
+
         return render_template(
             'blanko.htm',
             table_content=page.build_table(),
@@ -202,6 +209,10 @@ def cardwatcher():
             grading_selection = page.build_grading_selection(),
             grading_companies = GRADING_COMPANY_CHOICES,
             available_languages = page.languages,
+            market_language = market_language,
+            market_language_auto = market_language_auto,
+            market_language_override = page.market_language,
+            market_language_choices = sorted(set(language_to_english.values())),
             is_archived=page.isArchived,
             page_name=page_name,
             canonical_name=canonical_name,
@@ -355,6 +366,44 @@ def set_listing_grade():
         "company": listing.grade_company,
         "grade": listing.grade,
         "label": listing.grade_label()
+    })
+
+
+@app.route('/api/page/language', methods=['POST'])
+def set_page_market_language():
+    """Pin the language this card's price figures are computed in.
+
+    The automatic choice (watcherbase.page_language) is a heuristic over the
+    listings on offer; on a card down to a handful of raw copies it can settle
+    on a language the card does not really trade in, and only the collector
+    knows better. An empty language hands the choice back to the heuristic.
+    """
+    data = request.get_json(silent=True) or {}
+    if 'canonical_name' not in data:
+        return jsonify({"success": False, "message": "Missing canonical_name"})
+
+    canonical_name = data['canonical_name']
+    if canonical_name.endswith('.json'):
+        canonical_name = canonical_name[:-5]
+
+    language = (data.get('language') or '').strip()
+    if language and language not in set(language_to_english.values()):
+        return jsonify({"success": False, "message": f"Unknown language: {language}"})
+
+    page = watcherbase.get_page(canonical_name + '.json')
+    if not page or not page.canonical_name:
+        return jsonify({"success": False, "message": "Page not found"})
+
+    page.set_market_language(language)
+    # The floor, blend and sold average are all language-filtered, so the stored
+    # metrics are stale the moment this changes -- same reason the grade edit
+    # and the archive actions refresh them.
+    watcherbase.update_price_history_for_page(page)
+
+    return jsonify({
+        "success": True,
+        "language": page.market_language,
+        "effective": watcherbase.page_language(page),
     })
 
 

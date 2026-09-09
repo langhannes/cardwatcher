@@ -48,6 +48,10 @@ class Page:
         self.listings = []
         self.languages = []
         self.only_germany = False
+        # User override for the card's trading language (see
+        # watcherbase.page_language). Empty means "work it out from the
+        # listings"; a language name pins every price figure to that market.
+        self.market_language = ""
         # available counts RAW copies only -- a slab is not supply of the card a
         # buyer of the raw card is shopping for. Graded supply is tracked next to
         # it so nothing is lost.
@@ -94,6 +98,7 @@ class Page:
             'image': self.image,
             'languages': self.languages,
             'only_germany': self.only_germany,
+            'market_language': self.market_language,
             'available': self.available,
             'available_graded': self.available_graded,
             'sold': self.sold,
@@ -143,8 +148,15 @@ class Page:
         self.image = image
         self.languages = data.get('languages', [])
         self.only_germany = data.get('only_germany', False)
+        self.market_language = data.get('market_language', '') or ''
         self.available = data.get('available', 0)
         self.available_graded = data.get('available_graded', 0)
+        # Read back so an in-app edit (a grade correction, a language override,
+        # archiving a listing) can save the page without wiping the last import's
+        # item flow -- these are only recomputed by update_page, so a load/save
+        # round trip that left them at 0 silently threw the numbers away.
+        self.sold = data.get('sold', 0)
+        self.inserted = data.get('inserted', 0)
 
         # Load listings
         self.listings = []
@@ -450,6 +462,19 @@ class Page:
         listing.grade = float(grade) if (company and grade is not None) else None
         listing.grade_source = 'manual'
         print(f"set_listing_grade | listing {index} -> {listing.grade_label() or 'not graded'}")
+        self.save()
+        return True
+
+    def set_market_language(self, language):
+        """Pin (or release) the language every price figure on this page uses.
+
+        ``language=""`` hands the choice back to watcherbase.page_language. The
+        override exists because the automatic answer is a heuristic over what is
+        currently on offer, and on a thin, mostly-graded page that can land on a
+        language the card does not really trade in.
+        """
+        self.market_language = language or ""
+        print(f"set_market_language | {self.canonical_name} -> {self.market_language or 'automatic'}")
         self.save()
         return True
 

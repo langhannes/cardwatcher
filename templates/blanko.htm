@@ -252,6 +252,22 @@ CardWatcher
 							<dd class="col-6 col-xl-7">{{  available  }}{% if available_graded %}
 								<span class="cw-graded-split" title="{{ available_graded }} of the {{ available }} cop{{ 'y' if available == 1 else 'ies' }} available {{ 'is a professionally graded slab' if available_graded == 1 else 'are professionally graded slabs' }}. Price figures on this page describe raw copies only.">incl. {{ available_graded }} graded</span>{% endif %}
 							</dd>
+							<dt class="col-6 col-xl-5">Market language
+							</dt>
+							<dd class="col-6 col-xl-7">
+								<!-- Every price figure on this page (floor, blend, sold average) is
+								     filtered to one language. The automatic pick is a heuristic over
+								     the listings on offer, so it can be wrong on a thin page -- this
+								     is the escape hatch. -->
+								<select id="marketLanguageSelect" class="form-select form-select-sm d-inline-block" style="width:auto; max-width:100%;"
+										title="Language all price figures on this page are computed in">
+									<option value=""{% if not market_language_override %} selected{% endif %}>Automatic{% if market_language_auto %} ({{ market_language_auto }}){% endif %}</option>
+									{% for lang in market_language_choices %}
+									<option value="{{ lang }}"{% if market_language_override == lang %} selected{% endif %}>{{ lang }}</option>
+									{% endfor %}
+								</select>
+								<span id="marketLanguageStatus" class="small ms-1"></span>
+							</dd>
 						</dl>
 						<!-- Price Summary -->
 						<div class="d-flex flex-wrap gap-2 mt-2 mb-2">
@@ -2173,6 +2189,56 @@ CardWatcher
 			reset();
 		});
 	});
+})();
+
+// ---------------------------------------------------------------------------
+// Market language override
+//
+// Reloads on success rather than patching the page: the floor, blend, sold
+// average and the whole price graph are all filtered to this language, so
+// everything on screen is stale the moment it changes.
+// ---------------------------------------------------------------------------
+(function() {
+	var select = document.getElementById('marketLanguageSelect');
+	var status = document.getElementById('marketLanguageStatus');
+	if (!select) return;
+
+	select.addEventListener('change', function() {
+		var previous = select.dataset.current || '';
+		select.disabled = true;
+		status.className = 'small ms-1 text-muted';
+		status.textContent = 'Saving...';
+
+		fetch('/api/page/language', {
+			method: 'POST',
+			headers: {'Content-Type': 'application/json'},
+			body: JSON.stringify({
+				canonical_name: {{ canonical_name|tojson }},
+				language: select.value
+			})
+		})
+		.then(function(response) { return response.json(); })
+		.then(function(data) {
+			if (!data.success) {
+				select.value = previous;
+				select.disabled = false;
+				status.className = 'small ms-1';
+				status.style.color = '#b00';
+				status.textContent = data.message || 'unknown error';
+				return;
+			}
+			window.location.reload();
+		})
+		.catch(function(err) {
+			select.value = previous;
+			select.disabled = false;
+			status.className = 'small ms-1';
+			status.style.color = '#b00';
+			status.textContent = 'Error: ' + err;
+		});
+	});
+
+	select.dataset.current = select.value;
 })();
 
 // ---------------------------------------------------------------------------

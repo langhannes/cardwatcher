@@ -109,8 +109,8 @@ def test_rename_moves_page_and_rewrites_names(data_dirs):
 
 
 def test_rename_preserves_fields_page_load_drops(data_dirs):
-    # sold/inserted are not read back by Page.load_json, so a load/save round
-    # trip would zero them -- the raw-JSON rewrite must keep them.
+    # The raw-JSON rewrite must carry every stored field across, including the
+    # ones no Page attribute would reconstruct.
     write_page(data_dirs["pages"], MIHAWK_OLD)
 
     rename_page(MIHAWK_OLD, MIHAWK_URL)

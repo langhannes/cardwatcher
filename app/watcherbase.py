@@ -652,6 +652,9 @@ class watcherbase():
         mislabeled English listing on a Japanese-only product) can't hijack it.
         Languages outside the priority list (German/French/… only) fall back to
         the most-supplied one.
+
+        Feed this every listing on offer, graded ones included -- see
+        page_language for why the raw slice alone is the wrong electorate.
         """
         totals = {}
         for l in active_listings:
@@ -665,6 +668,31 @@ class watcherbase():
             if lang in pool:
                 return lang
         return max(pool, key=lambda k: pool[k])
+
+    def page_language(page, at_time=None, respect_override=True):
+        """The card's trading language, over *every* copy on offer.
+
+        Deliberately not the language of the raw pool alone. Which language a
+        product trades in is a property of the product, not of the slice you
+        happen to be pricing: on a card whose supply has gone almost entirely to
+        slabs, the handful of raw leftovers is the least representative sample
+        there is. One real page -- a Japanese tournament promo down to five raw
+        listings, four of them singletons -- had two S-Chinese raws outvote a
+        market of eight Japanese slabs and declared the card Chinese, because the
+        slabs were filtered out before the vote ever happened.
+
+        A user override on the page wins outright: the priority order is a rule
+        of thumb about print runs, and the owner of the collection knows which
+        market they are tracking. See Page.market_language. Pass
+        ``respect_override=False`` to ask what the listings alone would say --
+        the card page uses it to label the "Automatic" option honestly.
+        """
+        override = getattr(page, 'market_language', '') or ''
+        if override and respect_override:
+            return override
+        active, sold = watcherbase._listings_at_time(page, at_time, None)
+        return (watcherbase.dominant_language([l for l, _ in active])
+                or watcherbase.dominant_language([l for l, _ in sold]))
 
     def _graded_floor_fallback(page, at_time, lang, n_raw_asks, raw_floor):
         """Slab ask standing in for a raw floor the raw pool cannot supply.
@@ -712,9 +740,10 @@ class watcherbase():
         - blend: weighted mix of transaction and floor (the all-round number).
         All filtered to the dominant language and "average condition" grades.
 
-        ``lang`` pins the language to filter on. When left unset it is the
-        dominant language of the snapshot at ``at_time``. Callers building a
-        time series should pin a single canonical language across every day,
+        ``lang`` pins the language to filter on. When left unset it comes from
+        page_language -- the page's override, else the dominant language over
+        every listing at ``at_time``, slabs included. Callers building a time
+        series should pin a single canonical language across every day,
         otherwise the dominant language flips as the reconstructed supply
         changes and the floor/blend/sold numbers jump between price levels of
         different languages.
@@ -736,8 +765,7 @@ class watcherbase():
             active, sold = watcherbase._listings_at_time(page, at_time, None)
             basis = 'all'
         if lang is watcherbase._UNSET:
-            lang = (watcherbase.dominant_language([l for l, _ in active])
-                    or watcherbase.dominant_language([l for l, _ in sold]))
+            lang = watcherbase.page_language(page, at_time)
 
         def filtered(pairs):
             same_lang = [(l, p) for (l, p) in pairs if lang is None or l.language == lang]
