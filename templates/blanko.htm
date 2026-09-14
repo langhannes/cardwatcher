@@ -2343,35 +2343,44 @@ CardWatcher
 </script>
 
 <script>
-/* Filter persistence -----------------------------------------------------------
+/* Filter carry-over -----------------------------------------------------------
    Archiving, unarchiving and deleting a listing are plain links that reload this
    page, and the filters are pure DOM state (checkboxes toggling hidden-* classes
    on the rows). A reload therefore threw the filter away, which meant tidying up
    a handful of rows made you re-pick your filter after every single click.
 
-   The checked values are stashed per card and replayed on load. Replay sets each
-   box and fires the real 'change' event rather than reimplementing the show/hide
-   rules, so the eight filter groups -- which each carry their own copy of that
-   logic -- stay the single source of truth. Boxes are ticked one at a time
-   because those handlers read the state of the whole group to decide whether
-   this is the first tick (hide everything, then reveal) or a later one (reveal
-   this value too). sessionStorage, not localStorage: a filter should outlive a
-   reload, not last until next week. */
+   So the filter is handed across exactly that one navigation and no other:
+   clicking a row's archive / unarchive / delete link snapshots the ticked boxes,
+   and the next load spends that snapshot and deletes it. Opening the card fresh
+   finds nothing and starts unfiltered, which is what you want when you come back
+   to a card later -- a filter you set last time is invisible state that makes the
+   page look like it lost listings. The page-level Archive button is deliberately
+   not included: it is not row tidying, and it lands you on a different view of
+   the card.
+
+   Replay sets each box and fires the real 'change' event rather than
+   reimplementing the show/hide rules, so the eight filter groups -- which each
+   carry their own copy of that logic -- stay the single source of truth. Boxes
+   are ticked one at a time because those handlers read the state of the whole
+   group to decide whether this is the first tick (hide everything, then reveal)
+   or a later one (reveal this value too). */
 (function () {
 	var GROUPS = ['availability-checkbox', 'country-checkbox', 'language-checkbox',
 	              'condition-checkbox', 'firsted-checkbox', 'reverse-checkbox',
 	              'grade-checkbox', 'gradeval-checkbox'];
 	var KEY = 'cw-filters:' + (typeof canonicalName === 'string' ? canonicalName : location.search);
+	// A snapshot only ever bridges one immediate reload. Anything older is a
+	// navigation that never happened (blocked, cancelled, browsed away from), and
+	// replaying it minutes later would be the surprise state this whole change
+	// exists to get rid of.
+	var MAX_AGE_MS = 60 * 1000;
 
-	function read() {
-		try {
-			return JSON.parse(sessionStorage.getItem(KEY) || '{}') || {};
-		} catch (e) {
-			return {};   // private mode, cleared storage, or a stale/corrupt value
-		}
-	}
+	// The row links this carries across: ?archive=<n>, ?unarchive=<n>, ?delete=<n>.
+	// Matched on the href rather than a class so the row builder stays untouched;
+	// the numeric row number is what separates them from ?archive=toggle.
+	var TIDY_LINK = /[?&](?:un)?archive=\d+(?:&|$)|[?&]delete=\d+(?:&|$)/;
 
-	function save() {
+	function snapshot() {
 		var state = {};
 		GROUPS.forEach(function (cls) {
 			var checked = [];
@@ -2382,15 +2391,34 @@ CardWatcher
 		});
 		try {
 			if (Object.keys(state).length) {
-				sessionStorage.setItem(KEY, JSON.stringify(state));
+				sessionStorage.setItem(KEY, JSON.stringify({ at: Date.now(), state: state }));
 			} else {
 				sessionStorage.removeItem(KEY);
 			}
-		} catch (e) { /* storage unavailable: filters simply stop persisting */ }
+		} catch (e) { /* storage unavailable: filters simply stop carrying over */ }
 	}
 
-	function restore() {
-		var state = read();
+	// Read and consume in one go -- a snapshot is spent by the load it was made
+	// for, so a later visit to this card cannot pick it up.
+	function takeSnapshot() {
+		var raw = null;
+		try {
+			raw = sessionStorage.getItem(KEY);
+			sessionStorage.removeItem(KEY);
+		} catch (e) {
+			return {};
+		}
+		if (!raw) { return {}; }
+		try {
+			var stored = JSON.parse(raw) || {};
+			if (!stored.at || Date.now() - stored.at > MAX_AGE_MS) { return {}; }
+			return stored.state || {};
+		} catch (e) {
+			return {};   // private mode, cleared storage, or a stale/corrupt value
+		}
+	}
+
+	function restore(state) {
 		GROUPS.forEach(function (cls) {
 			var wanted = state[cls];
 			if (!wanted || !wanted.length) { return; }
@@ -2406,17 +2434,16 @@ CardWatcher
 		});
 	}
 
+	// Snapshot on the way out. A click handler runs before the browser follows
+	// the link, and sessionStorage writes are synchronous, so this always lands.
+	document.addEventListener('click', function (event) {
+		var link = event.target.closest ? event.target.closest('a[href]') : null;
+		if (link && TIDY_LINK.test(link.getAttribute('href') || '')) { snapshot(); }
+	});
+
 	// Run after the inline scripts above have bound their change handlers.
 	window.addEventListener('load', function () {
-		restore();
-		GROUPS.forEach(function (cls) {
-			document.querySelectorAll('.' + cls).forEach(function (box) {
-				box.addEventListener('change', save);
-			});
-		});
-		// "Deselect all" clears boxes without firing change on each one.
-		document.querySelectorAll('.deselect-all-grading, [class*="deselect-all"]')
-			.forEach(function (el) { el.addEventListener('click', function () { setTimeout(save, 0); }); });
+		restore(takeSnapshot());
 	});
 })();
 </script>
