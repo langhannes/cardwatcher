@@ -2,7 +2,9 @@
 
 A Windows app for tracking CardMarket trading-card listings over time — price changes, new/sold listings, supply trends, and your personal collection.
 
-![Dashboard](image-files/main-page.jpeg)
+**[🌐 View the live site on GitHub Pages](https://langhannes.github.io/cardwatcher-data/index.html)** — the full dashboard, card pages and price history, browsable without installing anything.
+
+![Dashboard](image-files/dashboard.png)
 
 ## Download
 
