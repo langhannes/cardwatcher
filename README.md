@@ -2,7 +2,9 @@
 
 A Windows app for tracking CardMarket trading-card listings over time — price changes, new/sold listings, supply trends, and your personal collection.
 
-![Dashboard](image-files/main-page.jpeg)
+**[🌐 View the live site on GitHub Pages](https://langhannes.github.io/cardwatcher-data/index.html)** — the full dashboard, card pages and price history, browsable without installing anything.
+
+![Dashboard](image-files/dashboard.png)
 
 ## Download
 
@@ -16,7 +18,9 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 - **From & Floor**: raw lowest and filtered buy-now price per card, each with its period change.
 - **Price chart**: quantity-weighted average with IQR outlier filtering.
 - **Availability chart**: existing vs. newly listed stock and sold quantities per day/week/month, with a drainage % line.
-- **Supply metrics**: per-card Net Supply Change, Drainage, and Inflation; sort the gallery by any of them.
+- **Supply metrics**: per-card Net Supply Change, Drainage, and Inflation; sort the gallery by any of them. Every supply figure counts **copies, not listings** — a row offering 40 copies is 40 items of stock — so the stock number and the +added/−sold beside it are always in the same unit.
+- **Market language, overridable**: every price figure describes one language, picked from all copies on offer (graded included). If the automatic pick is wrong for a card, set it by hand on the card page.
+- **Graded copies count as stock**: a slab on offer is still a copy you can buy, so it is included in the availability total, with the graded share shown beside it (e.g. `5 incl. 5 graded`). Prices stay raw-only, since a PSA 10 and a raw NM are not two samples of one price.
 - **History**: per-listing quantity and add/sell/relist history tracked over time.
 - **Collection**: track owned cards (quantity, condition, language) and see total value.
 - **Automated downloads**: a background priority queue refreshes all cards while letting an individual **Download** jump the line; an optional daily auto-refresh keeps data current on its own.
@@ -80,7 +84,7 @@ Use the search box or **Browse all cards** for the full gallery.
 
 ![Browse all cards](image-files/search.png)
 
-A sortable gallery of every tracked card. Each card shows **Avail**, **Sold**, **From**, and **Floor** prices (each with its change for the selected period) plus a stock badge with quantity, +added/−sold, and Net Supply Change % (green = growing, red = shrinking). Sort by name, price, price change, lowest price, or a supply metric, over Last Download / 1W / 1M / 2M / 6M. The starting sort order, period, and price type come from **Display Defaults** in **Settings**, so the gallery opens the way you prefer.
+A sortable gallery of every tracked card. Each card shows **Avail**, **Sold**, **From**, and **Floor** prices (each with its change for the selected period) plus a stock badge with quantity, +added/−sold, and Net Supply Change % (green = growing, red = shrinking) — all three in copies, so they read against each other. Sort by name, price, price change, lowest price, or a supply metric, over Last Download / 1W / 1M / 2M / 6M. The starting sort order, period, and price type come from **Display Defaults** in **Settings**, so the gallery opens the way you prefer.
 
 ### Card detail
 
@@ -89,11 +93,13 @@ A sortable gallery of every tracked card. Each card shows **Avail**, **Sold**, *
 The **price chart** shows the card's value four ways:
 
 - **Trend** (blue) — quantity-weighted average of all current asking prices, with IQR outlier filtering. This is every listing, regardless of condition or language.
-- **Floor** (orange) — the realistic buy-now price: the low band of asking prices, filtered to average condition and the card's usual language (so one beat-up or off-language cheapie doesn't define it).
+- **Floor** (orange) — the realistic buy-now price: the low band of asking prices, filtered to average condition and the card's market language (so one beat-up or off-language cheapie doesn't define it).
 - **Sold** (red) — a time-weighted average of prices that actually sold, with recent sales weighted more heavily.
 - **Blend** (green) — the headline "market price": a weighted mix of **Sold** and **Floor**, meant to be the single most representative number.
 
-Below the chart, the page lists every listing (seller, price, condition; rows color-coded for new / sold / quantity change), per-listing price history, country/language filters, and per-card **Download** / **Change Link** / **Archive** buttons. A second **availability chart** shows existing vs. new stock and sold per day/week/month with a drainage % line (aggregated to weeks beyond 1 month, months beyond 6). Both charts share the 1M / 3M / 6M / All range buttons.
+Above the chart, **Market language** shows which language those price figures describe — **Floor**, **Sold** and **Blend** are all filtered to one, because an English copy and a Japanese copy of the same card are two markets at two price levels. It is worked out from every copy on offer, graded ones included, and picks the most widely printed language available (English, then Japanese, then Chinese, then Korean). That rule of thumb does get cards wrong — a Japanese-only promo with a couple of imported English slabs on it will price itself in English — so the dropdown lets you pin the language yourself; **Automatic** hands the choice back and shows what it would pick.
+
+Below the chart, the page lists every listing (seller, price, condition; rows color-coded for new / sold / quantity change), per-listing price history, country/language filters, and per-card **Download** / **Change Link** / **Archive** buttons. The filters carry across archiving, unarchiving and deleting a row, so tidying up a listing doesn't make you re-pick them; opening the card again starts unfiltered. A second **availability chart** shows existing vs. new stock and sold per day/week/month with a drainage % line (aggregated to weeks beyond 1 month, months beyond 6). Both charts share the 1M / 3M / 6M / All range buttons.
 
 ### Collection
 

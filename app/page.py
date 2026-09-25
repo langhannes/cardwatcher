@@ -48,6 +48,10 @@ class Page:
         self.listings = []
         self.languages = []
         self.only_germany = False
+        # User override for the card's trading language (see
+        # watcherbase.page_language). Empty means "work it out from the
+        # listings"; a language name pins every price figure to that market.
+        self.market_language = ""
         # available counts RAW copies only -- a slab is not supply of the card a
         # buyer of the raw card is shopping for. Graded supply is tracked next to
         # it so nothing is lost.
@@ -94,6 +98,7 @@ class Page:
             'image': self.image,
             'languages': self.languages,
             'only_germany': self.only_germany,
+            'market_language': self.market_language,
             'available': self.available,
             'available_graded': self.available_graded,
             'sold': self.sold,
@@ -143,8 +148,15 @@ class Page:
         self.image = image
         self.languages = data.get('languages', [])
         self.only_germany = data.get('only_germany', False)
+        self.market_language = data.get('market_language', '') or ''
         self.available = data.get('available', 0)
         self.available_graded = data.get('available_graded', 0)
+        # Read back so an in-app edit (a grade correction, a language override,
+        # archiving a listing) can save the page without wiping the last import's
+        # item flow -- these are only recomputed by update_page, so a load/save
+        # round trip that left them at 0 silently threw the numbers away.
+        self.sold = data.get('sold', 0)
+        self.inserted = data.get('inserted', 0)
 
         # Load listings
         self.listings = []
@@ -225,6 +237,10 @@ class Page:
         self.set = page.set
         self.canonical_name = page.canonical_name
         self.image = page.image
+        # sold/inserted are item counts, not row counts, so they are in the same
+        # unit as self.available. A seller listing one row of 40 copies is 40
+        # items of supply, and counting the row as 1 made the badge read
+        # "700" next to "+300" for the same import.
         self.sold = 0
         self.inserted = 0
 
@@ -252,7 +268,9 @@ class Page:
             new_listing.grade = page.listings[0].grade
             new_listing.grade_source = page.listings[0].grade_source
             new_listing.canonical_name = self.canonical_name
-            self.inserted += 1
+            # Provisionally the whole stack is new supply; if the loop below finds
+            # this listing already existed, it is backed out down to the delta.
+            self.inserted += new_listing.quantity
 
             # check if the listing was there before
             for listing in self.listings:
@@ -292,9 +310,17 @@ class Page:
                     # check if the listing had ended before
                     if listing.ended:
                         new_listing.comment = "RELISTED! " + page.listings[0].comment
-                    # if not, it was there before and not actually inserted
+                    # if not, it was there before and not actually inserted. Only
+                    # the change in stack size is item flow: a seller going 40 -> 37
+                    # sold 3 items, and going 40 -> 45 added 5. Backing out the full
+                    # quantity and re-adding just the delta keeps
+                    # available == previous_available + inserted - sold.
                     else:
-                        self.inserted -= 1
+                        self.inserted -= new_listing.quantity
+                        if new_listing.quantity_change > 0:
+                            self.inserted += new_listing.quantity_change
+                        elif new_listing.quantity_change < 0:
+                            self.sold += -new_listing.quantity_change
 
                     # since we already updated the listing we can remove it from the previous listings
                     self.listings.remove(listing)
@@ -342,7 +368,9 @@ class Page:
                 new_listing.ended = True
                 new_listing.new = not self.listings[0].ended
                 if new_listing.new:
-                    self.sold += 1
+                    # The whole remaining stack left the market, so count the copies
+                    # it still held -- read before the quantity is zeroed below.
+                    self.sold += self.listings[0].quantity
                 if not self.listings[0].ended and self.listings[0].quantity > 0:
                     new_listing.previous_quantities.append((self.listings[0].quantity, self.listings[0].date))
                 new_listing.quantity = 0
@@ -359,9 +387,7 @@ class Page:
 
         # Recompute available as true quantity sum, excluding archived and ended
         # (can't do this earlier because archived status isn't known until after matching)
-        live = [l for l in self.listings if not l.ended and not l.archived]
-        self.available = sum(l.quantity for l in live if not l.is_graded())
-        self.available_graded = sum(l.quantity for l in live if l.is_graded())
+        self.recompute_available()
 
         for language in page.languages:
             if language not in self.languages:
@@ -374,15 +400,32 @@ class Page:
             
         self.price_average = page.price_average
 
+    def recompute_available(self):
+        """Recompute stock from the live listings.
+
+        available is *total* stock and includes graded copies: a slab on offer is
+        still a copy someone can buy, and excluding it made cards whose only
+        listing was graded report no stock at all. available_graded keeps the
+        breakdown so the split stays visible; the raw/graded separation that
+        matters for *pricing* lives in watcherbase._excluded_from_raw.
+
+        Ended listings hold a zeroed quantity and archived ones are excluded by
+        user request, so both drop out here. Every path that changes which
+        listings are live must call this -- archiving used to leave the stored
+        count untouched, so the figure went stale until the next import.
+        """
+        live = [l for l in self.listings if not l.ended and not l.archived]
+        self.available = sum(l.quantity for l in live)
+        self.available_graded = sum(l.quantity for l in live if l.is_graded())
+
     def delete_listings(self,delete_list):
         print("delete_listings | delete: " + str(delete_list))
         new_listings = []
-        self.available = 0
         for i in range(len(self.listings)):
             if i not in delete_list:
-                self.available += self.listings[i].quantity
                 new_listings.append(self.listings[i])
         self.listings = new_listings
+        self.recompute_available()
         self.save()
 
     def archive_listing(self, index):
@@ -390,6 +433,7 @@ class Page:
         if 0 <= index < len(self.listings):
             self.listings[index].archived = True
             print(f"archive_listing | archived listing {index}")
+            self.recompute_available()
             self.save()
             return True
         return False
@@ -399,6 +443,7 @@ class Page:
         if 0 <= index < len(self.listings):
             self.listings[index].archived = False
             print(f"unarchive_listing | unarchived listing {index}")
+            self.recompute_available()
             self.save()
             return True
         return False
@@ -417,6 +462,19 @@ class Page:
         listing.grade = float(grade) if (company and grade is not None) else None
         listing.grade_source = 'manual'
         print(f"set_listing_grade | listing {index} -> {listing.grade_label() or 'not graded'}")
+        self.save()
+        return True
+
+    def set_market_language(self, language):
+        """Pin (or release) the language every price figure on this page uses.
+
+        ``language=""`` hands the choice back to watcherbase.page_language. The
+        override exists because the automatic answer is a heuristic over what is
+        currently on offer, and on a thin, mostly-graded page that can land on a
+        language the card does not really trade in.
+        """
+        self.market_language = language or ""
+        print(f"set_market_language | {self.canonical_name} -> {self.market_language or 'automatic'}")
         self.save()
         return True
 

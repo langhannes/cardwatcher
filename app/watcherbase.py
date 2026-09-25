@@ -284,6 +284,37 @@ class watcherbase():
         """
         return listing.archived or listing.is_graded()
 
+    def _excluded_from_supply(listing):
+        """Whether a listing must stay out of the stock count.
+
+        Only archived listings are excluded. Graded copies *are* stock -- a slab
+        on offer is a copy a buyer can buy -- so they count here even though
+        _excluded_from_raw keeps them out of the raw *price* pool. Keeping the two
+        questions apart is the point: "how many are for sale" and "what is a raw
+        one worth" have different answers for the same listing.
+        """
+        return listing.archived
+
+    def _supply_quantity(listing):
+        """Items this listing contributed to supply while it was live.
+
+        An ended listing has its quantity forced to 0 by Page.update_page, with
+        the last real figure pushed onto previous_quantities. Reading .quantity
+        directly therefore scores every removal as zero items, which is why
+        drainage sat at 0% for every tracked card.
+        """
+        if not listing.ended:
+            return listing.quantity
+        for qty, _ts in reversed(listing.previous_quantities or []):
+            try:
+                qty = int(qty)
+            except (TypeError, ValueError):
+                continue
+            if qty > 0:
+                return qty
+        # Pre-quantity-history listing: it existed, so it was at least one copy.
+        return 1
+
     def calculate_historical_average(page, days_ago):
         """
         Calculate what the average price would have been X days ago.
@@ -415,10 +446,11 @@ class watcherbase():
         - first_date <= cutoff (existed by then)
         - AND either not ended now, or ended after the cutoff date
 
-        Counts item quantities (summing listing.quantity), not listings, so it is
-        consistent with current_available in calculate_all_period_averages. The
-        listing's current quantity is used as the best available proxy for its
-        quantity at the historical point.
+        Counts item quantities, not listings, so it is consistent with
+        current_available in calculate_all_period_averages. The listing's last
+        known quantity is used as the best available proxy for its quantity at the
+        historical point -- via _supply_quantity, because an ended listing carries
+        a zeroed .quantity and would otherwise contribute nothing.
 
         Args:
             page: Page object with listings
@@ -431,8 +463,8 @@ class watcherbase():
         count = 0
 
         for listing in page.listings:
-            # Skip archived and graded listings
-            if watcherbase._excluded_from_raw(listing):
+            # Archived listings are not stock; graded ones are.
+            if watcherbase._excluded_from_supply(listing):
                 continue
 
             try:
@@ -456,7 +488,7 @@ class watcherbase():
                     continue
 
             # Listing was available at the historical point in time
-            count += listing.quantity
+            count += watcherbase._supply_quantity(listing)
 
         return count
 
@@ -467,8 +499,10 @@ class watcherbase():
         Added: Listings that are currently available and were first seen within the period
         Removed: Listings that ended within the period (regardless of when first seen)
 
-        Counts item quantities (summing listing.quantity), not listings, so the net
-        supply change stays consistent with current_available / historical_available.
+        Counts item quantities, not listings, so the net supply change stays
+        consistent with current_available / historical_available. Removals read
+        through _supply_quantity: an ended listing's .quantity has been zeroed, so
+        summing it directly reported no removals at all.
 
         Args:
             page: Page object with listings
@@ -482,8 +516,8 @@ class watcherbase():
         removed = 0
 
         for listing in page.listings:
-            # Skip archived and graded listings
-            if watcherbase._excluded_from_raw(listing):
+            # Archived listings are not stock; graded ones are.
+            if watcherbase._excluded_from_supply(listing):
                 continue
 
             try:
@@ -505,7 +539,7 @@ class watcherbase():
                 # Ended listing - check if it ended within the period
                 # (last_seen > cutoff means it ended after the cutoff, i.e., within the period)
                 if last_seen > cutoff:
-                    removed += listing.quantity
+                    removed += watcherbase._supply_quantity(listing)
 
         return (added, removed)
 
@@ -618,6 +652,9 @@ class watcherbase():
         mislabeled English listing on a Japanese-only product) can't hijack it.
         Languages outside the priority list (German/French/… only) fall back to
         the most-supplied one.
+
+        Feed this every listing on offer, graded ones included -- see
+        page_language for why the raw slice alone is the wrong electorate.
         """
         totals = {}
         for l in active_listings:
@@ -631,6 +668,31 @@ class watcherbase():
             if lang in pool:
                 return lang
         return max(pool, key=lambda k: pool[k])
+
+    def page_language(page, at_time=None, respect_override=True):
+        """The card's trading language, over *every* copy on offer.
+
+        Deliberately not the language of the raw pool alone. Which language a
+        product trades in is a property of the product, not of the slice you
+        happen to be pricing: on a card whose supply has gone almost entirely to
+        slabs, the handful of raw leftovers is the least representative sample
+        there is. One real page -- a Japanese tournament promo down to five raw
+        listings, four of them singletons -- had two S-Chinese raws outvote a
+        market of eight Japanese slabs and declared the card Chinese, because the
+        slabs were filtered out before the vote ever happened.
+
+        A user override on the page wins outright: the priority order is a rule
+        of thumb about print runs, and the owner of the collection knows which
+        market they are tracking. See Page.market_language. Pass
+        ``respect_override=False`` to ask what the listings alone would say --
+        the card page uses it to label the "Automatic" option honestly.
+        """
+        override = getattr(page, 'market_language', '') or ''
+        if override and respect_override:
+            return override
+        active, sold = watcherbase._listings_at_time(page, at_time, None)
+        return (watcherbase.dominant_language([l for l, _ in active])
+                or watcherbase.dominant_language([l for l, _ in sold]))
 
     def _graded_floor_fallback(page, at_time, lang, n_raw_asks, raw_floor):
         """Slab ask standing in for a raw floor the raw pool cannot supply.
@@ -678,9 +740,10 @@ class watcherbase():
         - blend: weighted mix of transaction and floor (the all-round number).
         All filtered to the dominant language and "average condition" grades.
 
-        ``lang`` pins the language to filter on. When left unset it is the
-        dominant language of the snapshot at ``at_time``. Callers building a
-        time series should pin a single canonical language across every day,
+        ``lang`` pins the language to filter on. When left unset it comes from
+        page_language -- the page's override, else the dominant language over
+        every listing at ``at_time``, slabs included. Callers building a time
+        series should pin a single canonical language across every day,
         otherwise the dominant language flips as the reconstructed supply
         changes and the floor/blend/sold numbers jump between price levels of
         different languages.
@@ -702,8 +765,7 @@ class watcherbase():
             active, sold = watcherbase._listings_at_time(page, at_time, None)
             basis = 'all'
         if lang is watcherbase._UNSET:
-            lang = (watcherbase.dominant_language([l for l, _ in active])
-                    or watcherbase.dominant_language([l for l, _ in sold]))
+            lang = watcherbase.page_language(page, at_time)
 
         def filtered(pairs):
             same_lang = [(l, p) for (l, p) in pairs if lang is None or l.language == lang]
@@ -970,9 +1032,12 @@ class watcherbase():
         current_avg = Page.calculate_price_average_robust(current_prices) if current_prices else 0
         current_min = min(current_prices) if current_prices else 0
 
-        # Sum quantities of current available listings
+        # Sum quantities of current available listings. This is stock, so graded
+        # copies count (see _excluded_from_supply); the price figures above stay
+        # raw-only. Counting them apart was what made a card whose only copy is a
+        # slab report zero stock while still showing that listing.
         current_available = sum(l.quantity for l in page.listings
-                                if not l.ended and not watcherbase._excluded_from_raw(l))
+                                if not l.ended and not watcherbase._excluded_from_supply(l))
 
         # Calculate current ended average using time-weighted approach
         # Recent sales have more influence than older sales
