@@ -205,3 +205,41 @@ def test_grade_slug_is_css_safe():
     assert grade_slug(10.0) == "10"
     assert grade_slug(9.5) == "9-5"
     assert grade_slug(None) == "none"
+
+
+def test_grade_contenders_are_raw_wherever_the_word_sits():
+    """"PSA 10 contender" means the same as "candidate": a raw card."""
+    for comment in [
+        "PSA 10 contender",
+        "PSA 10 CONTENDER!! / NO PICTURES / LOTS OF CARDS",
+        "Very Clean / Ask for pics / PSA 10 contender",
+        "BGS/PSA 10 contender",
+        "BGS 10 / triple 10 bl contender",
+        "Excellent condition and great contender for Grade 10. pics on request",
+    ]:
+        company, grade, _ = parse_grade(comment)
+        assert (company, grade) == ("", None), comment
+
+
+def test_speculation_after_the_grade_is_raw():
+    for comment in [
+        "PSA 10 potential. Check my other cards too :)",
+        "very clean - psa10 potential",
+        "SEALED. GOOD CENTERING AND EDGES: PSA 10 WORTHY",
+        "Scratches in the back. not PSA 10 worthy. Ask for pics",
+        "Great centering. PSA 10 Chance. ask for more pictures. more cards in stock",
+        "On my T Chinese cards 90% PSA 10 GUARANTEE",
+        "chance to get PSA 10",
+        "Sehr Clean / Chance auf PSA10 / Sicherer Versand",
+        "Could be BGS10 or Black Label",
+    ]:
+        company, grade, _ = parse_grade(comment)
+        assert (company, grade) == ("", None), comment
+
+
+def test_speculation_about_a_second_grade_keeps_the_real_slab():
+    assert parse_grade("AOG 9.5 / PSA 10 Chance") == ("AOG", 9.5, False)
+    assert parse_grade("CGC 10 (strong chance PSA 10)") == ("CGC", 10.0, False)
+    assert parse_grade("Contact us before buying BGS 9.5 / potential for PSA 10") == ("BGS", 9.5, False)
+    assert parse_grade("BGS 10 - Surface 9.5 - High BL Chance - PM for offers")[:2] == ("BGS", 10.0)
+    assert parse_grade("PSA 10 READY TO SHIP")[:2] == ("PSA", 10.0)

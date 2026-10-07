@@ -136,17 +136,28 @@ BLACK_LABEL_RE = re.compile(
 # "*MORE PSA ON MY ACCOUNT* PSA 10 - 159642249").
 NEGATION_RE = re.compile(
     r"(?<![A-Za-z])(potential(?:ly)?|pot\.|possib(?:le|ly)|maybe|expect(?:ed|ing)?"
-    r"|worthy|evtl\.?|eventuell|k[oö]nnte|vielleicht)(?![A-Za-z])",
+    r"|worthy|chance|could|would(?:n'?t)?|evtl\.?|eventuell|k[oö]nnte|vielleicht)"
+    r"(?![A-Za-z])",
     re.IGNORECASE,
 )
 
 # Speculation that is NOT tied to a position. Sellers write "PSA 10 candidate"
-# (and the German "PSA-Kandidat") just as readily after the grade as before it,
-# so the NEGATION_WINDOW lookbehind would miss exactly the common form. The word
-# only ever means "raw card I hope would grade this", never a slab, so its mere
-# presence disqualifies the whole comment.
+# / "PSA 10 contender" (and the German "PSA-Kandidat") just as readily after the
+# grade as before it, so the NEGATION_WINDOW lookbehind would miss exactly the
+# common form. These words only ever mean "raw card I hope would grade this",
+# never a slab, so their mere presence disqualifies the whole comment.
 BLANKET_NEGATION_RE = re.compile(
-    r"(?<![A-Za-z])(candidate|kandidat)", re.IGNORECASE,
+    r"(?<![A-Za-z])(candidate|kandidat|contender)", re.IGNORECASE,
+)
+
+# Speculation written straight after the grade: "PSA 10 potential",
+# "PSA 10 WORTHY", "AOG 9.5 / PSA 10 Chance", "90% PSA 10 GUARANTEE". Unlike the
+# blanket words these also turn up next to real slabs ("BGS 9.5 / potential for
+# PSA 10", "CGC 10 (strong chance PSA 10)"), so only the grade they directly
+# follow is discarded, not the whole comment -- and only across a space or
+# punctuation, never past a "/" or "|", which start the seller's next point.
+POST_NEGATION_RE = re.compile(
+    r"[\s\-:.!]*(potential|worthy|chance|guarantee)", re.IGNORECASE,
 )
 
 # How far back from a match to look for that speculation. Wide enough to cover
@@ -190,9 +201,10 @@ def grade_slug(grade):
     return format_grade_number(grade).replace(".", "-")
 
 
-def _negated(text, start):
-    """True when the text just before ``start`` speculates about the grade."""
-    return bool(NEGATION_RE.search(text[max(0, start - NEGATION_WINDOW):start]))
+def _negated(text, start, end):
+    """True when the text around ``text[start:end]`` speculates about the grade."""
+    return bool(NEGATION_RE.search(text[max(0, start - NEGATION_WINDOW):start])
+                or POST_NEGATION_RE.match(text, end))
 
 
 def _mentions_grade(text):
@@ -241,7 +253,7 @@ def parse_grade(comment):
         company = normalize_company(match.group(1))
         if company is None:
             continue
-        if _negated(text, match.start()):
+        if _negated(text, match.start(), match.end()):
             suppressed = True
             continue
         found.append((company, normalize_grade(match.group(2))))
@@ -251,7 +263,7 @@ def parse_grade(comment):
             company = normalize_company(match.group(2))
             if company is None:
                 continue
-            if _negated(text, match.start()):
+            if _negated(text, match.start(), match.end()):
                 suppressed = True
                 continue
             found.append((company, normalize_grade(match.group(1))))
@@ -259,14 +271,14 @@ def parse_grade(comment):
     if not found and not suppressed:
         for match in BLACK_LABEL_RE.finditer(text):
             company = normalize_company(match.group(1))
-            if company is None or _negated(text, match.start()):
+            if company is None or _negated(text, match.start(), match.end()):
                 continue
             # Flagged because the grade is inferred from the label, not written.
             return company, 10.0, True
 
     if not found and not suppressed:
         for match in BARE_GRADE_RE.finditer(text):
-            if _negated(text, match.start()):
+            if _negated(text, match.start(), match.end()):
                 suppressed = True
                 continue
             # Never confident about who graded it, so always worth a look.
