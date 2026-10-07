@@ -32,6 +32,16 @@ The exe is written to `dist/CardWatcher.exe` (~30 MB). It expects the
 `cardwatcher-data/` directory as a sibling, containing `pages/`, `archive/`,
 `images/`, and `changes/`.
 
+`templates/` and `static/` are bundled into the exe (see `datas` in
+`cardwatcher.spec`), so it needs no web files beside it. PyInstaller's
+incremental build does **not** notice when only those files changed and keeps
+the old exe ("checking EXE" with no rebuild). After a template- or static-only
+change, build with `--clean`:
+
+```powershell
+.\.venv-build\Scripts\pyinstaller.exe cardwatcher.spec --noconfirm --clean
+```
+
 ## When you add a new dependency
 
 Add it to `requirements.txt`, then reinstall it into the build venv before
