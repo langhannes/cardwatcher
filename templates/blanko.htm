@@ -185,7 +185,7 @@ CardWatcher
 			<span id="downloadBtnText">Download</span>
 			<span id="downloadSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
 		</button>
-		<button id="relinkBtn" type="button" class="btn btn-sm btn-outline-secondary" style="white-space: nowrap;" title="CardMarket moved this product? Point this card at its new URL">
+		<button id="relinkBtn" type="button" class="btn btn-sm btn-outline-primary" style="white-space: nowrap;" title="CardMarket moved this product? Point this card at its new URL">
 			Change Link
 		</button>
 		<a href="/?name={{ page_name }}&archive=toggle" class="btn btn-sm {% if is_archived %}btn-success{% else %}btn-secondary{% endif %}" style="white-space: nowrap;" title="{% if is_archived %}Unarchive this page{% else %}Archive this page{% endif %}">
@@ -203,7 +203,7 @@ CardWatcher
 	<div class="input-group input-group-sm">
 		<input type="text" id="relinkInput" class="form-control" value="{{ cardmarket_link }}" spellcheck="false">
 		<button type="button" id="relinkSave" class="btn btn-primary">Save</button>
-		<button type="button" id="relinkCancel" class="btn btn-outline-secondary">Cancel</button>
+		<button type="button" id="relinkCancel" class="btn btn-outline-primary">Cancel</button>
 	</div>
 	<div id="relinkError" class="d-none small mt-1" style="color:#b00;"></div>
 </div>
@@ -2285,7 +2285,7 @@ CardWatcher
 
 		var cancel = document.createElement('button');
 		cancel.type = 'button';
-		cancel.className = 'btn btn-sm btn-outline-secondary py-0 px-1';
+		cancel.className = 'btn btn-sm btn-outline-primary py-0 px-1';
 		cancel.textContent = '×';
 
 		editor.appendChild(companySelect);
