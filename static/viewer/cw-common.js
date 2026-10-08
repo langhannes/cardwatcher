@@ -145,7 +145,7 @@
     defaultSortBy: "name",
     defaultSortOrder: "",
     defaultPricePeriod: "last",
-    defaultPriceType: "available",
+    defaultPriceType: "floor",
     // Link to a card page. archived only matters to the static viewer, which
     // serves active vs archived cards from different dirs.
     cardHref: function (fileName, archived) {

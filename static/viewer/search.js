@@ -30,7 +30,7 @@
       sortBy,
       order,
       pricePeriod: p.get("pricePeriod") || c.defaultPricePeriod || "last",
-      priceType: p.get("priceType") || c.defaultPriceType || "available",
+      priceType: p.get("priceType") || c.defaultPriceType || "floor",
       collectionView: p.get("collection") === "true" && c.collection,
     };
   }
@@ -126,15 +126,29 @@
     };
   }
 
+  // The price a sort reads for the selected Price Type: the average of what is
+  // on offer, the average of what sold, the raw lowest ask (From) or the
+  // filtered buy-now floor (Floor). Percent change is against the current value,
+  // the same convention the Available/Sold averages use.
+  function typedPrice(x, type) {
+    if (type === "sold") return { value: x.endedAvg, change: x.endedChg, pct: x.endedPercentChg };
+    if (type === "from" || type === "floor") {
+      const value = type === "from" ? x.priceMin : x.marketFloor;
+      const change = (type === "from" ? x.fromChange : x.floorChange) || 0;
+      return { value, change, pct: value > 0 ? (change / value) * 100 : 0 };
+    }
+    return { value: x.priceAvg, change: x.priceChg, pct: x.percentChg };
+  }
+
   function sortList(list, cfgv) {
     const desc = cfgv.order === "desc";
     const dir = desc ? -1 : 1;
     const by = (fn) => list.sort((a, b) => (fn(a) < fn(b) ? -1 : fn(a) > fn(b) ? 1 : 0) * dir);
     const num = (fn) => list.sort((a, b) => (fn(a) - fn(b)) * dir);
     switch (cfgv.sortBy) {
-      case "price": return num((x) => cfgv.priceType === "sold" ? x.endedAvg : x.priceAvg);
-      case "priceChange": return num((x) => cfgv.priceType === "sold" ? x.endedChg : x.priceChg);
-      case "percentChange": return num((x) => cfgv.priceType === "sold" ? x.endedPercentChg : x.percentChg);
+      case "price": return num((x) => typedPrice(x, cfgv.priceType).value);
+      case "priceChange": return num((x) => typedPrice(x, cfgv.priceType).change);
+      case "percentChange": return num((x) => typedPrice(x, cfgv.priceType).pct);
       case "lowestPrice": return num((x) => x.priceMin);
       case "drainage": return num((x) => x.drainage != null ? x.drainage : -1);
       case "inflation": return num((x) => x.inflation != null ? x.inflation : -1);
@@ -200,7 +214,7 @@
     return '<div style="' + style + '">' + str + "</div>";
   }
 
-  function priceRow(label, value, change) {
+  function priceRow(label, value, change, asPercent) {
     if (value <= 0) return "";
     const base = "font-size: 0.78em; font-weight: bold; background: var(--cw-pill-blue); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;";
     if (change == null) return '<div style="' + base + '">' + label + ": " + compact(value) + "€</div>";
@@ -208,7 +222,8 @@
     const arrow = change > 0 ? " ↑" : (change < 0 ? " ↓" : " →");
     const color = change > 0 ? "rgb(34,139,34)" : (change < 0 ? "rgb(220,20,60)" : "#555");
     const style = change === 0 ? base : "font-size: 0.78em; font-weight: bold; color: " + color + "; background: var(--cw-pill-blue); padding: 2px 4px; border-radius: 4px; display: inline-block; white-space: nowrap;";
-    return '<div style="' + style + '">' + label + ": " + compact(value) + "€ (" + sign + compact(change) + "€)" + arrow + "</div>";
+    const delta = asPercent ? r1((change / value) * 100) + "%" : compact(change) + "€";
+    return '<div style="' + style + '">' + label + ": " + compact(value) + "€ (" + sign + delta + ")" + arrow + "</div>";
   }
 
   function cardShell(d, badges, bodyExtra, hrefExtra) {
@@ -243,7 +258,9 @@
       ? '<div style="font-size:0.78em;color:rgb(220,53,69);">Drainage: ' + d.drainage + "%</div>" +
         '<div style="font-size:0.78em;color:rgb(34,139,34);">Inflation: ' + d.inflation + "%</div>"
       : "";
-    const lowest = priceRow("From", d.priceMin, d.fromChange) + priceRow("Floor", d.marketFloor, d.floorChange);
+    const pctRows = cfgv.sortBy === "percentChange";
+    const lowest = priceRow("From", d.priceMin, d.fromChange, pctRows && cfgv.priceType === "from") +
+      priceRow("Floor", d.marketFloor, d.floorChange, pctRows && cfgv.priceType === "floor");
     let badges = availabilityBadges(d);
     if (d.inCollection) {
       badges = '<div style="position: absolute; top: 4px; left: 4px; background: rgba(40,167,69,0.9); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;" title="In Collection">&#9829;</div>' + badges;

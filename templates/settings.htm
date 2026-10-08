@@ -352,6 +352,8 @@
 			<select class="form-select form-select-sm" name="default_price_type">
 				<option value="available" {% if settings.default_price_type == 'available' %}selected{% endif %}>Available</option>
 				<option value="sold" {% if settings.default_price_type == 'sold' %}selected{% endif %}>Sold</option>
+				<option value="from" {% if settings.default_price_type == 'from' %}selected{% endif %}>From</option>
+				<option value="floor" {% if settings.default_price_type == 'floor' %}selected{% endif %}>Floor</option>
 			</select>
 		</div>
 	</div>

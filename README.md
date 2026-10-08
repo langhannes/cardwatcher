@@ -15,7 +15,7 @@ A Windows app for tracking CardMarket trading-card listings over time — price 
 - **Dashboard**: home-page overview — biggest price movers, biggest net supply losses, and pressure/divergence signals.
 - **Market price**: one representative number per card (average condition, usual language) via **Floor**, **Sold**, and **Blend**, overlaid on the price chart and shown next to "From" in search.
 - **Price & sold tracking**: available and ended/sold price averages with change over 1W / 1M / 2M / 6M.
-- **From & Floor**: raw lowest and filtered buy-now price per card, each with its period change.
+- **From & Floor**: raw lowest and filtered buy-now price per card, each with its period change. Pick either as the search's **Price Type** (beside Available and Sold) to sort the gallery by its price, € change or % change; **Floor** is the default.
 - **Price chart**: quantity-weighted average with IQR outlier filtering.
 - **Availability chart**: existing vs. newly listed stock and sold quantities per day/week/month, with a drainage % line.
 - **Supply metrics**: per-card Net Supply Change, Drainage, and Inflation; sort the gallery by any of them. Every supply figure counts **copies, not listings** — a row offering 40 copies is 40 items of stock — so the stock number and the +added/−sold beside it are always in the same unit.

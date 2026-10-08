@@ -43,7 +43,7 @@ DEFAULT_SETTINGS = {
     "default_sort_by": "name",           # name, price, priceChange, percentChange, lowestPrice
     "default_sort_order": "asc",         # asc, desc
     "default_price_period": "last",      # last, 1w, 1m, 2m, 6m
-    "default_price_type": "available",   # available, sold
+    "default_price_type": "floor",       # available, sold, from, floor
 
     # Collection defaults
     "default_condition": "NM",           # MT, NM, EX, GD, LP, PL, PO

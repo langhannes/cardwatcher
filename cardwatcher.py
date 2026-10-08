@@ -77,7 +77,7 @@ def _resolve_search_params():
                   or settings.get('default_sort_order')
                   or ('asc' if sort_by == 'name' else 'desc'))
     price_period = request.args.get('pricePeriod') or settings.get('default_price_period', 'last')
-    price_type = request.args.get('priceType') or settings.get('default_price_type', 'available')
+    price_type = request.args.get('priceType') or settings.get('default_price_type', 'floor')
     return sort_by, sort_order, price_period, price_type
 
 
@@ -92,7 +92,7 @@ def _render_search_shell():
         # Leave empty when unset so the client applies its smart order default.
         default_sort_order=settings.get('default_sort_order', ''),
         default_price_period=settings.get('default_price_period', 'last'),
-        default_price_type=settings.get('default_price_type', 'available'),
+        default_price_type=settings.get('default_price_type', 'floor'),
     )
 
 # Filter out noisy status endpoint from logs
